@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <PackageReference Include="TonSdk.Client" Version="0.3.11" />
+    <PackageReference Include="TonSdk.Core" Version="0.3.9" />
+    <PackageReference Include="TonSdk.Contracts" Version="0.4.0" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\BuildingBlocks\Common\Common.csproj" />
+  </ItemGroup>
+
+</Project>
