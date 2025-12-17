@@ -1,4 +1,3 @@
-global using MediatR;
 global using TonSdk.Client;
 global using AutoMapper;
 global using TonSdk.Core;

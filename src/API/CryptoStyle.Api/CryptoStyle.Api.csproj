@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Modules\Contracts\Contracts.Infrastructure\Contracts.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Matrix\Matrix.Infrastructure\Matrix.Infrastructure.csproj" />
   </ItemGroup>
 
 

@@ -1,10 +1,10 @@
 namespace Matrix.Application.Features.Places;
 
-public record GetRootPlaceQuery(int M, string ProfileAddr): IRequest<PlaceResponse>;
+public record GetRootPlaceQuery(int M, string ProfileAddr): IQuery<PlaceResponse>;
 
-internal sealed class GetRootPlaceQueryHandler : IRequestHandler<GetRootPlaceQuery, PlaceResponse>
+internal sealed class GetRootPlaceQueryHandler : IQueryHandler<GetRootPlaceQuery, PlaceResponse>
 {
-    public Task<PlaceResponse> Handle(GetRootPlaceQuery request, CancellationToken cancellationToken)
+    public Task<Result<PlaceResponse>> Handle(GetRootPlaceQuery request, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
     }

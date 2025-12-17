@@ -1,10 +1,10 @@
 namespace Matrix.Application.Features.Places;
 
-public sealed record ConfirmPlaceCommand(): IRequest;
+public sealed record ConfirmPlaceCommand(): ICommand;
 
-internal sealed class ConfirmPlaceCommandHandler : IRequestHandler<ConfirmPlaceCommand>
+internal sealed class ConfirmPlaceCommandHandler : ICommandHandler<ConfirmPlaceCommand>
 {
-    public Task Handle(ConfirmPlaceCommand request, CancellationToken cancellationToken)
+    public Task<Result> Handle(ConfirmPlaceCommand request, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
     }

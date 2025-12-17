@@ -1,7 +1,9 @@
 using System.Data;
+using FastEndpoints;
 using Matrix.Application;
 using Matrix.Infrastructure.Data;
 using Matrix.Infrastructure.Data.Repositories;
+using Matrix.Presentation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
@@ -10,8 +12,14 @@ namespace Matrix.Infrastructure;
 
 public static class MatrixModule
 {
-    public static IServiceCollection AddMatrixModule(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddMatrixModule(this IServiceCollection services,
+        IConfiguration configuration)
     {
+        services.AddFastEndpoints(options =>
+        {
+            options.Assemblies = [PresentationReference.Assembly];
+        });
+        
         services.AddMediatR(config =>
         {
             config.RegisterServicesFromAssembly(ApplicationReference.Assembly);

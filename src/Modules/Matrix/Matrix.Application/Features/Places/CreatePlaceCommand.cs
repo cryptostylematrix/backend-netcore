@@ -1,10 +1,10 @@
 namespace Matrix.Application.Features.Places;
 
-public sealed record CreatePlaceCommand(): IRequest<int>;
+public sealed record CreatePlaceCommand(): ICommand<int>;
 
-internal sealed class CreatePlaceCommandHandler : IRequestHandler<CreatePlaceCommand, int>
+internal sealed class CreatePlaceCommandHandler : ICommandHandler<CreatePlaceCommand, int>
 {
-    public Task<int> Handle(CreatePlaceCommand request, CancellationToken cancellationToken)
+    public Task<Result<int>> Handle(CreatePlaceCommand request, CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
     }

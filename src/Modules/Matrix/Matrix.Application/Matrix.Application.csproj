@@ -11,8 +11,4 @@
     <ProjectReference Include="..\Matrix.Domain\Matrix.Domain.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Features\Matrix\" />
-  </ItemGroup>
-
 </Project>
