@@ -9,7 +9,6 @@
   <ItemGroup>
     <Folder Include="Aggregates\Events\" />
     <Folder Include="Aggregates\ValueObjects\" />
-    <Folder Include="Services\" />
   </ItemGroup>
 
   <ItemGroup>

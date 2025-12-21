@@ -1,6 +1,6 @@
-using System.Data;
 using FastEndpoints;
 using Matrix.Application;
+using Matrix.Domain.Services;
 using Matrix.Infrastructure.Data;
 using Matrix.Infrastructure.Data.Repositories;
 using Matrix.Presentation;
@@ -27,32 +27,37 @@ public static class MatrixModule
         
         services.AddInfrastructure(configuration);
 
+        // services
+        services.AddScoped<IFindNextPosService, FindNextPosService>();
+
         return services;
     }
-
+    
     private static void AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("Matrix")!;
-        
-        // DbContext
+
+        // EF Core
         services.AddDbContext<MatrixDbContext>(options =>
-        {
-            options.UseNpgsql(connectionString);
-        });
-        
-        // DbConnection
-        services.AddScoped<IDbConnection>(sp => new NpgsqlConnection(connectionString));
-        
+            options.UseNpgsql(connectionString));
+
+        // Dapper mapping
+        Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
+
+        // Dapper connection factory (ONE place)
+        services.AddSingleton(_ => NpgsqlDataSource.Create(connectionString));
+
         // Repositories
-        services.AddScoped<IMultiLockRepository, MultiLockRepository>();
-        services.AddScoped<IMultiPlaceRepository, MultiPlaceRepository>();
-        
+        services.AddScoped<ILockRepository, LockRepository>();
+        services.AddScoped<ILockReadOnlyRepository, LockReadOnlyRepository>();
+        services.AddScoped<IPlaceRepository, PlaceRepository>();
+        services.AddScoped<IPlaceReadOnlyRepository, PlaceReadOnlyRepository>();
+
         services.AddScoped<IMatrixUnitOfWork>(sp => sp.GetRequiredService<MatrixDbContext>());
 
-       
-        // Dapper
-
-        // Health Checks
         services.AddHealthChecks().AddDbContextCheck<MatrixDbContext>();
+        
+        // Mapper
+        services.AddAutoMapper(cfg => { }, ApplicationReference.Assembly);
     }
 }

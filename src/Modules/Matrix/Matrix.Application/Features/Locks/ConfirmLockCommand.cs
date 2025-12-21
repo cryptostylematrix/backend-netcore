@@ -1,4 +1,3 @@
-
 namespace Matrix.Application.Features.Locks;
 
 public sealed record ConfirmLockCommand() : ICommand;

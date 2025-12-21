@@ -4,33 +4,36 @@ public sealed class MultiPlace: Entity, IAggregateRoot
 {
     public int Id { get; init; }
     public int? ParentId { get; init; }
-    public int TaskKey { get; init; }
-    public int TaskQueryId { get; init; }
+
+    public int TaskKey { get; init; }          // integer
+    public long TaskQueryId { get; init; }     // bigint
     public string? TaskSourceAddr { get; init; }
-    
-    public int M { get; init; }
+
+    public short M { get; init; }              // smallint (or int if you prefer)
     public string Mp { get; init; } = null!;
-    public int Pos { get; init; }
+    public short Pos { get; init; }            // smallint (0/1)
     public string Addr { get; init; } = null!;
     public string ProfileAddr { get; init; } = null!;
     public string? InviterProfileAddr { get; init; }
     public string? ParentAddr { get; init; }
-    public int PlaceNumber { get; init; }
-    public int CreatedAt { get; init; }
-    public int Filling { get; init; }
-    public int Filling2 { get; init; }
-    public int Clone { get; init; }
+
+    public int PlaceNumber { get; init; }      // integer
+    public long CreatedAt { get; init; }       // bigint (craeted_at)
+    public short Filling { get; init; }        // smallint
+    public short Filling2 { get; init; }       // smallint
+    public short Clone { get; init; }          // smallint (0/1)
+
     public string ProfileLogin { get; init; } = null!;
     public string Index { get; init; } = null!;
-    public bool Confirmed { get; init; } = false;
+    public bool Confirmed { get; init; }
 
     private MultiPlace()
     {
     }
 
-    private MultiPlace(int m, string profileAddr, string addr, string? parentAddr, int? parentId,
-        string mp, int pos, int placeNumber, int createdAt, int clone, string profileLogin,
-        int taskKey, int taskQueryId, string? taskSourceAddr, string inviterProfileAddr)
+    private MultiPlace(short m, string profileAddr, string addr, string? parentAddr, int? parentId,
+        string mp, short pos, int placeNumber, long createdAt, short clone, string profileLogin,
+        int taskKey, long taskQueryId, string? taskSourceAddr, string inviterProfileAddr)
     {
         M = m;
         ProfileAddr = profileAddr;
@@ -51,9 +54,9 @@ public sealed class MultiPlace: Entity, IAggregateRoot
     
     
     public static Result<MultiPlace> CreateMultiPlace(
-        int m, string profileAddr, string addr, string? parentAddr, int? parentId,
-        string mp, int pos, int placeNumber, int createdAt, int clone, string profileLogin,
-        int taskKey, int taskQueryId, string? taskSourceAddr, string inviterProfileAddr)
+        short m, string profileAddr, string addr, string? parentAddr, int? parentId,
+        string mp, short pos, int placeNumber, long createdAt, short clone, string profileLogin,
+        int taskKey, long taskQueryId, string? taskSourceAddr, string inviterProfileAddr)
     {
         // todo: validations
 

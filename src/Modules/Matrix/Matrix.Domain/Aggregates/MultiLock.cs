@@ -4,17 +4,17 @@ public sealed class MultiLock: Entity, IAggregateRoot
 {
     public int Id { get; private set; }
     public string Mp { get; init; } = null!;
-    public int M { get; init; }
+    public short M { get; init; }
     public string ProfileAddr { get; init; } = null!;
     public string PlaceAddr { get; init; } = null!;
-    public int LockedPos { get; init; }
+    public short LockedPos { get; init; }
     public string PlaceProfileLogin { get; init; } = null!;
     public int PlaceNumber { get; init; }
-    public int CreatedAt { get; init; }
-    public bool Confirmed { get; init; } = false;
+    public long CreatedAt { get; init; }
+    public bool Confirmed { get; init; } 
     
     public int TaskKey { get; init; }
-    public int TaskQueryId { get; init; }
+    public long TaskQueryId { get; init; }
     public string TaskSourceAddr { get; init; } = null!;
 
 
@@ -22,8 +22,8 @@ public sealed class MultiLock: Entity, IAggregateRoot
     {
     }
 
-    private MultiLock(string mp, int m, string profileAddr, int taskKey, int taskQueryId, string taskSourceAddr,
-        string placeAddr, int lockedAos, string placeProfileLogin, int placeNumber, int createdAt)
+    private MultiLock(string mp, short m, string profileAddr, int taskKey, long taskQueryId, string taskSourceAddr,
+        string placeAddr, short lockedPos, string placeProfileLogin, int placeNumber, long createdAt)
     {
         Mp = mp;
         M = m;
@@ -32,14 +32,14 @@ public sealed class MultiLock: Entity, IAggregateRoot
         TaskQueryId = taskQueryId;
         TaskSourceAddr = taskSourceAddr;
         PlaceAddr = placeAddr;
-        LockedPos = lockedAos;
+        LockedPos = lockedPos;
         PlaceProfileLogin = placeProfileLogin;
         PlaceNumber = placeNumber;
         CreatedAt = createdAt;
     }
     
-    public static Result<MultiLock> CreateMultiLock(string mp, int m, string profileAddr, int taskKey, int taskQueryId, string taskSourceAddr,
-        string placeAddr, int lockedAos, string placeProfileLogin, int placeNumber, int createdAt)
+    public static Result<MultiLock> CreateMultiLock(string mp, short m, string profileAddr, int taskKey, long taskQueryId,
+        string taskSourceAddr, string placeAddr, short lockedPos, string placeProfileLogin, int placeNumber, long createdAt)
     {
         // todo: validations
 
@@ -51,7 +51,7 @@ public sealed class MultiLock: Entity, IAggregateRoot
             taskQueryId: taskQueryId,
             taskSourceAddr: taskSourceAddr,
             placeAddr: placeAddr,
-            lockedAos: lockedAos,
+            lockedPos: lockedPos,
             placeProfileLogin: placeProfileLogin,
             placeNumber: placeNumber,
             createdAt: createdAt);

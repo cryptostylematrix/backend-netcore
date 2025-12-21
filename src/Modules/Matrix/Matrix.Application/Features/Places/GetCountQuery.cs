@@ -1,11 +1,17 @@
 namespace Matrix.Application.Features.Places;
 
-public sealed record GetCountQuery(int M, string ProfileAddr): IQuery<PlacesCountResponse>;
+public sealed record GetCountQuery(short M, string ProfileAddr): IQuery<PlacesCountResponse>;
 
-internal sealed class GetCountQueryHandler : IQueryHandler<GetCountQuery, PlacesCountResponse>
+internal sealed class GetCountQueryHandler(IPlaceReadOnlyRepository placeReadOnlyRepository) : 
+    IQueryHandler<GetCountQuery, PlacesCountResponse>
 {
-    public Task<Result<PlacesCountResponse>> Handle(GetCountQuery request, CancellationToken cancellationToken)
+    public async Task<Result<PlacesCountResponse>> Handle(GetCountQuery request, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var count = await placeReadOnlyRepository.GetPlacesCount(request.M, request.ProfileAddr);
+        
+        return Result.Success(new PlacesCountResponse
+        {
+            Count = count
+        });
     }
 }

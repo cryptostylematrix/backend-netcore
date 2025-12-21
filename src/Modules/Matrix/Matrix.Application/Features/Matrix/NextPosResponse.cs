@@ -2,6 +2,9 @@ namespace Matrix.Application.Features.Matrix;
 
 public sealed class NextPosResponse
 {
+    [JsonPropertyName("parent_addr")]
     public string ParentAddr { get; init; } = null!;
-    public int Pos { get; init; }
+    
+    [JsonPropertyName("pos")]
+    public short Pos { get; init; }
 }
