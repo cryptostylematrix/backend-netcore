@@ -2,7 +2,6 @@ using Matrix.Application.Features.Locks;
 
 namespace Matrix.Presentation.Endpoints.Locks.GetLocks;
 
-
 public sealed class GetLocksEndpoint(ISender sender) : Endpoint<GetLocksRequest, Paginated<LockResponse>>
 {
     public override void Configure()

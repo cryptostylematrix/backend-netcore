@@ -10,6 +10,8 @@
 .DS_Store
 .env*
 
+src/TaskProcessor
+
 # JetBrains Rider / IntelliJ
 .idea/
 *.sln.iml
@@ -89,3 +91,4 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+src/API/CryptoStyle.Api/env.development

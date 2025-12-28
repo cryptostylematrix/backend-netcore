@@ -1,0 +1,65 @@
+using static Contracts.Infrastructure.Caching.CacheEntryOptions;
+
+namespace Contracts.Infrastructure.Queries;
+
+public sealed class ProfileCollectionQueries(
+    ITonClient tonClient,
+    IDistributedCache cache,
+    IOptions<TonQueryCacheOptions> cacheOpts,
+    IOptions<TonContractAddressesOptions> options) : IProfileCollectionQueries
+{
+    private readonly TonQueryCacheOptions _cacheOpts = cacheOpts.Value;
+    private readonly Address _profileCollectionAddress = new(options.Value.ProfileCollectionAddr);
+    
+    public Task<Result<NftAddressResponse>> GetNftAddressByLoginAsync(string login, CancellationToken ct = default)
+    {
+        var loginKey = login.Trim().ToLowerInvariant();
+        var key = $"{_cacheOpts.KeyPrefix}:profileCollection:nftByLogin:{loginKey}";
+
+        return CacheGetOrFetch.GetOrFetchAsync(
+            cache,
+            key,
+            fetch: _ => FetchNftAddressByLoginAsync(login),
+            shouldCache: _ => true,
+            options: TtlDays(_cacheOpts.LongTtlDays),
+            ct: ct);
+    }
+
+
+    private async Task<Result<NftAddressResponse>> FetchNftAddressByLoginAsync(string login)
+    {
+        try
+        {
+            var index = TonHashUtils.Sha256N(login);
+
+            var stackItems = new IStackItem[]
+            {
+                new VmStackInt { Value = index }
+            };
+
+            var result = await tonClient.RunGetMethod(
+                _profileCollectionAddress,
+                "get_nft_address_by_index",
+                stackItems);
+
+            if (result is null)
+                return Result<NftAddressResponse>.Error(nameof(ContractErrors.GetMethodReturnsNull));
+
+            if (result.Value.ExitCode != 0)
+                return Result<NftAddressResponse>.Error(nameof(ContractErrors.GetMethodFailed));
+
+            var cell = result.Value.Stack.TryGetClass<Cell>(0);
+            if (cell is null)
+                return Result<NftAddressResponse>.Error(nameof(ContractErrors.GetMethodFailed));
+
+            var addr = cell.Parse().ReadAddress()?.ToString();
+            return string.IsNullOrWhiteSpace(addr) ?
+                Result<NftAddressResponse>.Error(nameof(ContractErrors.GetMethodFailed)) : 
+                Result.Success(new NftAddressResponse { Addr = addr });
+        }
+        catch (Exception exc)
+        {
+            return Result<NftAddressResponse>.Error(exc.Message);
+        }
+    }
+}

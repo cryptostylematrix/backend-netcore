@@ -32,10 +32,10 @@ public sealed class SearchPacesEndpoint(ISender sender) : Endpoint<SearchPacesRe
                         ParentAddr = "E...",
                         PlaceNumber = 3,
                         CreatedAt  = 123456,
-                        FillCount = 3,
+                        Filling2 = 3,
                         Clone = 1,
                         Pos = 0,
-                        Login = "login",
+                        ProfileLogin = "login",
                         M = 3,
                         ProfileAddr = "E...",
                     }

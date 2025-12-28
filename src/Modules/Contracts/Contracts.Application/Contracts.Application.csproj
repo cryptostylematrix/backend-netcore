@@ -7,12 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="TonSdk.Client" Version="0.3.11" />
-    <PackageReference Include="AutoMapper" Version="16.0.0" />
+    <ProjectReference Include="..\Contracts.Dto\Contracts.Dto.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Common\Common.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Contracts.Domain\Contracts.Domain.csproj" />
+    <Folder Include="Features\Processor\" />
   </ItemGroup>
 
 </Project>

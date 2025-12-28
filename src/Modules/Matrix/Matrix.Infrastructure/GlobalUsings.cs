@@ -1,4 +1,5 @@
-global using Microsoft.EntityFrameworkCore;
-
-global using Matrix.Domain.Abstractions;
-global using Matrix.Domain.Aggregates;
+global using Matrix.Application.Abstractions;
+global using Npgsql;
+global using Common.Dto;
+global using Dapper;
+global using Matrix.Dto;

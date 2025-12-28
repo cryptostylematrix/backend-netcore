@@ -1,6 +1,5 @@
 global using Ardalis.Result;
 global using Common.Application;
-global using AutoMapper;
-global using System.Text.Json.Serialization;
-global using Matrix.Domain.Abstractions;
-global using Matrix.Domain.Aggregates;
+global using Matrix.Application.Abstractions;
+global using Matrix.Dto;
+global using Common.Dto;

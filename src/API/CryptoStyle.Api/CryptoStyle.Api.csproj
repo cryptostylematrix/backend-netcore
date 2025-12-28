@@ -16,5 +16,8 @@
     <ProjectReference Include="..\..\Modules\Matrix\Matrix.Infrastructure\Matrix.Infrastructure.csproj" />
   </ItemGroup>
 
-
+  <ItemGroup>
+    <Folder Include="Services\" />
+  </ItemGroup>
+  
 </Project>

@@ -27,7 +27,7 @@ public sealed class GetInviteDataEndpoint(ISender sender) : Endpoint<GetInviteDa
                 Owner = new InviteOwnerResponse
                 {
                     OwnerAddr = "",
-                    SetAt = (ulong)DateTime.Now.Ticks
+                    SetAt = DateTime.Now.Ticks
                 }
             };
         });

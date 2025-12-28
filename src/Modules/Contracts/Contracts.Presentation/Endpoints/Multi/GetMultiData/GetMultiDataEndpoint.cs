@@ -1,5 +1,4 @@
 using Contracts.Application.Features.Multi;
-using Contracts.Domain.Aggregates.Multi;
 
 namespace Contracts.Presentation.Endpoints.Multi.GetMultiData;
 

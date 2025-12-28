@@ -1,0 +1,15 @@
+global using Contracts.Application.Abstractions;
+global using Contracts.Dto;
+global using TonSdk.Client;
+global using TonSdk.Client.Stack;
+global using TonSdk.Core.Boc;
+global using System.Numerics;
+global using Ardalis.Result;
+global using TonSdk.Core;
+global using Contracts.Infrastructure.Options;
+global using Microsoft.Extensions.Options;
+global using Contracts.Infrastructure.Common;
+global using System.Text;
+global using System.Text.Json;
+global using Contracts.Infrastructure.Caching;
+global using Microsoft.Extensions.Caching.Distributed;

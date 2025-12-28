@@ -1,56 +1,90 @@
 using Contracts.Application;
-using Contracts.Domain.Aggregates.Multi;
-using Contracts.Domain.Aggregates.ProfileCollection;
+using Contracts.Infrastructure.Queries;
+using Contracts.Infrastructure.Ton;
 using Contracts.Presentation;
 using FastEndpoints;
-using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using TonSdk.Client;
-using TonSdk.Core;
+using Polly;
 
 namespace Contracts.Infrastructure;
 
 public static class ContractsModule
 {
-    public static void MapEndpoints(IApplicationBuilder app)
+    extension(IServiceCollection services)
     {
-        app.UseFastEndpoints();
-    }
-
-    public static IServiceCollection AddContractsModule(this IServiceCollection services,
-        IConfiguration configuration)
-    {
-        services.AddFastEndpoints(options =>
+        public IServiceCollection AddContractsModule(IConfiguration configuration)
         {
-            options.Assemblies = [PresentationReference.Assembly];
-        });
-        
-        services.AddMediatR(config =>
-        {
-            config.RegisterServicesFromAssembly(ApplicationReference.Assembly);
-        });
-        
-        services.AddInfrastructure(configuration);
+            services.AddFastEndpoints(options =>
+            {
+                options.Assemblies = [PresentationReference.Assembly];
+            });
 
-        return services;
-    }
-    
-    private static void AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
-    {
-        services.AddSingleton<ITonClient, TonClient>(sp => new TonClient(TonClientType.HTTP_TONCENTERAPIV2, new HttpParameters
-        {
-            Endpoint = "https://toncenter.com/api/v2/jsonRPC",
-            ApiKey = "193210c5feca89e2e483c94b7e7e43797c5c3e33cd61c7e711d4868dd8a4ed04"
-        }));
+            services.AddMediatR(config =>
+            {
+                config.RegisterServicesFromAssembly(ApplicationReference.Assembly);
+            });
 
-        services.AddSingleton<MultiContract>(sp =>
-            MultiContract.CreateFromAddress(new Address("EQCio9soCgFJxQOPMpkerdlDTWjzD_el3omcOiq9NSURzMnV")));
+            // Options
+            services.AddOptions<TonContractAddressesOptions>()
+                .Bind(configuration.GetSection("TonContractAddresses"))
+                .Validate(o => !string.IsNullOrWhiteSpace(o.MultiAddr), "TonContractAddresses:MultiAddr is required")
+                .Validate(o => !string.IsNullOrWhiteSpace(o.ProfileCollectionAddr), "TonContractAddresses:ProfileCollectionAddr is required")
+                .ValidateOnStart();
+
+            
+            services.AddOptions<TonCenterOptions>()
+                .Bind(configuration.GetSection("TonCenter"))
+                .Validate(o => !string.IsNullOrWhiteSpace(o.Endpoint), "TonCenter.Endpoint is required")
+                .Validate(o => !string.IsNullOrWhiteSpace(o.ApiKey), "TonCenter.ApiKey is required")
+                .ValidateOnStart();
+            
+            services.Configure<TonQueryCacheOptions>(
+                configuration.GetSection("TonQueryCache"));
+
+            services.AddInfrastructure();
+
+            // Query services
+            services.AddScoped<IInviteQueries, InviteQueries>();
+            services.AddScoped<IProfileItemQueries, ProfileItemQueries>();
+            services.AddScoped<IMultiQueries, MultiQueries>();
+            services.AddScoped<IProfileCollectionQueries, ProfileCollectionQueries>();
+            services.AddScoped<IPlaceQueries, PlaceQueries>();
+
+            return services;
+        }
         
-        services.AddSingleton<ProfileCollectionContract>(sp =>
-            ProfileCollectionContract.CreateFromAddress(new Address("EQAiWZqRPp39Z46Y4Pahvj5UQSzafJrUiTbYDcQ0kldLebjn")));
-        
-        // Mapper
-        services.AddAutoMapper(cfg => { }, ApplicationReference.Assembly);
+
+        private void AddInfrastructure()
+        {
+            // Create a single shared pipeline (singleton)
+            services.AddSingleton<ResiliencePipeline>(sp =>
+            {
+                var opts = sp.GetRequiredService<IOptions<TonCenterOptions>>().Value;
+
+                return TonCenterPipelineFactory.Create(
+                    rps: opts.RequestsPerSecond,
+                    queueLimit: opts.QueueLimit,
+                    acquireTimeoutMs: opts.AcquireTimeoutMs);
+            });
+
+            // Register ITonClient as: TonClient wrapped by PollyTonClient
+            services.AddSingleton<ITonClient>(sp =>
+            {
+                var opts = sp.GetRequiredService<IOptions<TonCenterOptions>>().Value;
+                var pipeline = sp.GetRequiredService<ResiliencePipeline>();
+
+                ITonClient inner = new TonClient(
+                    TonClientType.HTTP_TONCENTERAPIV2,
+                    new HttpParameters
+                    {
+                        Endpoint = opts.Endpoint,
+                        ApiKey = opts.ApiKey
+                    });
+
+                return new PollyTonClient(inner, pipeline);
+            });
+        }
+
     }
 }

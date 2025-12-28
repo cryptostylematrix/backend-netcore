@@ -1,63 +1,51 @@
 using FastEndpoints;
 using Matrix.Application;
-using Matrix.Domain.Services;
-using Matrix.Infrastructure.Data;
-using Matrix.Infrastructure.Data.Repositories;
+using Matrix.Application.Services;
+using Matrix.Infrastructure.Queries;
 using Matrix.Presentation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Npgsql;
 
 namespace Matrix.Infrastructure;
 
 public static class MatrixModule
 {
-    public static IServiceCollection AddMatrixModule(this IServiceCollection services,
-        IConfiguration configuration)
+    extension(IServiceCollection services)
     {
-        services.AddFastEndpoints(options =>
+        public IServiceCollection AddMatrixModule(IConfiguration configuration)
         {
-            options.Assemblies = [PresentationReference.Assembly];
-        });
+            services.AddFastEndpoints(options =>
+            {
+                options.Assemblies = [PresentationReference.Assembly];
+            });
         
-        services.AddMediatR(config =>
+            services.AddMediatR(config =>
+            {
+                config.RegisterServicesFromAssembly(ApplicationReference.Assembly);
+            });
+        
+            services.AddInfrastructure(configuration);
+        
+            
+            // Services
+            services.AddScoped<INextPosService, NextPosService>();
+
+            return services;
+        }
+
+        private void AddInfrastructure(IConfiguration configuration)
         {
-            config.RegisterServicesFromAssembly(ApplicationReference.Assembly);
-        });
-        
-        services.AddInfrastructure(configuration);
+            var connectionString = configuration.GetConnectionString("Matrix")!;
+            
+            // Dapper mapping
+            DefaultTypeMap.MatchNamesWithUnderscores = true;
 
-        // services
-        services.AddScoped<IFindNextPosService, FindNextPosService>();
+            // Dapper connection factory (ONE place)
+            services.AddSingleton(_ => NpgsqlDataSource.Create(connectionString));
 
-        return services;
-    }
-    
-    private static void AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
-    {
-        var connectionString = configuration.GetConnectionString("Matrix")!;
-
-        // EF Core
-        services.AddDbContext<MatrixDbContext>(options =>
-            options.UseNpgsql(connectionString));
-
-        // Dapper mapping
-        Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
-
-        // Dapper connection factory (ONE place)
-        services.AddSingleton(_ => NpgsqlDataSource.Create(connectionString));
-
-        // Repositories
-        services.AddScoped<ILockRepository, LockRepository>();
-        services.AddScoped<ILockReadOnlyRepository, LockReadOnlyRepository>();
-        services.AddScoped<IPlaceRepository, PlaceRepository>();
-        services.AddScoped<IPlaceReadOnlyRepository, PlaceReadOnlyRepository>();
-
-        services.AddScoped<IMatrixUnitOfWork>(sp => sp.GetRequiredService<MatrixDbContext>());
-
-        services.AddHealthChecks().AddDbContextCheck<MatrixDbContext>();
-        
-        // Mapper
-        services.AddAutoMapper(cfg => { }, ApplicationReference.Assembly);
+            // Repositories
+            services.AddScoped<IPlaceQueries, PlaceQueries>();
+            services.AddScoped<ILockQueries, LockQueries>();
+        }
     }
 }

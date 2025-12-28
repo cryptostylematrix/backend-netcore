@@ -1,19 +1,16 @@
 namespace Matrix.Application.Features.Places;
 
-public record GetRootPlaceQuery(short M, string ProfileAddr): IQuery<PlaceResponse>;
+public sealed record GetRootPlaceQuery(short M, string ProfileAddr) : IQuery<PlaceResponse>;
 
-internal sealed class GetRootPlaceQueryHandler(IPlaceReadOnlyRepository placeReadOnlyRepo, IMapper mapper) : 
-    IQueryHandler<GetRootPlaceQuery, PlaceResponse>
+internal sealed class GetRootPlaceQueryHandler(IPlaceQueries placeQueries)
+    : IQueryHandler<GetRootPlaceQuery, PlaceResponse>
 {
     public async Task<Result<PlaceResponse>> Handle(GetRootPlaceQuery request, CancellationToken cancellationToken)
     {
-        var rootPlace = await placeReadOnlyRepo.GetRootPlace(request.M, request.ProfileAddr);
-        if (rootPlace is null)
-        {
-            return Result<PlaceResponse>.NotFound();
-        }
-        
-        var response = mapper.Map<PlaceResponse>(rootPlace);
-        return Result.Success(response);
+        var root = await placeQueries.GetRootPlaceAsync(request.M, request.ProfileAddr, cancellationToken);
+
+        return root is null
+            ? Result<PlaceResponse>.NotFound()
+            : Result.Success(root);
     }
 }
