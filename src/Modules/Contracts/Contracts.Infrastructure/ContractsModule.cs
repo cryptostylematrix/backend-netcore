@@ -50,6 +50,7 @@ public static class ContractsModule
             services.AddScoped<IMultiQueries, MultiQueries>();
             services.AddScoped<IProfileCollectionQueries, ProfileCollectionQueries>();
             services.AddScoped<IPlaceQueries, PlaceQueries>();
+            services.AddScoped<IGeneralQueries, GeneralQueries>();
 
             return services;
         }
