@@ -31,6 +31,16 @@ public sealed class InviteQueries(
     {
         try
         {
+            // upgradaed contract
+            if (new Address(addr).Equals(new Address("EQDWtmELnfdGiCQeLCBcu8w0WGQ9KlWixQw4-Hekbf9teB2a")) && seqNo == 1)
+            {
+                return Result.Success(new InviteAddressResponse
+                {
+                    Addr = new Address("EQAPqoZn7SXpwRLYHTmNpNdcr36iRFO4zfH8A9T-0wdaWh9X").ToString()
+                });
+            }
+                
+                
             var stackItems = new List<IStackItem>
             {
                 new VmStackInt { Value = new BigInteger(seqNo) }
