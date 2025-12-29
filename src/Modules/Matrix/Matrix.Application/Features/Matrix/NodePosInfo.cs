@@ -45,7 +45,11 @@ internal sealed class TreeInfo
         // locked if any lock prefix matches
         var isLocked = _lockMps.Any(lockMp => mp.StartsWith(lockMp, StringComparison.Ordinal));
         
-        var canBuy = !isLocked && mp.StartsWith(_rootMp, StringComparison.Ordinal);
+        var canBuy = 
+            !isLocked 
+            && mp.StartsWith(_rootMp, StringComparison.Ordinal)
+            && parentRow is not null
+            && pos == parentRow.Filling;
         
         var canLock =
             !isLocked
