@@ -85,11 +85,21 @@ public sealed class MultiQueries(ITonClient tonClient, IOptions<TonContractAddre
 
             return Result.Success(new MultiDataResponse
             {
+                Addr = _multiAddress.ToString(),
                 ProcessorAddr = processor,
                 MaxTasks = (uint)maxTasks,
                 QueueSize = (uint)queueSize,
                 SeqNo = (uint)seqNo,
                 Fees = fees,
+                Prices = new MultiPricesDataResponse
+                {
+                    M1 = 15m,
+                    M2 = 45m,
+                    M3 = 100m,
+                    M4 = 240m,
+                    M5 = 500m,
+                    M6 = 1200m,
+                },
                 Security = security,
                 PlaceCode = placeCode,
                 Tasks = tasks

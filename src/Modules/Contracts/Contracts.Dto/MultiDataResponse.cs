@@ -2,6 +2,9 @@ namespace Contracts.Dto;
 
 public sealed class MultiDataResponse
 {
+    [JsonPropertyName("addr")]
+    public string Addr { get; init; } = null!;
+    
     [JsonPropertyName("processor_addr")]
     public string ProcessorAddr { get; init; } = null!;
     
@@ -17,10 +20,14 @@ public sealed class MultiDataResponse
     [JsonPropertyName("fees")]
     public MultiFeesDataResponse Fees { get; init; } = null!;
     
+    [JsonPropertyName("prices")]
+    public MultiPricesDataResponse Prices { get; init; } = null!;
+    
     [JsonPropertyName("security")]
     public MultiSecurityDataResponse Security { get; init; } = null!;
     
-    [JsonPropertyName("place_code")]
+    //[JsonPropertyName("place_code")]
+    [JsonIgnore]
     public string PlaceCode { get; init; } = null!;
     
     [JsonPropertyName("tasks")]
@@ -28,6 +35,27 @@ public sealed class MultiDataResponse
 }
 
 public sealed class MultiFeesDataResponse
+{
+    [JsonPropertyName("m1")]
+    public decimal M1 { get; init; } 
+    
+    [JsonPropertyName("m2")]
+    public decimal M2 { get; init; }
+    
+    [JsonPropertyName("m3")]
+    public decimal M3 { get; init; } 
+    
+    [JsonPropertyName("m4")]
+    public decimal M4 { get; init; } 
+    
+    [JsonPropertyName("m5")]
+    public decimal M5 { get; init; } 
+    
+    [JsonPropertyName("m6")]
+    public decimal M6 { get; init; } 
+}
+
+public sealed class MultiPricesDataResponse
 {
     [JsonPropertyName("m1")]
     public decimal M1 { get; init; } 

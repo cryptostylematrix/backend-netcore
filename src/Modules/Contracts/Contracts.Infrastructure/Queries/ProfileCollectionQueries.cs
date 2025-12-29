@@ -62,4 +62,52 @@ public sealed class ProfileCollectionQueries(
             return Result<NftAddressResponse>.Error(exc.Message);
         }
     }
+    
+    public Task<Result<CollectionDataResponse>> GetCollectionDataAsync(CancellationToken ct = default)
+    {
+        var key = $"{_cacheOpts.KeyPrefix}:profileCollection:collectionData";
+
+        return CacheGetOrFetch.GetOrFetchAsync(
+            cache,
+            key,
+            fetch: _ => FetchCollectionDataAsync(ct),
+            shouldCache: _ => true,
+            options: TtlDays(_cacheOpts.LongTtlDays),
+            ct: ct);
+    }
+
+
+    private async Task<Result<CollectionDataResponse>> FetchCollectionDataAsync(CancellationToken ct = default)
+    {
+        try
+        {
+            var result = await tonClient.RunGetMethod(
+                _profileCollectionAddress,
+                "get_collection_data",
+                Array.Empty<IStackItem>());
+
+            if (result is null)
+                return Result<CollectionDataResponse>.Error(nameof(ContractErrors.GetMethodReturnsNull));
+
+            if (result.Value.ExitCode != 0)
+                return Result<CollectionDataResponse>.Error(nameof(ContractErrors.GetMethodFailed));
+
+            // Stack layout (from your MultiContract):
+            // 0 nextItemIndex 
+            // 1 collectionContent (cell)
+            // 2 owner (cell->address)
+         
+            var owner = ((Cell)result.Value.Stack[2]).Parse().LoadAddress()!.ToString();
+
+            return Result.Success(new CollectionDataResponse
+            {
+                Addr = _profileCollectionAddress.ToString(),
+                OwnerAddr = owner
+            });
+        }
+        catch (Exception exc)
+        {
+            return Result<CollectionDataResponse>.Error(exc.Message);
+        }
+    }
 }

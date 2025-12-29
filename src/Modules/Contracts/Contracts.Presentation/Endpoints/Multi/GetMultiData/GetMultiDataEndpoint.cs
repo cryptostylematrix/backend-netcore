@@ -21,12 +21,21 @@ public sealed class GetMultiDataEndpoint(ISender sender) : EndpointWithoutReques
                 SeqNo = 1234,
                 Fees = new MultiFeesDataResponse
                 {
-                    M1 = 5_000_000,
-                    M2 = 5_000_000,
-                    M3 = 5_000_000,
-                    M4 = 10_000_000,
-                    M5 = 10_000_000,
-                    M6 = 10_000_000,
+                    M1 = 0.05m,
+                    M2 = 0.05m,
+                    M3 = 0.05m,
+                    M4 = 0.1m,
+                    M5 = 0.1m,
+                    M6 = 0.1m,
+                },
+                Prices = new MultiPricesDataResponse
+                {
+                    M1 = 15m,
+                    M2 = 45m,
+                    M3 = 100m,
+                    M4 = 240m,
+                    M5 = 500m,
+                    M6 = 1200m,
                 },
                 Security = new MultiSecurityDataResponse
                 {
