@@ -8,7 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Load env based on environment
 var envFile = builder.Environment.IsDevelopment()
     ? ".env.development"
-    : ".env.production";
+    : ".env";
 
 DotEnv.Load(options: new DotEnvOptions(
     envFilePaths: [ envFile ],
