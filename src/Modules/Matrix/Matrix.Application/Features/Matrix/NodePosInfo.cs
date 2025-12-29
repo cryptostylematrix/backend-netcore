@@ -39,14 +39,14 @@ internal sealed class TreeInfo
 
         var mpButLast = mp[..^1];
         var siblingMp = mpButLast + (pos == 0 ? '1' : '0');
-
-        var canBuy = mp.StartsWith(_rootMp, StringComparison.Ordinal);
-
+        
         var isLock = _lockSet.Contains(mp);
 
         // locked if any lock prefix matches
         var isLocked = _lockMps.Any(lockMp => mp.StartsWith(lockMp, StringComparison.Ordinal));
-
+        
+        var canBuy = !isLocked && mp.StartsWith(_rootMp, StringComparison.Ordinal);
+        
         var canLock =
             !isLocked
             && !_lockSet.Contains(siblingMp)
