@@ -19,7 +19,17 @@ public sealed class ProfileItemQueries(
             cache,
             key,
             fetch: _ => FetchNftDataAsync(normalizedAddr),
-            shouldCache: dto => dto.IsInit == -1,
+            shouldCache: dto => dto is
+            {
+                IsInit: -1,
+                Content:
+                {
+                    FirstName: not null, 
+                    LastName: not null, 
+                    ImageUrl: not null, 
+                    TgUsername: not null
+                }
+            },
             options: TtlDays(_cacheOpts.NftDataIsInitMinusOneTtlDays),
             ct: ct);
     }
