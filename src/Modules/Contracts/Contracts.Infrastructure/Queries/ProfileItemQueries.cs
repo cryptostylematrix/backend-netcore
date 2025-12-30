@@ -97,6 +97,28 @@ public sealed class ProfileItemQueries(
             ct: ct);
     }
 
+    public Result<MultiChooseInviterBodyResponse> BuildChooseInviterBody(long queryId, string profileAddr, int program, string inviterAddr, int seqNo, string inviteAddr)
+    {
+        try
+        {
+            var builder = new CellBuilder();
+            builder.StoreUInt(0xef27e2d6, 32); // ITEM_CHOOSE_INVITER
+            builder.StoreUInt(queryId, 64);
+            builder.StoreUInt(program, 32);
+            builder.StoreAddress(new Address(inviterAddr));
+            builder.StoreUInt(seqNo, 32);
+            builder.StoreAddress(new Address(inviteAddr));
+            return Result<MultiChooseInviterBodyResponse>.Success(new MultiChooseInviterBodyResponse
+            {
+                Boc = builder.Build().ToString("base64")
+            });
+        }
+        catch (Exception e)
+        {
+            return Result<MultiChooseInviterBodyResponse>.Error(e.Message);
+        }
+    }
+
 
     private async Task<Result<ProfileProgramsResponse>> FetchProgramsAsync(string addr)
     {
