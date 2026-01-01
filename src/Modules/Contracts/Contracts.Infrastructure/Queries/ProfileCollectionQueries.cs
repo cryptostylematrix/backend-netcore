@@ -1,3 +1,5 @@
+using Contracts.Infrastructure.NftContent;
+using Contracts.Infrastructure.Ton;
 using static Contracts.Infrastructure.Caching.CacheEntryOptions;
 
 namespace Contracts.Infrastructure.Queries;
@@ -74,6 +76,37 @@ public sealed class ProfileCollectionQueries(
             shouldCache: _ => true,
             options: TtlDays(_cacheOpts.LongTtlDays),
             ct: ct);
+    }
+
+    public Result<DeployItemBodyResponse> BuildDeployItemBody(long queryId, string login, string? imageUrl, string? firstName, string? lastName,
+        string? tgUsername)
+    {
+        try
+        {
+            var content = ProfileNftContent.ProfileToNftContent(
+                login: login,
+                imageUrl: imageUrl,
+                firstName: firstName,
+                lastName: lastName,
+                tgUsername: tgUsername);
+            
+            var contentCell = NftContentWriter.NftContentToCell(content);
+            
+            var builder = new CellBuilder();
+            builder.StoreUInt(1, 32); // COLLECTION_DEPLOY_ITEM
+            builder.StoreUInt(queryId, 64);
+            builder.StoreStringTail(login.ToLowerForProfile() ?? throw new ArgumentNullException(nameof(login)));
+            builder.StoreRef(contentCell);
+            
+            return Result<DeployItemBodyResponse>.Success(new DeployItemBodyResponse
+            {
+                BocHex = builder.Build().ToString("hex").ToLower()
+            });
+        }
+        catch (Exception e)
+        {
+            return Result<DeployItemBodyResponse>.Error(e.Message);
+        }
     }
 
 
