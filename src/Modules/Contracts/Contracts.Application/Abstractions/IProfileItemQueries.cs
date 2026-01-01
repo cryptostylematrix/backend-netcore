@@ -6,9 +6,16 @@ public interface IProfileItemQueries
     Task<Result<ProfileProgramsResponse>> GetProgramsAsync(string addr, CancellationToken ct = default);
     Result<MultiChooseInviterBodyResponse> BuildChooseInviterBody(
         long queryId,
-        string profileAddr, 
         int program, 
         string inviterAddr, 
         int seqNo, 
         string inviteAddr);
+    
+    Result<EditContentBodyResponse> BuildEditContentBody(
+        long queryId,
+        string login, 
+        string? imageUrl, 
+        string? firstName, 
+        string? lastName, 
+        string? tgUsername);
 }

@@ -17,14 +17,13 @@ public sealed class BuildMultiChooseInviterBodyEndpoint(ISender sender) :
             s.Description = "Build Choose Inviter Body";
             s.ExampleRequest = new BuildMultiChooseInviterBodyRequest
             {
-                ProfileAddr = "E...",
                 InviterAddr =  "E...",
                 SeqNo = 1,
                 InviteAddr =  "E...",
             };
             s.ResponseExamples[StatusCodes.Status200OK] = new MultiChooseInviterBodyResponse
             {
-                Boc = "..."
+                BocHex = "..."
             };
         });
     }
@@ -32,7 +31,6 @@ public sealed class BuildMultiChooseInviterBodyEndpoint(ISender sender) :
     public override async Task HandleAsync(BuildMultiChooseInviterBodyRequest request, CancellationToken ct)
     {
         var query = new BuildMultiChooseInviterBodyQuery(
-            ProfileAddr: request.ProfileAddr,
             InviterAddr: request.InviterAddr,
             SeqNo: request.SeqNo,
             InviteAddr: request.InviteAddr);

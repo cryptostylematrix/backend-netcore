@@ -1,0 +1,24 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+		<TargetFrameworks>net6.0;net7.0;netstandard2.1</TargetFrameworks>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <LangVersion>8.0</LangVersion>
+        <RootNamespace>TonSdk.Client</RootNamespace>
+        <PackageId>TonSdk.Client</PackageId>
+        <Version>0.3.11</Version>
+        <Authors>Continuation Team</Authors>
+        <PackageDescription>Ton Client library for work with HTTP API and Lite Servers.</PackageDescription>
+        <RepositoryUrl>https://github.com/continuation-team/TonSdk.NET</RepositoryUrl>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+        <PackageReference Include="TonSdk.Adnl" Version="0.2.4" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\TonSdk.Core\TonSdk.Core.csproj" />
+    </ItemGroup>
+</Project>

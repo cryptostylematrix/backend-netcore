@@ -1,4 +1,6 @@
 using System.Security.Cryptography;
+using Contracts.Infrastructure.NftContent;
+using Contracts.Infrastructure.Ton;
 using static Contracts.Infrastructure.Caching.CacheEntryOptions;
 
 namespace Contracts.Infrastructure.Queries;
@@ -97,7 +99,7 @@ public sealed class ProfileItemQueries(
             ct: ct);
     }
 
-    public Result<MultiChooseInviterBodyResponse> BuildChooseInviterBody(long queryId, string profileAddr, int program, string inviterAddr, int seqNo, string inviteAddr)
+    public Result<MultiChooseInviterBodyResponse> BuildChooseInviterBody(long queryId, int program, string inviterAddr, int seqNo, string inviteAddr)
     {
         try
         {
@@ -110,12 +112,42 @@ public sealed class ProfileItemQueries(
             builder.StoreAddress(new Address(inviteAddr));
             return Result<MultiChooseInviterBodyResponse>.Success(new MultiChooseInviterBodyResponse
             {
-                Boc = builder.Build().ToString("base64")
+                BocHex = builder.Build().ToString("hex").ToLower()
             });
         }
         catch (Exception e)
         {
             return Result<MultiChooseInviterBodyResponse>.Error(e.Message);
+        }
+    }
+
+    public Result<EditContentBodyResponse> BuildEditContentBody(long queryId, string login, string? imageUrl, string? firstName, string? lastName,
+        string? tgUsername)
+    {
+        try
+        {
+            var content = ProfileNftContent.ProfileToNftContent(
+                login: login,
+                imageUrl: imageUrl,
+                firstName: firstName,
+                lastName: lastName,
+                tgUsername: tgUsername);
+            
+            var contentCell = NftContentWriter.NftContentToCell(content);
+            
+            var builder = new CellBuilder();
+            builder.StoreUInt(0x1a0b9d51, 32); // Edit content op
+            builder.StoreUInt(queryId, 64);
+            builder.StoreRef(contentCell);
+            
+            return Result<EditContentBodyResponse>.Success(new EditContentBodyResponse
+            {
+                BocHex = builder.Build().ToString("hex").ToLower()
+            });
+        }
+        catch (Exception e)
+        {
+            return Result<EditContentBodyResponse>.Error(e.Message);
         }
     }
 
