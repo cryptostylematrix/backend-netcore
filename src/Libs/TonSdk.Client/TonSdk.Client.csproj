@@ -1,16 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-		<TargetFrameworks>net6.0;net7.0;netstandard2.1</TargetFrameworks>
+        <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>disable</ImplicitUsings>
-        <LangVersion>8.0</LangVersion>
+        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
         <RootNamespace>TonSdk.Client</RootNamespace>
-        <PackageId>TonSdk.Client</PackageId>
-        <Version>0.3.11</Version>
-        <Authors>Continuation Team</Authors>
-        <PackageDescription>Ton Client library for work with HTTP API and Lite Servers.</PackageDescription>
-        <RepositoryUrl>https://github.com/continuation-team/TonSdk.NET</RepositoryUrl>
-        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     </PropertyGroup>
 
     <ItemGroup>

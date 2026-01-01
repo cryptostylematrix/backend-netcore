@@ -13,6 +13,8 @@ COPY ["src/Modules/Contracts/Contracts.Application/Contracts.Application.csproj"
 COPY ["src/BuildingBlocks/Common/Common.csproj", "src/BuildingBlocks/Common/"]
 COPY ["src/Modules/Contracts/Contracts.Dto/Contracts.Dto.csproj", "src/Modules/Contracts/Contracts.Dto/"]
 COPY ["src/Modules/Contracts/Contracts.Presentation/Contracts.Presentation.csproj", "src/Modules/Contracts/Contracts.Presentation/"]
+COPY ["src/Libs/TonSdk.Core/TonSdk.Core.csproj", "src/Libs/TonSdk.Core/"]
+COPY ["src/Libs/TonSdk.Client/TonSdk.Client.csproj", "src/Libs/TonSdk.Client/"]
 COPY ["src/Modules/Matrix/Matrix.Infrastructure/Matrix.Infrastructure.csproj", "src/Modules/Matrix/Matrix.Infrastructure/"]
 COPY ["src/Modules/Matrix/Matrix.Application/Matrix.Application.csproj", "src/Modules/Matrix/Matrix.Application/"]
 COPY ["src/Modules/Matrix/Matrix.Dto/Matrix.Dto.csproj", "src/Modules/Matrix/Matrix.Dto/"]
