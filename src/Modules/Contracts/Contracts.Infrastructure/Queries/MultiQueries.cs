@@ -111,6 +111,85 @@ public sealed class MultiQueries(ITonClient tonClient, IOptions<TonContractAddre
         }
     }
 
+    private static Cell? PosToCell(string? parentAddr, int? pos)
+    {
+        if (parentAddr is null) return null;
+        if (pos is null) return null;
+
+        var notNullPos = (int)pos;
+        
+        var builder = new CellBuilder();
+        builder.StoreAddress(new Address(parentAddr));
+        builder.StoreUInt(notNullPos, 1);
+        return builder.Build();
+    }
+
+    public Result<BuyPlaceBodyResponse> BuildBuyPlaceBody(long queryId, int m, string profileAddr, string? parentAddr, int? pos)
+    {
+        try
+        {
+            var builder = new CellBuilder();
+            builder.StoreUInt(0x179b74a8, 32); // buy_place
+            builder.StoreUInt(queryId, 64);
+            builder.StoreUInt(m, 3);
+            builder.StoreAddress(new Address(profileAddr));
+            builder.StoreOptRef(PosToCell(parentAddr, pos));
+            
+            return Result<BuyPlaceBodyResponse>.Success(new BuyPlaceBodyResponse
+            {
+                BocHex = builder.Build().ToString("hex").ToLower()
+            });
+        }
+        catch (Exception e)
+        {
+            return Result<BuyPlaceBodyResponse>.Error(e.Message);
+        }
+    }
+
+    public Result<LockPosBodyResponse> BuildLockPosBody(long queryId, int m, string profileAddr, string parentAddr, int pos)
+    {
+        try
+        {
+            var builder = new CellBuilder();
+            builder.StoreUInt(0x6d31ad42, 32); // lock_pos
+            builder.StoreUInt(queryId, 64);
+            builder.StoreUInt(m, 3);
+            builder.StoreAddress(new Address(profileAddr));
+            builder.StoreRef(PosToCell(parentAddr, pos));
+            
+            return Result<LockPosBodyResponse>.Success(new LockPosBodyResponse
+            {
+                BocHex = builder.Build().ToString("hex").ToLower()
+            });
+        }
+        catch (Exception e)
+        {
+            return Result<LockPosBodyResponse>.Error(e.Message);
+        }
+    }
+
+    public Result<UnlockPosBodyResponse> BuildUnlockPosBody(long queryId, int m, string profileAddr, string parentAddr, int pos)
+    {
+        try
+        {
+            var builder = new CellBuilder();
+            builder.StoreUInt(0x77d27591, 32); // unlock_pos
+            builder.StoreUInt(queryId, 64);
+            builder.StoreUInt(m, 3);
+            builder.StoreAddress(new Address(profileAddr));
+            builder.StoreRef(PosToCell(parentAddr, pos));
+            
+            return Result<UnlockPosBodyResponse>.Success(new UnlockPosBodyResponse
+            {
+                BocHex = builder.Build().ToString("hex").ToLower()
+            });
+        }
+        catch (Exception e)
+        {
+            return Result<UnlockPosBodyResponse>.Error(e.Message);
+        }
+    }
+
     // -----------------------------
     // DTO parsers
     // -----------------------------

@@ -1,6 +1,5 @@
 using System.Security.Cryptography;
 using Contracts.Infrastructure.NftContent;
-using Contracts.Infrastructure.Ton;
 using static Contracts.Infrastructure.Caching.CacheEntryOptions;
 
 namespace Contracts.Infrastructure.Queries;
