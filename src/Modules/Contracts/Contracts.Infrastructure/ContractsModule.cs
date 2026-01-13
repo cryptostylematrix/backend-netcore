@@ -51,6 +51,7 @@ public static class ContractsModule
             services.AddScoped<IProfileCollectionQueries, ProfileCollectionQueries>();
             services.AddScoped<IPlaceQueries, PlaceQueries>();
             services.AddScoped<IGeneralQueries, GeneralQueries>();
+            services.AddScoped<IWalletQueries, WalletQueries>();
 
             return services;
         }
