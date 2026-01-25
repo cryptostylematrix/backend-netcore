@@ -38,7 +38,7 @@ builder.Services.AddDistributedMemoryCache();
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("DefaultCors", policy =>
+    options.AddPolicy("RestrictedCors", policy =>
     {
         policy
             .SetIsOriginAllowed(origin =>
@@ -46,12 +46,10 @@ builder.Services.AddCors(options =>
                 if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri))
                     return false;
 
-                // allow http(s)://localhost:anyPort
                 if (uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase) &&
                     (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
                     return true;
 
-                // allow https://cryptostylematrix.github.io
                 if (uri.Scheme == Uri.UriSchemeHttps &&
                     uri.Host.Equals("cryptostylematrix.github.io", StringComparison.OrdinalIgnoreCase))
                     return true;
@@ -61,7 +59,17 @@ builder.Services.AddCors(options =>
             .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
             .WithHeaders("Content-Type", "Authorization", "X-Requested-With");
     });
+
+    // 2Open policy (allow all hosts)
+    options.AddPolicy("OpenCors", policy =>
+    {
+        policy
+            .AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader();
+    });
 });
+
 
 
 var app = builder.Build();
@@ -72,7 +80,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors("DefaultCors");
+//app.UseCors("RestrictedCors");
+app.UseCors("OpenCors");
 
 app.UseFastEndpoints();
 
