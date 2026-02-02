@@ -18,4 +18,8 @@ public interface IProfileItemQueries
         string? firstName, 
         string? lastName, 
         string? tgUsername);
+    
+    
+    Task<Result> InvalidateNftDataCacheAsync(string addr, CancellationToken ct = default);
+    Task<Result> InvalidateProgramsCacheAsync(string addr, CancellationToken ct = default);
 }

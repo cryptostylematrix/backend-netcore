@@ -180,6 +180,37 @@ public sealed class ProfileItemQueries(
         }
     }
 
+    public async Task<Result> InvalidateNftDataCacheAsync(string addr, CancellationToken ct = default)
+    {
+        try
+        {
+            var normalizedAddr = new Address(addr).ToString();
+            var key = $"{_cacheOpts.KeyPrefix}:profileItem:nftData:{normalizedAddr}";
+            await cache.RemoveAsync(key, ct);
+            return Result.Success();
+        }
+        catch (Exception e)
+        {
+            return Result.Error(e.Message);
+        }
+    }
+
+    public async Task<Result> InvalidateProgramsCacheAsync(string addr, CancellationToken ct = default)
+    {
+        try
+        {
+            var normalizedAddr = new Address(addr).ToString();
+            var key = $"{_cacheOpts.KeyPrefix}:profileItem:programs:{normalizedAddr}";
+            await cache.RemoveAsync(key, ct);
+            return Result.Success();
+        }
+        catch (Exception e)
+        {
+            return Result.Error(e.Message);
+        }
+    }
+    
+    
     // -------------------------
     // Programs: dict parsing
     // -------------------------
