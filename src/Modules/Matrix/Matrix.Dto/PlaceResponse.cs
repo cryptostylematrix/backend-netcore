@@ -23,7 +23,7 @@ public sealed class PlaceResponse
     public string Addr { get; init; } = null!;
 
     [JsonPropertyName("parent_addr")]
-    public string ParentAddr { get; init; } = null!;
+    public string? ParentAddr { get; init; } = null!;
 
     [JsonPropertyName("place_number")]
     public int PlaceNumber { get; init; }

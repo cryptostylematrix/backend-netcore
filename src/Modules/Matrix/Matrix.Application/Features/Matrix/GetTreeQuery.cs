@@ -43,7 +43,13 @@ internal sealed class GetTreeQueryHandler(
 
         var treeInfo = new TreeInfo(root, nextMp, lockMps);
 
-        var npiSelected   = treeInfo.GetNodePosInfo(null, selected.Mp);
+        PlaceResponse? parentOfSelected = null;
+        if (selected.ParentAddr is not null)
+        {
+            parentOfSelected = await placeQueries.GetPlaceByAddressAsync(selected.ParentAddr, ct);
+        }
+
+        var npiSelected   = treeInfo.GetNodePosInfo(parentOfSelected, selected.Mp);
 
         var npiLeft       = treeInfo.GetNodePosInfo(selected, $"{selected.Mp}0");
         var npiLeftLeft   = treeInfo.GetNodePosInfo(leftRow,   $"{selected.Mp}00");
