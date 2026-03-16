@@ -10,6 +10,7 @@ public class MarkeetingTransactionMessageFactory
         
         var parentAddr = string.Empty;
         ulong pos = 0;
+        var posSet = false;
 
         ulong queryId = 0;
         ulong key = 0;
@@ -78,6 +79,7 @@ public class MarkeetingTransactionMessageFactory
                 if (posSlice.RemainderBits > 0)
                 {
                     pos = (ulong)posSlice.LoadUInt(1);
+                    posSet = true;
                 }
                 
                 comment = $"m:{m}  parent:{parentAddr}  pos:{pos}";
@@ -104,6 +106,7 @@ public class MarkeetingTransactionMessageFactory
                 if (posSlice.RemainderBits > 0)
                 {
                     pos = (ulong)posSlice.LoadUInt(1);
+                    posSet = true;
                 }
                 
                 comment = $"m:{m}  parent:{parentAddr}  pos:{pos}";
@@ -166,7 +169,8 @@ public class MarkeetingTransactionMessageFactory
             Key = key,
             M = m,
             ParentAddr =  parentAddr,
-            Pos = pos
+            Pos = pos,
+            PosSet = posSet,
         };
     }
     
@@ -179,6 +183,10 @@ public class MarkeetingTransactionMessageFactory
         ulong queryId = 0;
         ulong key = 0;
         ulong m = 0;
+        
+        var parentAddr = string.Empty;
+        ulong pos = 0;
+        var posSet = false;
         
         try
         {
@@ -258,7 +266,10 @@ public class MarkeetingTransactionMessageFactory
             
             QueryId = queryId,
             Key = key,
-            M = m
+            M = m,
+            
+            Pos =  pos,
+            PosSet = posSet,
         };
     }
     

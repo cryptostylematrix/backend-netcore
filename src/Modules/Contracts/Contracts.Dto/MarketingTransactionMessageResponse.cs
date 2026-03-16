@@ -34,4 +34,7 @@ public class MarketingTransactionMessageResponse
     
     [JsonPropertyName("pos")]
     public ulong Pos { get; init; }
+    
+    [JsonPropertyName("pos_set")]
+    public bool PosSet { get; init; }
 }
