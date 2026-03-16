@@ -1,8 +1,8 @@
 namespace Contracts.Infrastructure.Queries;
 
-public sealed class WalletQueries(ITonClient tonClient) : IWalletQueries
+public sealed class MarketingQueries(ITonClient tonClient) : IMarketingQueries
 {
-    public async Task<Result<WalletTransactionHistoryResponse>> GetWalletHistoryAsync(
+    public async Task<Result<MarketingTransactionHistoryResponse>> GetMarketingHistoryAsync(
         string addr, 
         uint limit,
         ulong? lt,
@@ -20,16 +20,16 @@ public sealed class WalletQueries(ITonClient tonClient) : IWalletQueries
                 archival: true);
 
             if (result is null)
-                return Result<WalletTransactionHistoryResponse>.Error(nameof(ContractErrors.GetMethodReturnsNull));
+                return Result<MarketingTransactionHistoryResponse>.Error(nameof(ContractErrors.GetMethodReturnsNull));
             
-            var response = new WalletTransactionHistoryResponse
+            var response = new MarketingTransactionHistoryResponse
             {
-                Items = result.Select(tr => new WalletTransactionResponse
+                Items = result.Select(tr => new MarketingTransactionResponse
                 {
                     Lt = tr.TransactionId.Lt,
                     Hash = tr.TransactionId.Hash,
                     UTime = tr.UTime,
-                    Messages = WalletTransactionMessageFactory.Create(tr)
+                    Messages = MarkeetingTransactionMessageFactory.Create(tr)
                 }).ToArray(),
             };
         
@@ -37,7 +37,7 @@ public sealed class WalletQueries(ITonClient tonClient) : IWalletQueries
         }
         catch (Exception exc)
         {
-            return Result<WalletTransactionHistoryResponse>.Error(exc.Message);
+            return Result<MarketingTransactionHistoryResponse>.Error(exc.Message);
         }
     }
 }

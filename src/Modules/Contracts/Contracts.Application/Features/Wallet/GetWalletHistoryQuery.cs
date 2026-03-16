@@ -4,12 +4,12 @@ public sealed record GetWalletHistoryQuery(
     string Addr,
     uint Limit,
     ulong? Lt,
-    string? Hash) : IQuery<TransactionHistoryResponse>;
+    string? Hash) : IQuery<WalletTransactionHistoryResponse>;
 
 internal sealed class GetWalletHistoryQueryHandler(IWalletQueries walletQueries)
-    : IQueryHandler<GetWalletHistoryQuery, TransactionHistoryResponse>
+    : IQueryHandler<GetWalletHistoryQuery, WalletTransactionHistoryResponse>
 {
-    public Task<Result<TransactionHistoryResponse>> Handle(GetWalletHistoryQuery request, CancellationToken ct)
+    public Task<Result<WalletTransactionHistoryResponse>> Handle(GetWalletHistoryQuery request, CancellationToken ct)
         => walletQueries.GetWalletHistoryAsync(
             addr: request.Addr,
             limit: request.Limit,

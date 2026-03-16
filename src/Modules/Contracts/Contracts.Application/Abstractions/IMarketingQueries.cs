@@ -1,11 +1,8 @@
 namespace Contracts.Application.Abstractions;
 
-
-
-
-public interface IWalletQueries
+public interface IMarketingQueries
 {
-    Task<Result<WalletTransactionHistoryResponse>> GetWalletHistoryAsync(
+    Task<Result<MarketingTransactionHistoryResponse>> GetMarketingHistoryAsync(
         string addr, 
         uint limit,
         ulong? lt,

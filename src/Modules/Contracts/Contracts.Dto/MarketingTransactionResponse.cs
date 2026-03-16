@@ -1,6 +1,6 @@
 namespace Contracts.Dto;
 
-public sealed class TransactionResponse
+public class MarketingTransactionResponse
 {
     [JsonPropertyName("hash")]
     public string Hash { get; init; } = null!;
@@ -12,5 +12,5 @@ public sealed class TransactionResponse
     public uint UTime { get; init; }
 
     [JsonPropertyName("messages")]
-    public TransactionMessageResponse[] Messages { get; init; } = null!;
+    public MarketingTransactionMessageResponse[] Messages { get; init; } = null!;
 }

@@ -1,10 +1,10 @@
 namespace Contracts.Infrastructure;
 
 
-internal static class TransactionMessageFactory
+internal static class WalletTransactionMessageFactory
 {
     
-    private static TransactionMessageResponse CreateFromInMsg(RawMessage inMsg)
+    private static WalletTransactionMessageResponse CreateFromInMsg(RawMessage inMsg)
     {
         string op;
         var comment = string.Empty;
@@ -55,7 +55,7 @@ internal static class TransactionMessageFactory
             op = inMsg.OpCode.ToLowerInvariant();
         }
         
-        return new TransactionMessageResponse
+        return new WalletTransactionMessageResponse
         {
             Addr = inMsg.Source.ToString(),
             Value = inMsg.Value.ToDecimal(),
@@ -65,7 +65,7 @@ internal static class TransactionMessageFactory
         };
     }
     
-    private static TransactionMessageResponse CreateFromOutMsg(RawMessage outMsg)
+    private static WalletTransactionMessageResponse CreateFromOutMsg(RawMessage outMsg)
     {
         string op;
         var comment = string.Empty;
@@ -165,7 +165,7 @@ internal static class TransactionMessageFactory
             op = outMsg.OpCode.ToLowerInvariant();
         }
         
-        return new TransactionMessageResponse
+        return new WalletTransactionMessageResponse
         {
             Addr = outMsg.Destination.ToString(),
             Value = outMsg.Value.ToDecimal() * -1m,
@@ -176,9 +176,9 @@ internal static class TransactionMessageFactory
     }
     
     
-    public static TransactionMessageResponse[] Create(TransactionsInformationResult transaction)
+    public static WalletTransactionMessageResponse[] Create(TransactionsInformationResult transaction)
     {
-        List<TransactionMessageResponse> messages = [];
+        List<WalletTransactionMessageResponse> messages = [];
 
         if (transaction.InMsg.Source is not null) // skip external messages
         {

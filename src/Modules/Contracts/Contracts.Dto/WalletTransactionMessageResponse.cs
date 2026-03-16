@@ -1,6 +1,6 @@
 namespace Contracts.Dto;
 
-public sealed class TransactionMessageResponse
+public sealed class WalletTransactionMessageResponse
 {
     [JsonPropertyName("addr")]
     public string Addr { get; init; }  = null!;

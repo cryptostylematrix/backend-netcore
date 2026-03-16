@@ -3,7 +3,7 @@ using Contracts.Application.Features.Wallet;
 namespace Contracts.Presentation.Endpoints.Wallet.GetWalletHistory;
 
 
-public sealed class GetWalletHistoryEndpoint(ISender sender) : Endpoint<GetWalletHistoryRequest, TransactionHistoryResponse>
+public sealed class GetWalletHistoryEndpoint(ISender sender) : Endpoint<GetWalletHistoryRequest, WalletTransactionHistoryResponse>
 {
     public override void Configure()
     {
@@ -21,17 +21,17 @@ public sealed class GetWalletHistoryEndpoint(ISender sender) : Endpoint<GetWalle
                 Lt = 123,
                 Hash = "abc...",
             };
-            s.ResponseExamples[StatusCodes.Status200OK] = new TransactionHistoryResponse
+            s.ResponseExamples[StatusCodes.Status200OK] = new WalletTransactionHistoryResponse
             {
                 Items =
                 [
-                    new TransactionResponse
+                    new WalletTransactionResponse
                     {
                         Lt = 123,
                         Hash = "abc...",
                         UTime = 123,
                         Messages = [
-                            new TransactionMessageResponse
+                            new WalletTransactionMessageResponse
                             {
                                 Addr = "E...",
                                 Comment = "comment",
