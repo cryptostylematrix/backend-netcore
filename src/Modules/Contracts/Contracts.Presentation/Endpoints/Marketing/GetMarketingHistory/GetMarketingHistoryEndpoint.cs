@@ -42,7 +42,9 @@ public sealed class GetMarketingHistoryEndpoint(ISender sender) : Endpoint<GetMa
                                 QueryId = 123,
                                 M = 2,
                                 ParentAddr = "E...",
-                                Pos = 0
+                                Pos = 0,
+                                PosSet = true
+                                
                             }
                         ]
                     }
