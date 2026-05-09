@@ -98,7 +98,7 @@ public sealed class ProfileItemQueries(
             ct: ct);
     }
 
-    public Result<MultiChooseInviterBodyResponse> BuildChooseInviterBody(long queryId, int program, string inviterAddr, int seqNo, string inviteAddr)
+    public Result<ChooseInviterBodyResponse> BuildChooseInviterBody(long queryId, uint program, string inviterAddr, int seqNo, string inviteAddr)
     {
         try
         {
@@ -109,14 +109,14 @@ public sealed class ProfileItemQueries(
             builder.StoreAddress(new Address(inviterAddr));
             builder.StoreUInt(seqNo, 32);
             builder.StoreAddress(new Address(inviteAddr));
-            return Result<MultiChooseInviterBodyResponse>.Success(new MultiChooseInviterBodyResponse
+            return Result<ChooseInviterBodyResponse>.Success(new ChooseInviterBodyResponse
             {
                 BocHex = builder.Build().ToString("hex").ToLower()
             });
         }
         catch (Exception e)
         {
-            return Result<MultiChooseInviterBodyResponse>.Error(e.Message);
+            return Result<ChooseInviterBodyResponse>.Error(e.Message);
         }
     }
 
@@ -168,10 +168,12 @@ public sealed class ProfileItemQueries(
 
             var programsCell = result.Value.Stack.TryGetClass<Cell>(0);
             var multi = ParseMultiProgram(programsCell);
+            var neo = ParseNeoProgram(programsCell);
 
             return Result.Success(new ProfileProgramsResponse
             {
-                Multi = multi
+                Multi = multi,
+                Neo = neo
             });
         }
         catch (Exception exc)
@@ -226,6 +228,31 @@ public sealed class ProfileItemQueries(
             const uint multiHash = 0x1ce8c484;
 
             var bytes = BitConverter.GetBytes(multiHash);
+            if (BitConverter.IsLittleEndian) Array.Reverse(bytes);
+
+            var key = new Bits(bytes);
+
+            return dict.Get(key);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+    
+    private static ProgramDataResponse? ParseNeoProgram(Cell? programsCell)
+    {
+        if (programsCell is null) return null;
+
+        try
+        {
+            var dict = Hashmap<Bits, ProgramDataResponse>.Deserialize(programsCell, ProgramDictOptions);
+
+            const uint neoHash = 0x435acabf;
+            //  static multi = 0x1ce8c484;
+            //   static neo = 0x435acabf;
+
+            var bytes = BitConverter.GetBytes(neoHash);
             if (BitConverter.IsLittleEndian) Array.Reverse(bytes);
 
             var key = new Bits(bytes);

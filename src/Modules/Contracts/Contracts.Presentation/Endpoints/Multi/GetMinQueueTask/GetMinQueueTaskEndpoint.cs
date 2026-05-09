@@ -11,8 +11,8 @@ public sealed class GetMinQueueTaskEndpoint(ISender sender) : EndpointWithoutReq
         AllowAnonymous();
         Summary(s =>
         {
-            s.Summary = "Create a payment";
-            s.Description = "Create a payment";
+            s.Summary = "Get Min Queue Task";
+            s.Description = "Get Min Queue Task";
             s.ResponseExamples[StatusCodes.Status200OK] = new MinQueueTaskResponse
             {
                 Key = 123, 

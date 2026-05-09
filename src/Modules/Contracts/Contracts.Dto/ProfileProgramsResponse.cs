@@ -4,6 +4,9 @@ public sealed class ProfileProgramsResponse
 {
     [JsonPropertyName("multi")]
     public ProgramDataResponse? Multi { get; init; }
+    
+    [JsonPropertyName("neo")]
+    public ProgramDataResponse? Neo { get; init; }
 }
 
 public sealed class ProgramDataResponse

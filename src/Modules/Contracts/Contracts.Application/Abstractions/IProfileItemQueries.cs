@@ -4,9 +4,9 @@ public interface IProfileItemQueries
 {
     Task<Result<ProfileDataResponse>> GetNftDataAsync(string addr, CancellationToken ct = default);
     Task<Result<ProfileProgramsResponse>> GetProgramsAsync(string addr, CancellationToken ct = default);
-    Result<MultiChooseInviterBodyResponse> BuildChooseInviterBody(
+    Result<ChooseInviterBodyResponse> BuildChooseInviterBody(
         long queryId,
-        int program, 
+        uint program, 
         string inviterAddr, 
         int seqNo, 
         string inviteAddr);

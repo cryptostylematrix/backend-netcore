@@ -23,6 +23,7 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddContractsModule(builder.Configuration);
 builder.Services.AddMatrixModule(builder.Configuration);
+builder.Services.AddMarketingModule(builder.Configuration);
 
 // Distributed cache (choose ONE):
 // 1) In-memory distributed cache (dev / single instance)
