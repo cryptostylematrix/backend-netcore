@@ -54,6 +54,8 @@ public static class ContractsModule
             services.AddScoped<IWalletQueries, WalletQueries>();
             services.AddScoped<IMarketingQueries, MarketingQueries>();
             services.AddScoped<IMatrixPlaceQueries, MatrixPlaceQueries>();
+            services.AddScoped<IJetttonMinterQueries, JetttonMinterQueries>();
+            services.AddScoped<IJettonWalletQueries, JettonWalletQueries>();
 
             return services;
         }

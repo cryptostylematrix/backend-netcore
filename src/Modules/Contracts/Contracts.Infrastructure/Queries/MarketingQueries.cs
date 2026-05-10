@@ -1,5 +1,3 @@
-using System.Collections.Concurrent;
-
 namespace Contracts.Infrastructure.Queries;
 
 public sealed class MarketingQueries(ITonClient tonClient) : IMarketingQueries
