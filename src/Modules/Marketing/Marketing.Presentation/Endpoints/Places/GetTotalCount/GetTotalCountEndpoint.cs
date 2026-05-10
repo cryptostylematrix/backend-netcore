@@ -7,7 +7,7 @@ public sealed class GetTotalCountEndpoint(ISender sender) : Endpoint<GetTotalCou
     public override void Configure()
     {
         Get("/api/marketing/{marketing_addr}/places/total-count");
-        Tags("Matrix");
+        Tags("Marketing");
         AllowAnonymous();
         Summary(s =>
         {

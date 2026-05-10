@@ -7,7 +7,7 @@ public sealed class GetPathEndpoint(ISender sender) : Endpoint<GetPathRequest, I
     public override void Configure()
     {
         Get("/api/marketing/{marketing_addr}/path");
-        Tags("Matrix");
+        Tags("Marketing");
         AllowAnonymous();
         Summary(s =>
         {

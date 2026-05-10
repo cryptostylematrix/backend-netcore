@@ -1,23 +1,24 @@
 using Marketing.Application.Features.Places;
 
-namespace Marketing.Presentation.Endpoints.Places.GetRootPlace;
+namespace Marketing.Presentation.Endpoints.Places.GetPlaceByTaskKey;
 
-public sealed class GetRootPlaceEndpoint(ISender sender) : Endpoint<GetRootPlaceRequest, PlaceResponse>
+
+public sealed class GetPlaceByTaskKeyEndpoint(ISender sender) : 
+    Endpoint<GetPlaceByTaskKeyRequest, PlaceResponse>
 {
     public override void Configure()
     {
-        Get("/api/marketing/{marketing_addr}/root");
+        Get("/api/marketing/{marketing_addr}/place-by-task-key");
         Tags("Marketing");
         AllowAnonymous();
         Summary(s =>
         {
-            s.Summary = "Get Root Place";
-            s.Description = "Get Root Place";
-            s.ExampleRequest = new GetRootPlaceRequest
+            s.Summary = "Get Place by task key";
+            s.Description = "Get Place by task key";
+            s.ExampleRequest = new GetPlaceByTaskKeyRequest
             {
                 MarketingAddr = "E...",
-                ProfileAddr = "E...",
-                M = 3
+                TaskKey = 123,
             };
             s.ResponseExamples[StatusCodes.Status200OK] = new PlaceResponse
             {
@@ -33,12 +34,11 @@ public sealed class GetRootPlaceEndpoint(ISender sender) : Endpoint<GetRootPlace
         });
     }
 
-    public override async Task HandleAsync(GetRootPlaceRequest request, CancellationToken ct)
+    public override async Task HandleAsync(GetPlaceByTaskKeyRequest request, CancellationToken ct)
     {
-        var query = new GetRootPlaceQuery(
+        var query = new GetPlaceByTaskKeyQuery(
             MarketingAddr: request.MarketingAddr,
-            M: request.M,
-            ProfileAddr: request.ProfileAddr);
+            TaskKey: request.TaskKey);
         
         var result = await sender.Send(query, ct);
         

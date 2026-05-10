@@ -187,6 +187,44 @@ public sealed class MarketingQueries(ITonClient tonClient) : IMarketingQueries
         }
     }
     
+    public async Task<Result<PlaceAddressResponse>> GetPlaceAddrAsync(string marketingAddr, int m, string? parentAddr, int pos, CancellationToken ct = default)
+    {
+        try
+        {
+            var stackItems = new IStackItem[]
+            {
+                new VmStackInt() { Value = m },
+                new VmStackSlice() { Value = string.IsNullOrWhiteSpace(parentAddr)?
+                    new CellBuilder().StoreAddress(null).Build().Parse() :
+                    new CellBuilder().StoreAddress(new Address(parentAddr)).Build().Parse() },
+                new VmStackInt() { Value = pos },
+            };
+            
+            var result = await tonClient.RunGetMethod(
+                new Address(marketingAddr),
+                "get_place_addr",
+                stackItems);
+
+            if (result is null)
+                return Result<PlaceAddressResponse>.Error(nameof(ContractErrors.GetMethodReturnsNull));
+
+            if (result.Value.ExitCode != 0)
+                return Result<PlaceAddressResponse>.Error(nameof(ContractErrors.GetMethodFailed));
+            
+          
+            var addr = ((Cell)result.Value.Stack[0]).Parse().LoadAddress()!.ToString();
+           
+
+            return Result.Success(new PlaceAddressResponse
+            {
+               Addr = addr,
+            });
+        }
+        catch (Exception exc)
+        {
+            return Result<PlaceAddressResponse>.Error(exc.Message);
+        }
+    }
 
     public async Task<Result<FirstTaskResponse>> GetFirstTaskAsync(string marketingAddr, CancellationToken ct = default)
     {

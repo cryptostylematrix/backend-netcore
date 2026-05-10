@@ -15,4 +15,11 @@ public interface ILockQueries
         int page,
         int pageSize,
         CancellationToken ct);
+    
+    Task<LockResponse?> GetLockByPlaceAddrAndLockedPosAsync(
+        string marketingAddr,
+        string placeAddr,
+        uint lockedPos,
+        string profileAddr,
+        CancellationToken cancellationToken);
 }

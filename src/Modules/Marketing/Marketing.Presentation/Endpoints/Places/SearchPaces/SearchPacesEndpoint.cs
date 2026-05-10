@@ -7,7 +7,7 @@ public sealed class SearchPacesEndpoint(ISender sender) : Endpoint<SearchPacesRe
     public override void Configure()
     {
         Get("/api/marketing/{marketing_addr}/search");
-        Tags("Matrix");
+        Tags("Marketing");
         AllowAnonymous();
         Summary(s =>
         {

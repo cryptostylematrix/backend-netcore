@@ -45,4 +45,7 @@ public interface IMarketingQueries
     
     Task<Result<FirstTaskResponse>> GetFirstTaskAsync(string marketingAddr, CancellationToken ct = default);
     Task<Result<MarketingDataResponse>> GetMarketingDataAsync(string marketingAddr, CancellationToken ct = default);
+
+    Task<Result<PlaceAddressResponse>> GetPlaceAddrAsync(string marketingAddr, int m, string? parentAddr, int pos,
+        CancellationToken ct = default);
 }

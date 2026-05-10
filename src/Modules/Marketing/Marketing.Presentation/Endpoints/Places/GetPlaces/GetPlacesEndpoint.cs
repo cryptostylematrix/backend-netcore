@@ -7,7 +7,7 @@ public sealed class GetPlacesEndpoint(ISender sender) : Endpoint<GetPlacesReques
     public override void Configure()
     {
         Get("/api/marketing/{marketing_addr}/places");
-        Tags("Matrix");
+        Tags("Marketing");
         AllowAnonymous();
         Summary(s =>
         {

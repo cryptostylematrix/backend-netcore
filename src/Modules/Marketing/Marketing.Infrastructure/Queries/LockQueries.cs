@@ -103,4 +103,35 @@ public sealed class LockQueries(NpgsqlDataSource dataSource) : ILockQueries
             Items = items
         };
     }
+    
+    
+    public async Task<LockResponse?> GetLockByPlaceAddrAndLockedPosAsync(
+        string marketingAddr,
+        string placeAddr,
+        uint lockedPos,
+        string profileAddr,
+        CancellationToken ct)
+    {
+        await using var conn = await dataSource.OpenConnectionAsync(ct);
+
+        const string sql = LockSelectSql + """
+                                               AND marketing_addr = @marketingAddr
+                                               AND place_addr = @placeAddr
+                                               AND locked_pos = @lockedPos
+                                               AND profile_addr = @profileAddr
+                                               LIMIT 1;
+                                           """;
+
+        return await conn.QuerySingleOrDefaultAsync<LockResponse>(
+            new CommandDefinition(
+                sql,
+                new
+                {
+                    marketingAddr,
+                    placeAddr,
+                    lockedPos,
+                    profileAddr
+                },
+                cancellationToken: ct));
+    }
 }

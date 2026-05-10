@@ -78,4 +78,15 @@ public interface IPlaceQueries
         int page,
         int pageSize,
         CancellationToken cancellationToken);
+
+    Task<PlaceResponse?> GetPlaceByTaskKeyAsync(
+        string marketingAddr,
+        uint taskKey,
+        CancellationToken ct);
+
+    Task<uint> GetMaxPlaceNumberAsync(
+        string marketingAddr,
+        byte m,
+        string profileAddr,
+        CancellationToken ct);
 }

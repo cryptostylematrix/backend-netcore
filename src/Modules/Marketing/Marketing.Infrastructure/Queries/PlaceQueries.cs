@@ -92,13 +92,13 @@ public sealed class PlaceQueries(NpgsqlDataSource dataSource) : IPlaceQueries
         await using var conn = await dataSource.OpenConnectionAsync(ct);
 
         const string sql = PlaceSelectSql + """
-            AND marketing_addr = @marketingAddr
-            AND m = @m
-            AND mp LIKE @prefix
-            AND seq_no < width
-            ORDER BY length(mp) ASC, mp ASC
-            LIMIT @limit OFFSET @offset;
-        """;
+                                                AND marketing_addr = @marketingAddr
+                                                AND m = @m
+                                                AND mp LIKE @prefix
+                                                AND (width = 0 OR seq_no < width)
+                                                ORDER BY length(mp) ASC, mp ASC
+                                                LIMIT @limit OFFSET @offset;
+                                            """;
 
         var items = await conn.QueryAsync<PlaceResponse>(
             new CommandDefinition(
@@ -425,5 +425,55 @@ public sealed class PlaceQueries(NpgsqlDataSource dataSource) : IPlaceQueries
             TotalPages = Math.Max(1, (int)Math.Ceiling((double)total / safePageSize)),
             Items = items
         };
+    }
+    
+    public async Task<PlaceResponse?> GetPlaceByTaskKeyAsync(
+        string marketingAddr,
+        uint taskKey,
+        CancellationToken ct)
+    {
+        await using var conn = await dataSource.OpenConnectionAsync(ct);
+
+        const string sql = PlaceSelectSql + """
+                                                AND marketing_addr = @marketingAddr
+                                                AND task_key = @taskKey
+                                                LIMIT 1;
+                                            """;
+
+        return await conn.QuerySingleOrDefaultAsync<PlaceResponse>(
+            new CommandDefinition(
+                sql,
+                new { marketingAddr, taskKey },
+                cancellationToken: ct));
+    }
+    
+    public async Task<uint> GetMaxPlaceNumberAsync(
+        string marketingAddr,
+        byte m,
+        string profileAddr,
+        CancellationToken ct)
+    {
+        await using var conn = await dataSource.OpenConnectionAsync(ct);
+
+        const string sql = """
+                               SELECT COALESCE(MAX(place_number), 0)
+                               FROM marketing_places
+                               WHERE marketing_addr = @marketingAddr
+                                 AND m = @m
+                                 AND profile_addr = @profileAddr;
+                           """;
+
+        var value = await conn.ExecuteScalarAsync<long>(
+            new CommandDefinition(
+                sql,
+                new
+                {
+                    marketingAddr,
+                    m,
+                    profileAddr
+                },
+                cancellationToken: ct));
+
+        return (uint)value;
     }
 }
