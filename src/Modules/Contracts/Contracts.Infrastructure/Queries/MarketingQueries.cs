@@ -126,7 +126,7 @@ public sealed class MarketingQueries(ITonClient tonClient) : IMarketingQueries
             builder.StoreAddress(new Address(marketingAddr));   // destination
             builder.StoreAddress(new Address(senderAddr));      // response_address
             builder.StoreUInt(0, 1);                        // custom_payload:(Maybe ^Cell)
-            builder.StoreCoins(new Coins(fee));                 // forward_ton_amount:Coins
+            builder.StoreCoins(new Coins(fee, new CoinsOptions(IsNano: true)));                 // forward_ton_amount:Coins
             builder.StoreUInt(1, 1);                        // forward_payload:(Either Cell ^Cell)
             builder.StoreRef(fpBuilder.Build());
             
