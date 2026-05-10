@@ -122,7 +122,7 @@ public sealed class MarketingQueries(ITonClient tonClient) : IMarketingQueries
             var builder = new CellBuilder();
             builder.StoreUInt(0x0f8a7ea5, 32);              // transfer
             builder.StoreUInt(queryId, 64);
-            builder.StoreCoins(new Coins(amount));              // jetton_amount
+            builder.StoreCoins(new Coins(amount, new CoinsOptions(IsNano: true)));              // jetton_amount
             builder.StoreAddress(new Address(marketingAddr));   // destination
             builder.StoreAddress(new Address(senderAddr));      // response_address
             builder.StoreUInt(0, 1);                        // custom_payload:(Maybe ^Cell)
