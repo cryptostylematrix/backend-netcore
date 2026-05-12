@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using Contracts.Infrastructure.Helpers;
 using Contracts.Infrastructure.NftContent;
 using static Contracts.Infrastructure.Caching.CacheEntryOptions;
 
@@ -93,7 +94,9 @@ public sealed class ProfileItemQueries(
             cache,
             key,
             fetch: _ => FetchProgramsAsync(normalizedAddr),
-            shouldCache: dto => dto.Multi is not null && dto.Multi.Confirmed == 1,
+            shouldCache: dto =>
+                dto.Count > 0 &&
+                dto.All(x => x.Values.All(p => p.Confirmed == 1)),
             options: TtlDays(_cacheOpts.LongTtlDays),
             ct: ct);
     }
@@ -150,7 +153,6 @@ public sealed class ProfileItemQueries(
         }
     }
 
-
     private async Task<Result<ProfileProgramsResponse>> FetchProgramsAsync(string addr)
     {
         try
@@ -167,20 +169,84 @@ public sealed class ProfileItemQueries(
                 return Result<ProfileProgramsResponse>.Error(nameof(ContractErrors.GetMethodFailed));
 
             var programsCell = result.Value.Stack.TryGetClass<Cell>(0);
-            var multi = ParseMultiProgram(programsCell);
-            var neo = ParseNeoProgram(programsCell);
 
-            return Result.Success(new ProfileProgramsResponse
-            {
-                Multi = multi,
-                Neo = neo
-            });
+            var programs = ParsePrograms(programsCell);
+
+            return Result.Success(programs);
         }
         catch (Exception exc)
         {
             return Result<ProfileProgramsResponse>.Error(exc.Message);
         }
     }
+    
+    private static ProfileProgramsResponse ParsePrograms(Cell? programsCell)
+    {
+        var response = new ProfileProgramsResponse();
+
+        if (programsCell is null)
+            return response;
+
+        try
+        {
+            var dict = Hashmap<Bits, ProgramDataResponse>.Deserialize(
+                programsCell,
+                ProgramDictOptions);
+
+            foreach (var item in dict.GetEntries(ProgramDictOptions))
+            {
+                var keyHex = BitsToHex(item.Key);
+
+                response.Add(new Dictionary<string, ProgramDataResponse>
+                {
+                    [keyHex] = item.Value
+                });
+            }
+
+            return response;
+        }
+        catch
+        {
+            return response;
+        }
+    }
+    
+    private static string BitsToHex(Bits bits)
+    {
+        var bytes = bits.ToBytes();
+        return Convert.ToHexString(bytes);
+    }
+
+    // private async Task<Result<ProfileProgramsResponse>> FetchProgramsAsync(string addr)
+    // {
+    //     try
+    //     {
+    //         var result = await tonClient.RunGetMethod(
+    //             new Address(addr),
+    //             "get_programs",
+    //             Array.Empty<IStackItem>());
+    //
+    //         if (result is null)
+    //             return Result<ProfileProgramsResponse>.Error(nameof(ContractErrors.GetMethodReturnsNull));
+    //
+    //         if (result.Value.ExitCode != 0)
+    //             return Result<ProfileProgramsResponse>.Error(nameof(ContractErrors.GetMethodFailed));
+    //
+    //         var programsCell = result.Value.Stack.TryGetClass<Cell>(0);
+    //         var multi = ParseMultiProgram(programsCell);
+    //         var neo = ParseNeoProgram(programsCell);
+    //
+    //         return Result.Success(new ProfileProgramsResponse
+    //         {
+    //             Multi = multi,
+    //             Neo = neo
+    //         });
+    //     }
+    //     catch (Exception exc)
+    //     {
+    //         return Result<ProfileProgramsResponse>.Error(exc.Message);
+    //     }
+    // }
 
     public async Task<Result> InvalidateNftDataCacheAsync(string addr, CancellationToken ct = default)
     {

@@ -21,12 +21,15 @@ public sealed class GetProgramsEndpoint(ISender sender) :
             };
             s.ResponseExamples[StatusCodes.Status200OK] = new ProfileProgramsResponse
             {
-                Multi = new ProgramDataResponse
+                new()
                 {
-                    InviterAddr = "E...",
-                    SeqNo = 23,
-                    InviteAddr =  "E...",
-                    Confirmed = 1
+                    ["1CE8C484"] = new ProgramDataResponse
+                    {
+                        InviterAddr = "E...",
+                        SeqNo = 23,
+                        InviteAddr = "E...",
+                        Confirmed = 1
+                    }
                 }
             };
         });

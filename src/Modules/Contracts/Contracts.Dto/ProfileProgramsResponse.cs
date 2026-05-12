@@ -1,12 +1,7 @@
 namespace Contracts.Dto;
 
-public sealed class ProfileProgramsResponse
+public sealed class ProfileProgramsResponse : List<Dictionary<string, ProgramDataResponse>>
 {
-    [JsonPropertyName("multi")]
-    public ProgramDataResponse? Multi { get; init; }
-    
-    [JsonPropertyName("neo")]
-    public ProgramDataResponse? Neo { get; init; }
 }
 
 public sealed class ProgramDataResponse
