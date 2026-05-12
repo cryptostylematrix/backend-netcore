@@ -1,3 +1,5 @@
+using Contracts.Infrastructure.Ton;
+
 namespace Contracts.Infrastructure.Queries;
 
 public sealed class MarketingQueries(ITonClient tonClient) : IMarketingQueries
@@ -186,7 +188,85 @@ public sealed class MarketingQueries(ITonClient tonClient) : IMarketingQueries
             return Result<UnlockPosBodyResponse>.Error(e.Message);
         }
     }
+
+    // deploy_place#ce2879c7  query_id:uint64  key:uint32  parent:MsgAddress  info:^PlaceInfo = MarketingInternalMsg;
+    // _#_ kind:(## 4)  profile_address:MsgAddress  place_number:#  inviter_profile_address:MsgAddress = PlaceInfo;
+    public Result<DeployPlaceBodyResponse> BuildDeployPlaceBody(long queryId, uint key, string parentAddr, byte kind, string profileAddr, uint placeNumber,
+        string? inviterProfileAddr)
+    {
+        try
+        {
+            var info = new CellBuilder();
+            info.StoreUInt(kind, 4);
+            info.StoreAddress(new Address(profileAddr));
+            info.StoreUInt(placeNumber, 32);
+            info.StoreAddress(string.IsNullOrWhiteSpace(inviterProfileAddr) ? 
+                null : 
+                new Address(inviterProfileAddr));
+
+
+            var builder = new CellBuilder();
+            builder.StoreUInt(0xce2879c7, 32); // deploy_place
+            builder.StoreUInt(queryId, 64);
+            builder.StoreUInt(key, 32);
+            builder.StoreAddress(new Address(parentAddr));
+            builder.StoreRef(info.Build());
+            
+            return Result<DeployPlaceBodyResponse>.Success(new DeployPlaceBodyResponse
+            {
+                BocHex = builder.Build().ToString("hex").ToLower()
+            });
+        }
+        catch (Exception e)
+        {
+            return Result<DeployPlaceBodyResponse>.Error(e.Message);
+        }
+    }
     
+    // pay_bonus#7db363d2  query_id:uint64  key:uint32  wallet: MsgAddress = MarketingInternalMsg;
+    public Result<PayBonusBodyResponse> BuildPayBonusBody(long queryId, uint key, string walletAddr)
+    {
+        try
+        {
+            var builder = new CellBuilder();
+            builder.StoreUInt(0x7db363d2, 32); // pay_bonus
+            builder.StoreUInt(queryId, 64);
+            builder.StoreUInt(key, 32);
+            builder.StoreAddress(new Address(walletAddr));
+            
+            return Result<PayBonusBodyResponse>.Success(new PayBonusBodyResponse
+            {
+                BocHex = builder.Build().ToString("hex").ToLower()
+            });
+        }
+        catch (Exception e)
+        {
+            return Result<PayBonusBodyResponse>.Error(e.Message);
+        }
+    }
+    
+    // cancel_task#02b82976  query_id:uint64  key:uint32 comment:Any= MarketingInternalMsg;
+    public Result<CancelTaskBodyResponse> BuildCancelTaskBody(long queryId, uint key, string comment)
+    {
+        try
+        {
+            var builder = new CellBuilder();
+            builder.StoreUInt(0x02b82976, 32); // cancel_task
+            builder.StoreUInt(queryId, 64);
+            builder.StoreUInt(key, 32);
+            builder.StoreStringTail(comment);
+            
+            return Result<CancelTaskBodyResponse>.Success(new CancelTaskBodyResponse
+            {
+                BocHex = builder.Build().ToString("hex").ToLower()
+            });
+        }
+        catch (Exception e)
+        {
+            return Result<CancelTaskBodyResponse>.Error(e.Message);
+        }
+    }
+
     public async Task<Result<PlaceAddressResponse>> GetPlaceAddrAsync(string marketingAddr, int m, string? parentAddr, int pos, CancellationToken ct = default)
     {
         try

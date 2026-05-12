@@ -43,6 +43,19 @@ public interface IMarketingQueries
         string parentAddr,
         int pos);
     
+    Result<DeployPlaceBodyResponse> BuildDeployPlaceBody(
+        long queryId,
+        uint key,
+        string parentAddr,
+        byte kind ,
+        string profileAddr,
+        uint placeNumber,
+        string? inviterProfileAddr);
+
+
+    Result<PayBonusBodyResponse> BuildPayBonusBody(long queryId, uint key, string walletAddr);
+    Result<CancelTaskBodyResponse> BuildCancelTaskBody(long queryId, uint key, string comment);
+    
     Task<Result<FirstTaskResponse>> GetFirstTaskAsync(string marketingAddr, CancellationToken ct = default);
     Task<Result<MarketingDataResponse>> GetMarketingDataAsync(string marketingAddr, CancellationToken ct = default);
 
