@@ -1,6 +1,6 @@
 namespace Marketing.Dto;
 
-[JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "node_type")]
 [JsonDerivedType(typeof(TreeEmptyNodeResponse), "empty")]
 [JsonDerivedType(typeof(TreeFilledNodeResponse), "filled")]
 public abstract class TreeNodeResponse
