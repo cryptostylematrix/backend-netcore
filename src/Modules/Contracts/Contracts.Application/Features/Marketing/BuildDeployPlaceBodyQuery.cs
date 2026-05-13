@@ -1,6 +1,7 @@
 namespace Contracts.Application.Features.Marketing;
 
 public sealed record BuildDeployPlaceBodyQuery(
+    ulong QueryId,
     uint Key,
     string ParentAddr,
     byte Kind ,
@@ -14,7 +15,7 @@ internal sealed class BuildDeployPlaceBodyQueryHandler(IMarketingQueries queries
 {
     public Task<Result<DeployPlaceBodyResponse>> Handle(BuildDeployPlaceBodyQuery request, CancellationToken ct)
         => Task.FromResult(queries.BuildDeployPlaceBody(
-            queryId: DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            queryId: request.QueryId,
             key: request.Key,
             parentAddr: request.ParentAddr,
             kind: request.Kind,

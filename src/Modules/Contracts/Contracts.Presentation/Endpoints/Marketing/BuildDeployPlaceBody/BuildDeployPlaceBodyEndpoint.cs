@@ -17,6 +17,7 @@ public sealed class BuildDeployPlaceBodyEndpoint(ISender sender) :
             s.Description = "Build Deploy Place Body";
             s.ExampleRequest = new BuildDeployPlaceBodyRequest
             {
+                QueryId = 123,
                 Key = 123,
                 ParentAddr ="E...",
                 Kind = 1,
@@ -34,6 +35,7 @@ public sealed class BuildDeployPlaceBodyEndpoint(ISender sender) :
     public override async Task HandleAsync(BuildDeployPlaceBodyRequest request, CancellationToken ct)
     {
         var query = new BuildDeployPlaceBodyQuery(
+            QueryId: request.QueryId,
             Key: request.Key,
             ParentAddr: request.ParentAddr,
             Kind: request.Kind,

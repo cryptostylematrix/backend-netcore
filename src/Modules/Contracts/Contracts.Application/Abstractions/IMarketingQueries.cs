@@ -44,7 +44,7 @@ public interface IMarketingQueries
         int pos);
     
     Result<DeployPlaceBodyResponse> BuildDeployPlaceBody(
-        long queryId,
+        ulong queryId,
         uint key,
         string parentAddr,
         byte kind ,
@@ -53,8 +53,8 @@ public interface IMarketingQueries
         string? inviterProfileAddr);
 
 
-    Result<PayBonusBodyResponse> BuildPayBonusBody(long queryId, uint key, string walletAddr);
-    Result<CancelTaskBodyResponse> BuildCancelTaskBody(long queryId, uint key, string comment);
+    Result<PayBonusBodyResponse> BuildPayBonusBody(ulong queryId, uint key, string walletAddr);
+    Result<CancelTaskBodyResponse> BuildCancelTaskBody(ulong queryId, uint key, string comment);
     
     Task<Result<FirstTaskResponse>> GetFirstTaskAsync(string marketingAddr, CancellationToken ct = default);
     Task<Result<MarketingDataResponse>> GetMarketingDataAsync(string marketingAddr, CancellationToken ct = default);

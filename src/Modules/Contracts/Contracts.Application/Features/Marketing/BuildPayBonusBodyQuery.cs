@@ -1,6 +1,7 @@
 namespace Contracts.Application.Features.Marketing;
 
 public sealed record BuildPayBonusBodyQuery(
+    ulong QueryId,
     uint Key,
     string WalletAddr) : IQuery<PayBonusBodyResponse>;
 
@@ -10,7 +11,7 @@ internal sealed class BuildPayBonusBodyQueryHandler(IMarketingQueries queries)
 {
     public Task<Result<PayBonusBodyResponse>> Handle(BuildPayBonusBodyQuery request, CancellationToken ct)
         => Task.FromResult(queries.BuildPayBonusBody(
-            queryId: DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(),
+            queryId: request.QueryId,
             key: request.Key,
             walletAddr: request.WalletAddr));
 }

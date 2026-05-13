@@ -191,7 +191,7 @@ public sealed class MarketingQueries(ITonClient tonClient) : IMarketingQueries
 
     // deploy_place#ce2879c7  query_id:uint64  key:uint32  parent:MsgAddress  info:^PlaceInfo = MarketingInternalMsg;
     // _#_ kind:(## 4)  profile_address:MsgAddress  place_number:#  inviter_profile_address:MsgAddress = PlaceInfo;
-    public Result<DeployPlaceBodyResponse> BuildDeployPlaceBody(long queryId, uint key, string parentAddr, byte kind, string profileAddr, uint placeNumber,
+    public Result<DeployPlaceBodyResponse> BuildDeployPlaceBody(ulong queryId, uint key, string parentAddr, byte kind, string profileAddr, uint placeNumber,
         string? inviterProfileAddr)
     {
         try
@@ -224,7 +224,7 @@ public sealed class MarketingQueries(ITonClient tonClient) : IMarketingQueries
     }
     
     // pay_bonus#7db363d2  query_id:uint64  key:uint32  wallet: MsgAddress = MarketingInternalMsg;
-    public Result<PayBonusBodyResponse> BuildPayBonusBody(long queryId, uint key, string walletAddr)
+    public Result<PayBonusBodyResponse> BuildPayBonusBody(ulong queryId, uint key, string walletAddr)
     {
         try
         {
@@ -246,7 +246,7 @@ public sealed class MarketingQueries(ITonClient tonClient) : IMarketingQueries
     }
     
     // cancel_task#02b82976  query_id:uint64  key:uint32 comment:Any= MarketingInternalMsg;
-    public Result<CancelTaskBodyResponse> BuildCancelTaskBody(long queryId, uint key, string comment)
+    public Result<CancelTaskBodyResponse> BuildCancelTaskBody(ulong queryId, uint key, string comment)
     {
         try
         {

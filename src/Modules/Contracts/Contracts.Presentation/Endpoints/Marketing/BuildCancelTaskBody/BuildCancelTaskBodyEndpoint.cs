@@ -17,6 +17,7 @@ public sealed class BuildCancelTaskBodyEndpoint(ISender sender) :
             s.Description = "Build Cancel Task Body";
             s.ExampleRequest = new BuildCancelTaskBodyRequest
             {
+                QueryId = 123,
                 Key = 123,
                 Comment = "the reason",
             };
@@ -30,6 +31,7 @@ public sealed class BuildCancelTaskBodyEndpoint(ISender sender) :
     public override async Task HandleAsync(BuildCancelTaskBodyRequest request, CancellationToken ct)
     {
         var query = new BuildCancelTaskBodyQuery(
+            QueryId: request.QueryId,
             Key: request.Key,
             Comment: request.Comment);
             

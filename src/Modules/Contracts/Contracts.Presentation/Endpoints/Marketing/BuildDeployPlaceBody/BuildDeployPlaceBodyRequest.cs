@@ -3,6 +3,9 @@ namespace Contracts.Presentation.Endpoints.Marketing.BuildDeployPlaceBody;
 
 public sealed class BuildDeployPlaceBodyRequest
 {
+    [BindFrom("query_id")]
+    public ulong QueryId { get; init; }
+    
     [BindFrom("key")]
     public uint Key { get; init; }
     

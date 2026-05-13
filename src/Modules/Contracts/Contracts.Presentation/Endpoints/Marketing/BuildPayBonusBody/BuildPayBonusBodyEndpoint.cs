@@ -17,6 +17,7 @@ public sealed class BuildPayBonusBodyEndpoint(ISender sender) :
             s.Description = "Build Pay Bonus Body";
             s.ExampleRequest = new BuildPayBonusBodyRequest
             {
+                QueryId = 123,
                 Key = 123,
                 WalletAddr = "E...",
             };
@@ -30,6 +31,7 @@ public sealed class BuildPayBonusBodyEndpoint(ISender sender) :
     public override async Task HandleAsync(BuildPayBonusBodyRequest request, CancellationToken ct)
     {
         var query = new BuildPayBonusBodyQuery(
+            QueryId: request.QueryId,
             Key: request.Key,
             WalletAddr: request.WalletAddr);
             
