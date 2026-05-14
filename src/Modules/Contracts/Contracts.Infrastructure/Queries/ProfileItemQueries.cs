@@ -95,7 +95,7 @@ public sealed class ProfileItemQueries(
             key,
             fetch: _ => FetchProgramsAsync(normalizedAddr),
             shouldCache: dto =>
-                dto.Count > 0 &&
+                dto.Count >= 2 &&
                 dto.All(x => x.Values.All(p => p.Confirmed == 1)),
             options: TtlDays(_cacheOpts.LongTtlDays),
             ct: ct);
