@@ -6,5 +6,5 @@ public sealed class GetPlaceByTaskKeyRequest
     public string MarketingAddr { get; init; } = null!;
     
     [BindFrom("task_key")]
-    public uint TaskKey { get; init; }
+    public int TaskKey { get; init; }
 }

@@ -429,7 +429,7 @@ public sealed class PlaceQueries(NpgsqlDataSource dataSource) : IPlaceQueries
     
     public async Task<PlaceResponse?> GetPlaceByTaskKeyAsync(
         string marketingAddr,
-        uint taskKey,
+        int taskKey,
         CancellationToken ct)
     {
         await using var conn = await dataSource.OpenConnectionAsync(ct);

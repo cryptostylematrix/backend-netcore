@@ -1,7 +1,7 @@
 namespace Marketing.Application.Features.Places;
 
 
-public sealed record GetPlaceByTaskKeyQuery(string MarketingAddr, uint TaskKey)
+public sealed record GetPlaceByTaskKeyQuery(string MarketingAddr, int TaskKey)
     : IQuery<PlaceResponse>;
 
 internal sealed class GetPlaceByTaskKeyQueryHandler(IPlaceQueries placeQueries)

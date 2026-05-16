@@ -81,7 +81,7 @@ public interface IPlaceQueries
 
     Task<PlaceResponse?> GetPlaceByTaskKeyAsync(
         string marketingAddr,
-        uint taskKey,
+        int taskKey,
         CancellationToken ct);
 
     Task<uint> GetMaxPlaceNumberAsync(
