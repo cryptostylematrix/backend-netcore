@@ -71,7 +71,54 @@ public sealed class MatrixConfigResponse
 
 public sealed class MarketingParamsResponse
 {
+    [JsonPropertyName("version")]
+    public uint? Version { get; init; }
     
+    [JsonPropertyName("program_id")]
+    public uint? ProgramId { get; init; }
+    
+    [JsonPropertyName("metadata_uri")]
+    public string? MetadataUri { get; init; }
+    
+    [JsonPropertyName("program_features")]
+    public ProgramFeaturesResponse? ProgramFeatures { get; init; }
+    
+    [JsonPropertyName("matrix_features")] 
+    public IDictionary<byte, MatrixFeaturesResponse>? MatrixFeatures { get; init; }
+}
+
+public sealed class ProgramFeaturesResponse
+{
+    [JsonPropertyName("version")]
+    public uint? Version { get; init; }
+    
+    [JsonPropertyName("admin_locks")]
+    public bool? AdminLocks { get; init; }
+    
+    [JsonPropertyName("subscription")]
+    public ProgramSubscriptionResponse? Subscription { get; init; }
+}
+
+public sealed class ProgramSubscriptionResponse
+{
+    
+}
+public sealed class MatrixFeaturesResponse
+{
+    [JsonPropertyName("version")]
+    public uint? Version { get; init; }
+    
+    [JsonPropertyName("distribution")]
+    public string? Distribution { get; init; }
+    
+    [JsonPropertyName("management")]
+    public string? Management { get; init; }
+  
+    [JsonPropertyName("cut_factor")]
+    public byte? CutFactor { get; init; }
+    
+    [JsonPropertyName("prev_required")]
+    public bool? PrevRequired { get; init; }
 }
 
 

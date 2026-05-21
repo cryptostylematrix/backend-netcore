@@ -432,8 +432,6 @@ public sealed class MarketingQueries(ITonClient tonClient) : IMarketingQueries
         return result;
     }
     
-  
-    
     private static Dictionary<byte, MatrixConfigResponse> MatrixesFromCell(Cell? cell)
     {
         var result = new Dictionary<byte, MatrixConfigResponse>();
@@ -511,9 +509,145 @@ public sealed class MarketingQueries(ITonClient tonClient) : IMarketingQueries
     
     private static MarketingParamsResponse ParamsFromCell(Cell? cell)
     {
-        // todo;
+        if (cell is null)
+            return new MarketingParamsResponse();
+        
+        var s = cell.Parse();
+        if (s.RemainderBits < 32)
+            return new MarketingParamsResponse();
+
+        var tag = s.LoadUInt(32);
+        if (tag == 0x23cda492)
+        {
+              
+            var programId = s.LoadUInt(32);
+            var metadataUri = s.LoadRef().Parse().LoadString();
+            var programFeatures = ProgramFeaturesFromCell(s.LoadRef());
+            var matrixFeatures = MatrixFeaturesDictFromCell(s.LoadRef());
+
+            return new MarketingParamsResponse
+            {
+                Version = 1,
+                ProgramId = (uint)programId,
+                MetadataUri = metadataUri,
+                ProgramFeatures = programFeatures,
+                MatrixFeatures = matrixFeatures
+            };
+        }
+        
         return new MarketingParamsResponse();
     }
+
+    private static ProgramFeaturesResponse ProgramFeaturesFromCell(Cell? cell)
+    {
+        if (cell is null)
+            return new ProgramFeaturesResponse();
+        
+        var s = cell.Parse();
+        if (s.RemainderBits < 32)
+            return new ProgramFeaturesResponse();
+        
+        var tag = s.LoadUInt(32);
+        if (tag == 0x27a03865)
+        {
+            var adminLocks = s.LoadBit();
+            var subscription = SubscriptionFromCell(s.LoadOptRef());
+
+            return new ProgramFeaturesResponse
+            {
+                Version = 1,
+                AdminLocks = adminLocks,
+                Subscription = subscription
+            };
+        }
+        
+        return new ProgramFeaturesResponse();
+    }
+
+    private static Dictionary<byte, MatrixFeaturesResponse> MatrixFeaturesDictFromCell(Cell? cell)
+    {
+        var result = new Dictionary<byte, MatrixFeaturesResponse>();
+        if (cell is null)
+            return result;
+
+        var dict = Hashmap<Bits, Cell>.Deserialize(cell, GetDictOptions(8));
+        
+        var end = (byte)dict.Count;
+        for (byte key = 1; key <= end; key++)
+        {
+            var keyBits = ByteToBits(key);
+
+            var valCell = dict.Get(keyBits);
+            if (valCell is null) continue;
+
+            var val = MatrixFeaturesFromCell(valCell);
+            if (val is null) continue;
+            
+            result.Add(key, val);
+        }
+
+        return result;
+    }
+    
+    private static MatrixFeaturesResponse? MatrixFeaturesFromCell(Cell? cell)
+    {
+        if (cell is null)
+            return null;
+        
+        var s = cell.Parse();
+        if (s.RemainderBits < 32)
+            return null;
+        
+        var tag = s.LoadUInt(32);
+        if (tag == 0x5b9338be)
+        {
+            var distribution = GetDistribution(s.LoadUInt(4));
+            var management = GetManagement(s.LoadUInt(4));
+            var cutFactor = s.LoadUInt(8);
+            var prevRequired = s.LoadBit();
+
+            return new MatrixFeaturesResponse
+            {
+                Version = 1,
+                Distribution = distribution,
+                Management = management,
+                CutFactor = (byte)cutFactor,
+                PrevRequired = prevRequired
+            };
+        }
+
+        return null;
+    }
+
+    private static string? GetDistribution(BigInteger tag)
+    {
+        return (uint)tag switch
+        {
+            0 => "0__classic",
+            1 => "1__queue",
+            _ => null
+        };
+    }
+    
+    private static string? GetManagement(BigInteger tag)
+    {
+        return (uint)tag switch
+        {
+            0 => "0__none",
+            1 => "1__lock",
+            2 => "2__reserve",
+            3 => "3__reserve_lock",
+            _ => null
+        };
+    }
+
+    private static ProgramSubscriptionResponse SubscriptionFromCell(Cell? cell)
+    {
+        // todo:
+        
+        return new ProgramSubscriptionResponse();
+    }
+    
     
     private static HashmapOptions<Bits, Cell> GetDictOptions(uint keySize) => new()
     {
