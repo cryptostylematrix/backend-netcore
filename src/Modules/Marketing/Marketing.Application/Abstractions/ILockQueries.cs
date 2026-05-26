@@ -19,7 +19,7 @@ public interface ILockQueries
     Task<LockResponse?> GetLockByPlaceAddrAndLockedPosAsync(
         string marketingAddr,
         string placeAddr,
-        uint lockedPos,
+        int lockedPos,
         string profileAddr,
         CancellationToken cancellationToken);
 }

@@ -9,7 +9,7 @@ public sealed class GetLockByPlaceAddrAndLockedPosRequest
     public string PlaceAddr { get; init; } = null!;
 
     [BindFrom("locked_pos")]
-    public uint LockedPos { get; init; }
+    public int LockedPos { get; init; }
 
     [BindFrom("profile_addr")]
     public string ProfileAddr { get; init; } = null!;

@@ -108,7 +108,7 @@ public sealed class LockQueries(NpgsqlDataSource dataSource) : ILockQueries
     public async Task<LockResponse?> GetLockByPlaceAddrAndLockedPosAsync(
         string marketingAddr,
         string placeAddr,
-        uint lockedPos,
+        int lockedPos,
         string profileAddr,
         CancellationToken ct)
     {
@@ -121,7 +121,7 @@ public sealed class LockQueries(NpgsqlDataSource dataSource) : ILockQueries
                                                AND profile_addr = @profileAddr
                                                LIMIT 1;
                                            """;
-
+        
         return await conn.QuerySingleOrDefaultAsync<LockResponse>(
             new CommandDefinition(
                 sql,

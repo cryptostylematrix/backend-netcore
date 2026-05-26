@@ -3,7 +3,7 @@ namespace Marketing.Application.Features.Locks;
 public sealed record GetLockByPlaceAddrAndLockedPosQuery(
     string MarketingAddr,
     string PlaceAddr,
-    uint LockedPos,
+    int LockedPos,
     string ProfileAddr)
     : IQuery<LockResponse>;
 
