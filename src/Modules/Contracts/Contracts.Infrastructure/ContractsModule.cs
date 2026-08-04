@@ -1,8 +1,6 @@
 using Contracts.Application;
 using Contracts.Infrastructure.Queries;
 using Contracts.Infrastructure.Ton;
-using Contracts.Presentation;
-using FastEndpoints;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Polly;
@@ -15,11 +13,6 @@ public static class ContractsModule
     {
         public IServiceCollection AddContractsModule(IConfiguration configuration)
         {
-            services.AddFastEndpoints(options =>
-            {
-                options.Assemblies = [PresentationReference.Assembly];
-            });
-
             services.AddMediatR(config =>
             {
                 config.RegisterServicesFromAssembly(ApplicationReference.Assembly);
@@ -38,6 +31,30 @@ public static class ContractsModule
                 .Validate(o => !string.IsNullOrWhiteSpace(o.Endpoint), "TonCenter.Endpoint is required")
                 .Validate(o => !string.IsNullOrWhiteSpace(o.ApiKey), "TonCenter.ApiKey is required")
                 .ValidateOnStart();
+
+            services.AddOptions<ProcessorWalletOptions>()
+                .Bind(configuration.GetSection(ProcessorWalletOptions.SectionName))
+                .Validate(
+                    options => options.Mnemonic.Split(
+                        (char[]?)null,
+                        StringSplitOptions.RemoveEmptyEntries).Length == 24,
+                    "ProcessorWallet:Mnemonic must contain 24 words.")
+                .Validate(options =>
+                        decimal.TryParse(
+                            options.TransferAmountTon,
+                            System.Globalization.NumberStyles.Number,
+                            System.Globalization.CultureInfo.InvariantCulture,
+                            out var amount) && amount > 0,
+                    "ProcessorWallet:TransferAmountTon must be greater than zero.")
+                .Validate(options => options.SeqnoTimeoutSeconds > 0,
+                    "ProcessorWallet:SeqnoTimeoutSeconds must be greater than zero.")
+                .Validate(options => options.PollIntervalMilliseconds > 0,
+                    "ProcessorWallet:PollIntervalMilliseconds must be greater than zero.")
+                .Validate(options => options.MaxRetries >= 0,
+                    "ProcessorWallet:MaxRetries cannot be negative.")
+                .Validate(options => options.RetryDelayMilliseconds > 0,
+                    "ProcessorWallet:RetryDelayMilliseconds must be greater than zero.")
+                .ValidateOnStart();
             
             services.Configure<TonQueryCacheOptions>(
                 configuration.GetSection("TonQueryCache"));
@@ -53,6 +70,8 @@ public static class ContractsModule
             services.AddScoped<IGeneralQueries, GeneralQueries>();
             services.AddScoped<IWalletQueries, WalletQueries>();
             services.AddScoped<IMarketingQueries, MarketingQueries>();
+            services.AddScoped<IMarketingV3Queries, MarketingV3Queries>();
+            services.AddSingleton<IMarketingTransactionSender, MarketingTransactionSender>();
             services.AddScoped<IMatrixPlaceQueries, MatrixPlaceQueries>();
             services.AddScoped<IJetttonMinterQueries, JetttonMinterQueries>();
             services.AddScoped<IJettonWalletQueries, JettonWalletQueries>();

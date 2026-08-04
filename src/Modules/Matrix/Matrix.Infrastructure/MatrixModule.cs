@@ -1,8 +1,6 @@
-using FastEndpoints;
 using Matrix.Application;
 using Matrix.Application.Services;
 using Matrix.Infrastructure.Queries;
-using Matrix.Presentation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -14,11 +12,6 @@ public static class MatrixModule
     {
         public IServiceCollection AddMatrixModule(IConfiguration configuration)
         {
-            services.AddFastEndpoints(options =>
-            {
-                options.Assemblies = [PresentationReference.Assembly];
-            });
-        
             services.AddMediatR(config =>
             {
                 config.RegisterServicesFromAssembly(ApplicationReference.Assembly);

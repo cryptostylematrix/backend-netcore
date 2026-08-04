@@ -13,9 +13,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\BuildingBlocks\IntegrationEvents\IntegrationEvents.csproj" />
     <ProjectReference Include="..\..\Modules\Contracts\Contracts.Infrastructure\Contracts.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Matrix\Matrix.Infrastructure\Matrix.Infrastructure.csproj" />
     <ProjectReference Include="..\..\Modules\Marketing\Marketing.Infrastructure\Marketing.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\ReferalProgram\ReferalProgram.Infrastructure\ReferalProgram.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

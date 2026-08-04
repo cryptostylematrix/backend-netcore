@@ -19,6 +19,10 @@ COPY ["src/Modules/Matrix/Matrix.Infrastructure/Matrix.Infrastructure.csproj", "
 COPY ["src/Modules/Matrix/Matrix.Application/Matrix.Application.csproj", "src/Modules/Matrix/Matrix.Application/"]
 COPY ["src/Modules/Matrix/Matrix.Dto/Matrix.Dto.csproj", "src/Modules/Matrix/Matrix.Dto/"]
 COPY ["src/Modules/Matrix/Matrix.Presentation/Matrix.Presentation.csproj", "src/Modules/Matrix/Matrix.Presentation/"]
+COPY ["src/Modules/ReferalProgram/ReferalProgram.Infrastructure/ReferalProgram.Infrastructure.csproj", "src/Modules/ReferalProgram/ReferalProgram.Infrastructure/"]
+COPY ["src/Modules/ReferalProgram/ReferalProgram.Application/ReferalProgram.Application.csproj", "src/Modules/ReferalProgram/ReferalProgram.Application/"]
+COPY ["src/Modules/ReferalProgram/ReferalProgram.Dto/ReferalProgram.Dto.csproj", "src/Modules/ReferalProgram/ReferalProgram.Dto/"]
+COPY ["src/Modules/ReferalProgram/ReferalProgram.Presentation/ReferalProgram.Presentation.csproj", "src/Modules/ReferalProgram/ReferalProgram.Presentation/"]
 RUN dotnet restore "src/API/CryptoStyle.Api/CryptoStyle.Api.csproj"
 COPY . .
 WORKDIR "/src/src/API/CryptoStyle.Api"

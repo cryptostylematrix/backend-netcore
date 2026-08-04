@@ -3,6 +3,40 @@ namespace Contracts.Infrastructure.Queries;
 
 public sealed class JettonWalletQueries(ITonClient tonClient) : IJettonWalletQueries
 {
+    private const uint TransferTag = 0x0f8a7ea5;
+
+    public Result<JettonTransferMsgBodyResponse> BuildTransferMsgBody(
+        ulong queryId,
+        ulong amount,
+        string destinationAddr,
+        string? responseDestinationAddr,
+        string? customPayloadBocHex,
+        ulong forwardTonAmount,
+        string? forwardPayloadBocHex)
+    {
+        try
+        {
+            var builder = new CellBuilder();
+            builder.StoreUInt(TransferTag, 32);
+            builder.StoreUInt(queryId, 64);
+            builder.StoreCoins(new Coins(amount, new CoinsOptions(IsNano: true)));
+            builder.StoreAddress(new Address(destinationAddr));
+            builder.StoreAddress(ParseAddress(responseDestinationAddr));
+            builder.StoreOptRef(ParseCell(customPayloadBocHex));
+            builder.StoreCoins(new Coins(forwardTonAmount, new CoinsOptions(IsNano: true)));
+            builder.StoreOptRef(ParseCell(forwardPayloadBocHex));
+
+            return Result.Success(new JettonTransferMsgBodyResponse
+            {
+                BocHex = builder.Build().ToString("hex").ToLowerInvariant()
+            });
+        }
+        catch (Exception exc)
+        {
+            return Result<JettonTransferMsgBodyResponse>.Error(exc.Message);
+        }
+    }
+
     public async Task<Result<JettonWalletDataResponse>> GetWalletDataAsync(string addr, CancellationToken ct = default)
     {
         try
@@ -45,4 +79,12 @@ public sealed class JettonWalletQueries(ITonClient tonClient) : IJettonWalletQue
             return Result<JettonWalletDataResponse>.Error(exc.Message);
         }
     }
+
+    private static Address? ParseAddress(string? address) =>
+        string.IsNullOrWhiteSpace(address) ? null : new Address(address);
+
+    private static Cell? ParseCell(string? bocHex) =>
+        string.IsNullOrWhiteSpace(bocHex)
+            ? null
+            : Cell.From(new Bits(Convert.FromHexString(bocHex)));
 }

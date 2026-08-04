@@ -1,0 +1,12 @@
+{
+  "v": 1,
+  "root": "profile",
+  "relation": "relative",
+  "groups": [
+    {
+      "id": 0,
+      "algo": "classic",
+      "weight": 1
+    }
+  ]
+}

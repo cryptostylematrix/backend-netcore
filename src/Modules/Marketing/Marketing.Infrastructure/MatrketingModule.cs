@@ -1,8 +1,6 @@
-using FastEndpoints;
 using Marketing.Application;
 using Marketing.Application.Services;
 using Marketing.Infrastructure.Queries;
-using Marketing.Presentation;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,11 +10,6 @@ public static class MatrketingModule
     {
         public IServiceCollection AddMarketingModule(IConfiguration configuration)
         {
-            services.AddFastEndpoints(options =>
-            {
-                options.Assemblies = [PresentationReference.Assembly];
-            });
-        
             services.AddMediatR(config =>
             {
                 config.RegisterServicesFromAssembly(ApplicationReference.Assembly);
@@ -47,4 +40,3 @@ public static class MatrketingModule
         }
     }
 }
-

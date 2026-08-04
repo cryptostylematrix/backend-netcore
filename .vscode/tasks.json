@@ -1,0 +1,29 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build CryptoStyle.Api",
+      "type": "process",
+      "command": "dotnet",
+      "args": [
+        "build",
+        "${workspaceFolder}/src/API/CryptoStyle.Api/CryptoStyle.Api.csproj",
+        "--configuration",
+        "Debug",
+        "--disable-build-servers",
+        "--maxcpucount:1",
+        "-p:UseSharedCompilation=false",
+        "-p:GenerateFullPaths=true",
+        "-consoleloggerparameters:NoSummary"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": "$msCompile",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    }
+  ]
+}

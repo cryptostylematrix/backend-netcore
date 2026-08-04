@@ -1,7 +1,13 @@
 using Contracts.Infrastructure;
+using CryptoStyle.Api.BackgroundServices;
 using dotenv.net;
 using FastEndpoints;
 using Matrix.Infrastructure;
+using ReferalProgram.Infrastructure;
+using ContractsPresentation = Contracts.Presentation.PresentationReference;
+using MarketingPresentation = Marketing.Presentation.PresentationReference;
+using MatrixPresentation = Matrix.Presentation.PresentationReference;
+using ReferalProgramPresentation = ReferalProgram.Presentation.PresentationReference;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,12 +24,37 @@ DotEnv.Load(options: new DotEnvOptions(
 // IMPORTANT: re-add environment variables so configuration sees what DotEnv just loaded
 builder.Configuration.AddEnvironmentVariables();
 
+builder.Services.AddFastEndpoints(options =>
+{
+    options.Assemblies =
+    [
+        ContractsPresentation.Assembly,
+        MatrixPresentation.Assembly,
+        MarketingPresentation.Assembly,
+        ReferalProgramPresentation.Assembly
+    ];
+});
+
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    // Multiple modules expose DTOs with the same class name (for example,
+    // Matrix.Dto.PlaceResponse and Marketing.Dto.PlaceResponse).
+    options.CustomSchemaIds(type =>
+        type.FullName?.Replace("+", ".") ?? type.Name);
+});
 
 builder.Services.AddContractsModule(builder.Configuration);
 builder.Services.AddMatrixModule(builder.Configuration);
 builder.Services.AddMarketingModule(builder.Configuration);
+builder.Services.AddReferalProgramModule(builder.Configuration);
+
+builder.Services.AddOptions<TaskProcessorOptions>()
+    .Bind(builder.Configuration.GetSection(TaskProcessorOptions.SectionName))
+    .Validate(options => options.IntervalSeconds > 0,
+        "TaskProcessor.IntervalSeconds must be greater than zero.")
+    .ValidateOnStart();
+builder.Services.AddHostedService<TaskProcessor>();
 
 // Distributed cache (choose ONE):
 // 1) In-memory distributed cache (dev / single instance)

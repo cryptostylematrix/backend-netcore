@@ -13,6 +13,7 @@
     <PackageReference Include="Polly" Version="8.6.5" />
     <PackageReference Include="Polly.Extensions" Version="8.6.5" />
     <PackageReference Include="Polly.RateLimiting" Version="8.6.5" />
+    <PackageReference Include="TonSdk.Contracts" Version="0.4.0" />
   </ItemGroup>
 
   <ItemGroup>

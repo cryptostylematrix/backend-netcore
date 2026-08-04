@@ -1,0 +1,17 @@
+{
+  "v": 1,
+  "root": "owner",
+  "relation": "relative",
+  "groups": [
+    {
+      "id": 1,
+      "algo": "chess",
+      "weight": 987
+    },
+    {
+      "id": 2,
+      "algo": "radar",
+      "weight": 610
+    }
+  ]
+}

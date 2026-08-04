@@ -434,11 +434,29 @@ public sealed class PlaceQueries(NpgsqlDataSource dataSource) : IPlaceQueries
     {
         await using var conn = await dataSource.OpenConnectionAsync(ct);
 
-        const string sql = PlaceSelectSql + """
-                                                AND marketing_addr = @marketingAddr
-                                                AND task_key = @taskKey
-                                                LIMIT 1;
-                                            """;
+        const string sql = """
+            SELECT
+                id              AS "Id",
+                parent_id       AS "ParentId",
+                marketing_addr  AS "MarketingAddr",
+                addr            AS "Addr",
+                parent_addr     AS "ParentAddr",
+                place_number    AS "PlaceNumber",
+                created_at      AS "CreatedAt",
+                pos             AS "Pos",
+                seq_no          AS "SeqNo",
+                width           AS "Width",
+                height          AS "Height",
+                kind            AS "Kind",
+                profile_login   AS "ProfileLogin",
+                m               AS "M",
+                profile_addr    AS "ProfileAddr",
+                mp              AS "Mp"
+            FROM marketing_places
+            WHERE marketing_addr = @marketingAddr
+              AND task_key = @taskKey
+            LIMIT 1;
+            """;
 
         return await conn.QuerySingleOrDefaultAsync<PlaceResponse>(
             new CommandDefinition(
