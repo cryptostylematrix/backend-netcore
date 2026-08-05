@@ -10,7 +10,7 @@ public sealed class NextPosService(
     public async Task<NextPosResponse?> GetNextPosAsync(
         string marketingAddr,
         byte structureNumber,
-        string profileAddr,
+        string? profileAddr,
         CancellationToken ct)
     {
         var structure = await structureQueries.GetStructureAsync(
@@ -36,7 +36,11 @@ public sealed class NextPosService(
         PlaceResponse? root = config.Root.ToLowerInvariant() switch
         {
             "owner" => await placeQueries.GetRootPlaceAsync(marketingAddr, structureNumber, ct),
-            "profile" => throw new NotImplementedException("The profile pos_algo root is not implemented."),
+            "profile" => await placeQueries.GetFirstPlaceAsync(
+                marketingAddr,
+                structureNumber,
+                profileAddr,
+                ct),
             _ => throw new InvalidOperationException($"Unknown pos_algo root '{config.Root}'.")
         };
 
@@ -51,6 +55,7 @@ public sealed class NextPosService(
                     structureNumber,
                     structure.Width,
                     root,
+                    checked((byte)group.Id),
                     ct);
             case "radar":
                 return await GetRadarNextPosAsync(
@@ -58,6 +63,7 @@ public sealed class NextPosService(
                     structureNumber,
                     structure.Width,
                     root,
+                    checked((byte)group.Id),
                     ct);
             case "classic":
                 throw new NotImplementedException("The classic position algorithm is not implemented.");
@@ -74,6 +80,7 @@ public sealed class NextPosService(
         byte structureNumber,
         byte width,
         PlaceResponse root,
+        byte posGroup,
         CancellationToken ct)
     {
         if (width == 0)
@@ -99,7 +106,8 @@ public sealed class NextPosService(
                     ProfileAddr = place.ProfileAddr,
                     PlaceNumber = place.PlaceNumber,
                     Pos = pos,
-                    Mp = place.Mp + pos.ToString("X8")
+                    Mp = place.Mp + pos.ToString("X8"),
+                    PosGroup = posGroup
                 };
             }
         }
@@ -112,6 +120,7 @@ public sealed class NextPosService(
         byte structureNumber,
         byte width,
         PlaceResponse root,
+        byte posGroup,
         CancellationToken ct)
     {
         if (width == 0)
@@ -133,7 +142,8 @@ public sealed class NextPosService(
             ProfileAddr = place.ProfileAddr,
             PlaceNumber = place.PlaceNumber,
             Pos = pos,
-            Mp = place.Mp + pos.ToString("X8")
+            Mp = place.Mp + pos.ToString("X8"),
+            PosGroup = posGroup
         };
     }
 

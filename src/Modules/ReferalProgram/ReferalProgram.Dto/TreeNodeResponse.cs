@@ -24,7 +24,14 @@ public abstract class TreeNodeResponse
     public TreeNodeResponse[]? Children { get; init; }
 }
 
-public sealed class TreeEmptyNodeResponse : TreeNodeResponse;
+public sealed class TreeEmptyNodeResponse : TreeNodeResponse
+{
+    [JsonPropertyName("is_next_pos")]
+    public bool IsNextPos { get; init; }
+
+    [JsonPropertyName("can_buy")]
+    public bool CanBuy { get; init; }
+}
 
 public sealed class TreeFilledNodeResponse : TreeNodeResponse
 {

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -8,8 +8,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\BuildingBlocks\Common\Common.csproj" />
-    <ProjectReference Include="..\ReferalProgram.Core\ReferalProgram.Core.csproj" />
-    <ProjectReference Include="..\ReferalProgram.Dto\ReferalProgram.Dto.csproj" />
   </ItemGroup>
 
 </Project>

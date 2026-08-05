@@ -9,10 +9,12 @@
   <ItemGroup>
     <PackageReference Include="Dapper" Version="2.1.66" />
     <PackageReference Include="Npgsql" Version="10.0.0" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\ReferalProgram.Application\ReferalProgram.Application.csproj" />
+    <ProjectReference Include="..\ReferalProgram.Core\ReferalProgram.Core.csproj" />
     <ProjectReference Include="..\ReferalProgram.Presentation\ReferalProgram.Presentation.csproj" />
   </ItemGroup>
 

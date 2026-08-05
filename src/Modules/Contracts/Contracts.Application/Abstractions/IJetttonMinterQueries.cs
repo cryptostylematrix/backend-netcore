@@ -6,4 +6,8 @@ public interface IJetttonMinterQueries
         string addr, 
         string ownerAddr,
         CancellationToken ct = default);
+
+    Task<Result<JettonMinterDataResponse>> GetJettonDataAsync(
+        string addr,
+        CancellationToken ct = default);
 }

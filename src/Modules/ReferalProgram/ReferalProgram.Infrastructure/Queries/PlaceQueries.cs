@@ -137,7 +137,7 @@ public sealed class PlaceQueries(
     public async Task<long> GetPlacesCountAsync(
         string marketingAddr,
         byte structureNumber,
-        string profileAddr,
+        string? profileAddr,
         CancellationToken cancellationToken)
     {
         const string sql = """
@@ -145,7 +145,7 @@ public sealed class PlaceQueries(
             FROM public.places
             WHERE marketing_addr = @marketingAddr
               AND structure_number = @structureNumber
-              AND profile_addr = @profileAddr;
+              AND profile_addr IS NOT DISTINCT FROM @profileAddr;
             """;
 
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
@@ -544,6 +544,23 @@ public sealed class PlaceQueries(
             .Reverse()
             .Select(mp => byMp[mp])
             .ToList();
+    }
+
+    public async Task<PlaceResponse?> GetPlaceAsync(
+        int id,
+        CancellationToken cancellationToken)
+    {
+        const string sql = PlaceSelectSql + "\n" + """
+            WHERE id = @id
+            LIMIT 1;
+            """;
+
+        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        return await connection.QuerySingleOrDefaultAsync<PlaceResponse>(
+            new CommandDefinition(
+                sql,
+                new { id },
+                cancellationToken: cancellationToken));
     }
 
     public async Task<IReadOnlyList<PlaceResponse>> GetPlacesByMpPrefixAsync(

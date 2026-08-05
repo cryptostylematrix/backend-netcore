@@ -4,6 +4,9 @@ using dotenv.net;
 using FastEndpoints;
 using Matrix.Infrastructure;
 using ReferalProgram.Infrastructure;
+using Serilog;
+using Serilog.Debugging;
+using Serilog.Events;
 using ContractsPresentation = Contracts.Presentation.PresentationReference;
 using MarketingPresentation = Marketing.Presentation.PresentationReference;
 using MatrixPresentation = Matrix.Presentation.PresentationReference;
@@ -12,17 +15,53 @@ using ReferalProgramPresentation = ReferalProgram.Presentation.PresentationRefer
 var builder = WebApplication.CreateBuilder(args);
 
 // Load env based on environment
-var envFile = builder.Environment.IsDevelopment()
+var envFileName = builder.Environment.IsDevelopment()
     ? ".env.development"
     : ".env";
 
-DotEnv.Load(options: new DotEnvOptions(
-    envFilePaths: [ envFile ],
-    ignoreExceptions: true
-));
+var envFile = new[]
+    {
+        Path.Combine(builder.Environment.ContentRootPath, envFileName),
+        Path.Combine(
+            builder.Environment.ContentRootPath,
+            "src",
+            "API",
+            "CryptoStyle.Api",
+            envFileName),
+        Path.Combine(AppContext.BaseDirectory, envFileName)
+    }
+    .FirstOrDefault(File.Exists);
+
+if (envFile is not null)
+{
+    DotEnv.Load(options: new DotEnvOptions(
+        envFilePaths: [envFile],
+        ignoreExceptions: false));
+}
 
 // IMPORTANT: re-add environment variables so configuration sees what DotEnv just loaded
 builder.Configuration.AddEnvironmentVariables();
+
+if (builder.Environment.IsDevelopment())
+    SelfLog.Enable(message => Console.Error.WriteLine("Serilog: {0}", message));
+
+builder.Host.UseSerilog((_, _, loggerConfiguration) =>
+{
+    loggerConfiguration
+        .MinimumLevel.Information()
+        .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+        .MinimumLevel.Override("System", LogEventLevel.Warning)
+        .Enrich.FromLogContext()
+        .WriteTo.Console();
+
+    var seqUrl = builder.Configuration["SEQ_URL"];
+    if (!string.IsNullOrWhiteSpace(seqUrl))
+    {
+        loggerConfiguration.WriteTo.Seq(
+            seqUrl,
+            apiKey: builder.Configuration["SEQ_API_KEY"]);
+    }
+});
 
 builder.Services.AddFastEndpoints(options =>
 {
@@ -105,6 +144,11 @@ builder.Services.AddCors(options =>
 
 
 var app = builder.Build();
+
+app.Logger.LogInformation(
+    "CryptoStyle API logging initialized for {EnvironmentName}; Seq enabled: {SeqEnabled}",
+    app.Environment.EnvironmentName,
+    !string.IsNullOrWhiteSpace(builder.Configuration["SEQ_URL"]));
 
 if (app.Environment.IsDevelopment())
 {

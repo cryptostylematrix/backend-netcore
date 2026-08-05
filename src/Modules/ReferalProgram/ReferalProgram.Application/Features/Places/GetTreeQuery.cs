@@ -10,7 +10,8 @@ public sealed record GetTreeQuery(
 
 internal sealed class GetTreeQueryHandler(
     IPlaceQueries placeQueries,
-    IStructureQueries structureQueries)
+    IStructureQueries structureQueries,
+    INextPosService nextPosService)
     : IQueryHandler<GetTreeQuery, TreeNodeResponse>
 {
     public async Task<Result<TreeNodeResponse>> Handle(
@@ -41,6 +42,12 @@ internal sealed class GetTreeQueryHandler(
 
         if (selected is null)
             return Result<TreeNodeResponse>.NotFound();
+
+        var nextPosition = await nextPosService.GetNextPosAsync(
+            request.MarketingAddr,
+            request.StructureNumber,
+            request.ProfileAddr,
+            ct);
 
         var subtree = await placeQueries.GetPlacesByMpPrefixAsync(
             request.MarketingAddr,
@@ -95,6 +102,14 @@ internal sealed class GetTreeQueryHandler(
 
             if (row is null)
             {
+                var isNextPos = string.Equals(
+                    mp,
+                    nextPosition?.Mp,
+                    StringComparison.Ordinal);
+                var canBuy = parent is not null
+                    && mp.StartsWith(selected.Mp, StringComparison.Ordinal)
+                    && pos == checked(parent.Filling + 1);
+
                 return new TreeEmptyNodeResponse
                 {
                     ParentProfileAddr = parent?.ProfileAddr,
@@ -102,7 +117,9 @@ internal sealed class GetTreeQueryHandler(
                     Pos = pos,
                     Width = structure.Width,
                     Height = structure.DisplayHeight,
-                    Children = children
+                    Children = children,
+                    IsNextPos = isNextPos,
+                    CanBuy = canBuy
                 };
             }
 

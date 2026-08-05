@@ -1,3 +1,6 @@
+using Common.Domain;
+using ReferalProgram.Core.PlaceAggregate;
+
 namespace ReferalProgram.Application.Features.Invites;
 
 public sealed record ChooseInviterCommand(
@@ -7,16 +10,17 @@ public sealed record ChooseInviterCommand(
     int TaskKey,
     long QueryId,
     string? SourceAddr,
-    string ProfileLogin) : ICommand<PlaceResponse>;
+    string ProfileLogin) : ICommand<CommandResponse>;
 
 internal sealed class ChooseInviterCommandHandler(
     IPlaceQueries placeQueries,
-    IPlaceCommands placeCommands) : ICommandHandler<ChooseInviterCommand, PlaceResponse>
+    IPlaceRepository placeRepository,
+    IUnitOfWork unitOfWork) : ICommandHandler<ChooseInviterCommand, CommandResponse>
 {
     private const byte StructureNumber = 0;
     private const uint PlaceNumber = 1;
 
-    public async Task<Result<PlaceResponse>> Handle(
+    public async Task<Result<CommandResponse>> Handle(
         ChooseInviterCommand request,
         CancellationToken cancellationToken)
     {
@@ -30,7 +34,7 @@ internal sealed class ChooseInviterCommandHandler(
                 cancellationToken);
 
             if (inviter is null)
-                return Result<PlaceResponse>.Error("Inviter place was not found.");
+                return Result<CommandResponse>.Error("Inviter place was not found.");
 
             var taskPlace = await placeQueries.GetPlaceByTaskKeyAsync(
                 inviter.MarketingAddr,
@@ -38,7 +42,7 @@ internal sealed class ChooseInviterCommandHandler(
                 cancellationToken);
 
             if (taskPlace is not null)
-                return Result<PlaceResponse>.Error("Invite for this task is already created.");
+                return Result.Success(new CommandResponse(0, taskPlace));
 
             var existingInvite = await placeQueries.GetPlaceAsync(
                 inviter.MarketingAddr,
@@ -48,47 +52,51 @@ internal sealed class ChooseInviterCommandHandler(
                 cancellationToken);
 
             if (existingInvite is not null)
-                return Result<PlaceResponse>.Error("Invite is already created.");
+                return Result<CommandResponse>.Error("Invite is already created.");
 
             if (!inviter.IsActive)
-                return Result<PlaceResponse>.Error("Inviter is not active.");
+                return Result<CommandResponse>.Error("Inviter is not active.");
 
             var inviterProfileAddr = inviter.ProfileAddr;
             if (string.IsNullOrWhiteSpace(inviterProfileAddr))
-                return Result<PlaceResponse>.Error("Inviter place has no profile address.");
+                return Result<CommandResponse>.Error("Inviter place has no profile address.");
 
             var pos = checked(inviter.Filling + 1);
 
-            var createdPlace = await placeCommands.CreatePlaceAsync(
-                new CreatePlaceCommand(
-                    ParentId: inviter.Id,
-                    ParentFilling: inviter.Filling,
-                    MarketingAddr: inviter.MarketingAddr,
-                    StructureNumber: inviter.StructNumber,
-                    ProfileAddr: request.ProfileAddr,
-                    ProfileLogin: request.ProfileLogin,
-                    Index: request.ProfileLogin + PlaceNumber.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                    PlaceNumber: PlaceNumber,
-                    ParentProfileAddr: inviterProfileAddr,
-                    ParentProfileLogin: inviter.ProfileLogin,
-                    ParentPlaceNumber: inviter.PlaceNumber,
-                    Mp: inviter.Mp + pos.ToString("X8"),
-                    PosGroup: 0,
-                    Kind: 0,
-                    Pos: pos,
-                    Filling: 0,
-                    Deep: checked(inviter.Deep + 1),
-                    IsActive: false,
-                    CreatedAt: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                    ActivatedAt: null,
-                    PersonalVolume: 0,
-                    GroupVolume: 0,
-                    TaskKey: request.TaskKey,
-                    TaskQueryId: request.QueryId,
-                    TaskSourceAddr: request.SourceAddr),
-                cancellationToken);
+            var parent = await placeRepository.GetByIdAsync(inviter.Id, cancellationToken);
+            if (parent is null)
+                return Result<CommandResponse>.Error("Inviter place was not found.");
 
-            return Result.Success(createdPlace);
+            var createdPlace = Place.Create(
+                parentId: inviter.Id,
+                marketingAddr: inviter.MarketingAddr,
+                structureNumber: inviter.StructNumber,
+                profileAddr: request.ProfileAddr,
+                profileLogin: request.ProfileLogin,
+                index: request.ProfileLogin + PlaceNumber.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                placeNumber: PlaceNumber,
+                parentProfileAddr: inviterProfileAddr,
+                parentProfileLogin: inviter.ProfileLogin,
+                parentPlaceNumber: inviter.PlaceNumber,
+                mp: inviter.Mp + pos.ToString("X8"),
+                posGroup: 0,
+                kind: 0,
+                pos: pos,
+                filling: 0,
+                deep: checked(inviter.Deep + 1),
+                isActive: false,
+                createdAt: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                activatedAt: null,
+                personalVolume: 0,
+                groupVolume: 0,
+                taskKey: request.TaskKey,
+                taskQueryId: request.QueryId,
+                taskSourceAddr: request.SourceAddr);
+
+            placeRepository.Add(createdPlace);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+
+            return Result.Success(new CommandResponse(0, ToResponse(createdPlace)));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -96,7 +104,33 @@ internal sealed class ChooseInviterCommandHandler(
         }
         catch (Exception exception)
         {
-            return Result<PlaceResponse>.Error(exception.Message);
+            return Result<CommandResponse>.Error(exception.Message);
         }
     }
+
+    private static PlaceResponse ToResponse(Place place) => new()
+    {
+        Id = place.Id,
+        ParentId = place.ParentId,
+        Mp = place.Mp,
+        PosGroup = place.PosGroup,
+        MarketingAddr = place.MarketingAddr,
+        StructNumber = place.StructureNumber,
+        ProfileAddr = place.ProfileAddr,
+        PlaceNumber = place.PlaceNumber,
+        ProfileLogin = place.ProfileLogin,
+        Index = place.Index,
+        ParentProfileAddr = place.ParentProfileAddr,
+        ParentProfileLogin = place.ParentProfileLogin,
+        ParentPlaceNumber = place.ParentPlaceNumber,
+        CreatedAt = place.CreatedAt,
+        ActivatedAt = place.ActivatedAt,
+        IsActive = place.IsActive,
+        Kind = place.Kind,
+        Pos = place.Pos,
+        Filling = place.Filling,
+        Deep = place.Deep,
+        PersonalVolume = place.PersonalVolume,
+        GroupVolume = place.GroupVolume
+    };
 }

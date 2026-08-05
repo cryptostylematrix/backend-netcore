@@ -19,7 +19,7 @@ public interface IPlaceQueries
     Task<long> GetPlacesCountAsync(
         string marketingAddr,
         byte structureNumber,
-        string profileAddr,
+        string? profileAddr,
         CancellationToken cancellationToken);
 
     Task<IReadOnlyDictionary<byte, long>> GetPlaceCountsByPosGroupAsync(
@@ -83,6 +83,10 @@ public interface IPlaceQueries
     Task<PlaceResponse?> GetRootPlaceAsync(
         string marketingAddr,
         byte structureNumber,
+        CancellationToken cancellationToken);
+
+    Task<PlaceResponse?> GetPlaceAsync(
+        int id,
         CancellationToken cancellationToken);
 
     Task<Paginated<PlaceResponse>> GetChildrenAsync(

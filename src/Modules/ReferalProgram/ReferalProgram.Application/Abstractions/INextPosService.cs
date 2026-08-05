@@ -5,6 +5,6 @@ public interface INextPosService
     Task<NextPosResponse?> GetNextPosAsync(
         string marketingAddr,
         byte structureNumber,
-        string profileAddr,
+        string? profileAddr,
         CancellationToken ct);
 }
