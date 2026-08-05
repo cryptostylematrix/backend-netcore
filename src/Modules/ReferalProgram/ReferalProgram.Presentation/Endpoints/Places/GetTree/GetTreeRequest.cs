@@ -9,7 +9,7 @@ public sealed class GetTreeRequest
     public byte StructureNumber { get; init; }
 
     [BindFrom("profile_addr")]
-    public string ProfileAddr { get; init; } = null!;
+    public string? ProfileAddr { get; init; }
 
     [BindFrom("place_number")]
     public uint PlaceNumber { get; init; }

@@ -3,7 +3,7 @@ namespace ReferalProgram.Application.Features.Places;
 public sealed record GetTreeQuery(
     string MarketingAddr,
     byte StructureNumber,
-    string ProfileAddr,
+    string? ProfileAddr,
     uint PlaceNumber,
     uint FromPos,
     uint ToPos) : IQuery<TreeNodeResponse>;
@@ -33,10 +33,14 @@ internal sealed class GetTreeQueryHandler(
             return Result<TreeNodeResponse>.Error(
                 $"Positions must be between 1 and structure width {structure.Width}.");
 
+        var profileAddr = string.IsNullOrWhiteSpace(request.ProfileAddr)
+            ? null
+            : request.ProfileAddr;
+
         var selected = await placeQueries.GetPlaceAsync(
             request.MarketingAddr,
             request.StructureNumber,
-            request.ProfileAddr,
+            profileAddr,
             request.PlaceNumber,
             ct);
 
@@ -46,7 +50,7 @@ internal sealed class GetTreeQueryHandler(
         var nextPosition = await nextPosService.GetNextPosAsync(
             request.MarketingAddr,
             request.StructureNumber,
-            request.ProfileAddr,
+            profileAddr,
             ct);
 
         var subtree = await placeQueries.GetPlacesByMpPrefixAsync(
