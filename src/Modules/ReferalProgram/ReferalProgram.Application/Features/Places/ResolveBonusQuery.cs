@@ -19,20 +19,23 @@ internal sealed class ResolveBonusQueryHandler(IPlaceQueries placeQueries)
         ResolveBonusQuery request,
         CancellationToken cancellationToken)
     {
-        var relativePlace = await placeQueries.GetPlaceAsync(
+        var sourcePlace = await placeQueries.GetPlaceAsync(
             request.MarketingAddr,
             request.StructureNumber,
             request.RelativeProfileAddr,
             request.RelativePlaceNumber,
             cancellationToken);
 
-        var reason = await FindEligiblePlaceAsync(
-            relativePlace,
+        if (sourcePlace is null)
+            return Result<BonusResponse>.Error("The source place was not found.");
+
+        var relativePlace = await FindEligiblePlaceAsync(
+            sourcePlace,
             request.Level,
             cancellationToken);
 
-        if (reason?.ProfileAddr is null)
-            return Result<BonusResponse>.Error("An active profiled reason place was not found.");
+        if (relativePlace is null)
+            return Result<BonusResponse>.Error("An eligible relative place was not found.");
 
         PlaceResponse? recipientPlace;
 
@@ -42,7 +45,7 @@ internal sealed class ResolveBonusQueryHandler(IPlaceQueries placeQueries)
                 var invite = await placeQueries.GetPlaceAsync(
                     request.MarketingAddr,
                     structureNumber: 0,
-                    reason.ProfileAddr,
+                    relativePlace.ProfileAddr,
                     placeNumber: 1,
                     cancellationToken);
 
@@ -54,7 +57,7 @@ internal sealed class ResolveBonusQueryHandler(IPlaceQueries placeQueries)
 
             case StructBonusTag:
             case DevBonusTag:
-                recipientPlace = reason;
+                recipientPlace = relativePlace;
                 break;
 
             default:
@@ -69,7 +72,7 @@ internal sealed class ResolveBonusQueryHandler(IPlaceQueries placeQueries)
             return Result<BonusResponse>.Error("The bonus recipient has no profile address.");
 
         return Result.Success(new BonusResponse(
-            Reason: reason,
+            Reason: sourcePlace,
             RecipientProfileAddr: recipientPlace.ProfileAddr));
     }
 
