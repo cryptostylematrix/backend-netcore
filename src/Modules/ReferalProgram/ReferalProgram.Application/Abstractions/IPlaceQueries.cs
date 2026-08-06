@@ -8,6 +8,12 @@ public interface IPlaceQueries
         string? profileAddr,
         CancellationToken cancellationToken);
 
+    Task<PlaceResponse?> GetLastPlaceAsync(
+        string marketingAddr,
+        byte structureNumber,
+        string? profileAddr,
+        CancellationToken cancellationToken);
+
     Task<Paginated<PlaceResponse>> GetPlacesAsync(
         string marketingAddr,
         byte structureNumber,

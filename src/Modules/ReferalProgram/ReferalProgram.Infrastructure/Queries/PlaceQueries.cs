@@ -65,6 +65,38 @@ public sealed class PlaceQueries(
                 cancellationToken: cancellationToken));
     }
 
+    public async Task<PlaceResponse?> GetLastPlaceAsync(
+        string marketingAddr,
+        byte structureNumber,
+        string? profileAddr,
+        CancellationToken cancellationToken)
+    {
+        profileAddr = string.IsNullOrWhiteSpace(profileAddr)
+            ? null
+            : profileAddr;
+
+        const string sql = PlaceSelectSql + "\n" + """
+            WHERE marketing_addr = @marketingAddr
+              AND structure_number = @structureNumber
+              AND profile_addr IS NOT DISTINCT FROM @profileAddr
+            ORDER BY place_number DESC, id DESC
+            LIMIT 1;
+            """;
+
+        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
+
+        return await connection.QuerySingleOrDefaultAsync<PlaceResponse>(
+            new CommandDefinition(
+                sql,
+                new
+                {
+                    marketingAddr,
+                    structureNumber = (short)structureNumber,
+                    profileAddr
+                },
+                cancellationToken: cancellationToken));
+    }
+
     public async Task<Paginated<PlaceResponse>> GetPlacesAsync(
         string marketingAddr,
         byte structureNumber,
