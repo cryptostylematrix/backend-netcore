@@ -423,6 +423,10 @@ public sealed class PlaceQueries(
         uint placeNumber,
         CancellationToken cancellationToken)
     {
+        profileAddr = string.IsNullOrWhiteSpace(profileAddr)
+            ? null
+            : profileAddr;
+
         const string sql = PlaceSelectSql + "\n" + """
             WHERE marketing_addr = @marketingAddr
               AND structure_number = @structureNumber

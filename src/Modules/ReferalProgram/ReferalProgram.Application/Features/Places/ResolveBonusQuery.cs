@@ -73,6 +73,11 @@ internal sealed class ResolveBonusQueryHandler(IPlaceQueries placeQueries)
             RecipientProfileAddr: recipientPlace.ProfileAddr));
     }
 
+    /* 
+        level cannot be a starting ppint becasue in this casse we can 
+        take the same place twice
+    */
+
     private async Task<PlaceResponse?> FindEligiblePlaceAsync(
         PlaceResponse? start,
         ushort level,
