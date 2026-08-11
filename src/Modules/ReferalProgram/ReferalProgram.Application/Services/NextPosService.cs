@@ -93,22 +93,31 @@ public sealed class NextPosService(
             width,
             ct);
 
-        for (uint filling = 0; filling < width; filling++)
-        {
-            foreach (var place in ChessOrder(places))
-            {
-                if (place.Filling != filling)
-                    continue;
+        IReadOnlyList<PlaceResponse>[] placeGroups =
+        [
+            places.Where(place => !string.IsNullOrWhiteSpace(place.ProfileAddr)).ToArray(),
+            places.Where(place => string.IsNullOrWhiteSpace(place.ProfileAddr)).ToArray()
+        ];
 
-                var pos = checked(place.Filling + 1);
-                return new NextPosResponse
+        foreach (var placeGroup in placeGroups)
+        {
+            for (uint filling = 0; filling < width; filling++)
+            {
+                foreach (var place in ChessOrder(placeGroup))
                 {
-                    ProfileAddr = place.ProfileAddr,
-                    PlaceNumber = place.PlaceNumber,
-                    Pos = pos,
-                    Mp = place.Mp + pos.ToString("X8"),
-                    PosGroup = posGroup
-                };
+                    if (place.Filling != filling)
+                        continue;
+
+                    var pos = checked(place.Filling + 1);
+                    return new NextPosResponse
+                    {
+                        ProfileAddr = place.ProfileAddr,
+                        PlaceNumber = place.PlaceNumber,
+                        Pos = pos,
+                        Mp = place.Mp + pos.ToString("X8"),
+                        PosGroup = posGroup
+                    };
+                }
             }
         }
 
