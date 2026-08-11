@@ -304,7 +304,12 @@ public sealed class PlaceQueries(
               AND mp LIKE @mpPrefix
               AND is_active = true
               AND filling < @width
-            ORDER BY deep ASC, filling ASC, activated_at ASC NULLS LAST, id ASC
+            ORDER BY
+                deep ASC,
+                (profile_addr IS NULL) ASC,
+                filling ASC,
+                activated_at ASC NULLS LAST,
+                id ASC
             LIMIT 1;
             """;
 
