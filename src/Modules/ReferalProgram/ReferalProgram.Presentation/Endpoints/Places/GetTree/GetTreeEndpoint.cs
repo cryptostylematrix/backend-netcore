@@ -13,7 +13,10 @@ public sealed class GetTreeEndpoint(ISender sender)
         Summary(summary =>
         {
             summary.Summary = "Get place tree";
-            summary.Description = "Gets a place tree using the structure's configured width and height.";
+            summary.Description =
+                "Gets a place tree using the structure's configured width and height. "
+                + "Purchase and lock actions are calculated for viewer_profile_addr; "
+                + "viewer_wallet_addr is required for wallet-owned lock actions.";
         });
     }
 
@@ -24,6 +27,8 @@ public sealed class GetTreeEndpoint(ISender sender)
             request.StructureNumber,
             request.ProfileAddr,
             request.PlaceNumber,
+            request.ViewerProfileAddr,
+            request.ViewerWalletAddr,
             request.FromPos,
             request.ToPos), ct);
 

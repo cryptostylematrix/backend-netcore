@@ -28,16 +28,24 @@ public interface IPlaceQueries
         string? profileAddr,
         CancellationToken cancellationToken);
 
+    Task<PlaceSubtreeCounts> GetPlaceSubtreeCountsAsync(
+        string marketingAddr,
+        byte structureNumber,
+        string mpPrefix,
+        byte height,
+        CancellationToken cancellationToken);
+
     Task<IReadOnlyDictionary<byte, long>> GetPlaceCountsByPosGroupAsync(
         string marketingAddr,
         byte structureNumber,
         CancellationToken cancellationToken);
 
-    Task<IReadOnlyList<PlaceResponse>> GetUnfilledPlacesAtMinDepthAsync(
+    Task<IReadOnlyList<PlaceResponse>> GetUnfilledPlacesInDepthWindowAsync(
         string marketingAddr,
         byte structureNumber,
         string rootMp,
         byte width,
+        byte depthSpread,
         CancellationToken cancellationToken);
 
     Task<PlaceResponse?> GetFirstActiveUnfilledPlaceAsync(
@@ -45,12 +53,23 @@ public interface IPlaceQueries
         byte structureNumber,
         string rootMp,
         byte width,
+        bool profiledPlacesPrioritized,
+        byte depthSpread,
+        CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<PlaceResponse>> GetOpenPlacesByMpPrefixAsync(
+        string marketingAddr,
+        byte structureNumber,
+        string mpPrefix,
+        byte width,
+        int page,
+        int pageSize,
         CancellationToken cancellationToken);
 
     Task<Paginated<PlaceResponse>> SearchPlacesAsync(
         string marketingAddr,
         byte structureNumber,
-        string profileAddr,
+        string rootMp,
         string query,
         int page,
         int pageSize,
@@ -104,3 +123,7 @@ public interface IPlaceQueries
         int pageSize,
         CancellationToken cancellationToken);
 }
+
+public sealed record PlaceSubtreeCounts(
+    long MatrixPlacesCount,
+    long DescendantsCount);

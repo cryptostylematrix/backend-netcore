@@ -18,6 +18,7 @@ internal sealed class BuySystemPlaceCommandHandler(
     IPlaceRepository placeRepository,
     IStructureQueries structureQueries,
     INextPosService nextPosService,
+    ISourcePlaceResolver sourcePlaceResolver,
     IUnitOfWork unitOfWork) : ICommandHandler<BuySystemPlaceCommand, CommandResponse>
 {
     public async Task<Result<CommandResponse>> Handle(
@@ -114,25 +115,18 @@ internal sealed class BuySystemPlaceCommandHandler(
                 placeWithTaskKey = boughtPlace;
             }
 
-            var matrixTopPlace = await placeRepository.GetAncestorAsync(
+            var source = await sourcePlaceResolver.ResolveAsync(
                 placeWithTaskKey,
                 structure.Height,
                 cancellationToken);
 
-            if (matrixTopPlace is null)
+            if (source is null)
                 return Result<CommandResponse>.Error(
                     $"Could not find a parent at height {structure.Height}.");
 
-            var matrixPlacesCount = await placeRepository.CountAtDepthAsync(
-                request.MarketingAddr,
-                request.StructureNumber,
-                matrixTopPlace.Mp,
-                placeWithTaskKey.Deep,
-                cancellationToken);
-
             return Result.Success(new CommandResponse(
-                Code: checked((uint)matrixPlacesCount),
-                Source: ToResponse(matrixTopPlace)));
+                source.Code,
+                source.SourcePlace));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -143,32 +137,6 @@ internal sealed class BuySystemPlaceCommandHandler(
             return Result<CommandResponse>.Error(exception.Message);
         }
     }
-
-    private static PlaceResponse ToResponse(Place place) => new()
-    {
-        Id = place.Id,
-        ParentId = place.ParentId,
-        Mp = place.Mp,
-        PosGroup = place.PosGroup,
-        MarketingAddr = place.MarketingAddr,
-        StructNumber = place.StructureNumber,
-        ProfileAddr = place.ProfileAddr,
-        PlaceNumber = place.PlaceNumber,
-        ProfileLogin = place.ProfileLogin,
-        Index = place.Index,
-        ParentProfileAddr = place.ParentProfileAddr,
-        ParentProfileLogin = place.ParentProfileLogin,
-        ParentPlaceNumber = place.ParentPlaceNumber,
-        CreatedAt = place.CreatedAt,
-        ActivatedAt = place.ActivatedAt,
-        IsActive = place.IsActive,
-        Kind = place.Kind,
-        Pos = place.Pos,
-        Filling = place.Filling,
-        Deep = place.Deep,
-        PersonalVolume = place.PersonalVolume,
-        GroupVolume = place.GroupVolume
-    };
 
     private sealed class PositionAlgorithm
     {

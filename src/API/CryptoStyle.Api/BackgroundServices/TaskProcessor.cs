@@ -1,11 +1,14 @@
-using Contracts.Application.Abstractions;
+using Contracts.Application.Features.MarketingV3;
 using Contracts.Application.Features.ProfileItem;
 using Contracts.Dto;
+using IMarketingTransactionSender = Contracts.Application.Abstractions.IMarketingTransactionSender;
 using MediatR;
 using Microsoft.Extensions.Options;
 using ReferalProgram.Application.Abstractions;
 using ReferalProgram.Application.Features.Invites;
+using ReferalProgram.Application.Features.Locks;
 using ReferalProgram.Application.Features.Places;
+using ReferalProgram.Dto;
 using TonSdk.Core.Boc;
 
 namespace CryptoStyle.Api.BackgroundServices;
@@ -31,6 +34,7 @@ public sealed class TaskProcessor(
 
     private const uint CreateCloneCommandTag = 0xca8b8aa2;
     private const uint CreateReinvestCloneCommandTag = 0x08b738b1;
+    private const uint StructBonusTag = 0xe1319040;
 
     private readonly TimeSpan _interval = TimeSpan.FromSeconds(options.Value.IntervalSeconds);
 
@@ -63,7 +67,6 @@ public sealed class TaskProcessor(
         LogAction("Creating task-processing service scope");
         await using var scope = scopeFactory.CreateAsyncScope();
         var referalProgramQueries = scope.ServiceProvider.GetRequiredService<IReferalProgramQueries>();
-        var marketingV3Queries = scope.ServiceProvider.GetRequiredService<IMarketingV3Queries>();
         var transactionSender = scope.ServiceProvider.GetRequiredService<IMarketingTransactionSender>();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
 
@@ -81,8 +84,8 @@ public sealed class TaskProcessor(
                 "[API TaskProcessor] Requesting first task for marketing {MarketingAddr}",
                 program.MarketingAddr);
 
-            var taskResult = await marketingV3Queries.GetFirstTaskAsync(
-                program.MarketingAddr,
+            var taskResult = await sender.Send(
+                new GetFirstTaskQuery(program.MarketingAddr),
                 cancellationToken);
 
             if (taskResult.IsSuccess && taskResult.Value is { Key: not null, Val: not null })
@@ -95,7 +98,6 @@ public sealed class TaskProcessor(
                     program.MarketingAddr,
                     taskResult.Value.Key.Value,
                     taskResult.Value.Val,
-                    marketingV3Queries,
                     transactionSender,
                     sender,
                     cancellationToken);
@@ -120,7 +122,6 @@ public sealed class TaskProcessor(
         string marketingAddr,
         uint taskKey,
         MarketingV3TaskResponse task,
-        IMarketingV3Queries marketingV3Queries,
         IMarketingTransactionSender transactionSender,
         ISender sender,
         CancellationToken cancellationToken)
@@ -147,6 +148,23 @@ public sealed class TaskProcessor(
         {
             switch (task)
             {
+                case
+                {
+                    Command: { Tag: SystemCommandTaskTag } systemCommand,
+                    Query: { Tag: BonusQueryTaskTag } bonusQuery
+                }:
+                    LogAction("Dispatching move-or-structure-bonus task");
+                    await ProcessMoveOrStructBonusAsync(
+                        marketingAddr,
+                        taskKey,
+                        task,
+                        systemCommand,
+                        bonusQuery,
+                        transactionSender,
+                        sender,
+                        cancellationToken);
+                    break;
+
                 case { Command: { Tag: UserCommandTaskTag } userCommand }:
                     LogAction("Dispatching user command task");
                     await ProcessUserCommandAsync(
@@ -154,7 +172,6 @@ public sealed class TaskProcessor(
                         taskKey,
                         task,
                         userCommand,
-                        marketingV3Queries,
                         transactionSender,
                         sender,
                         cancellationToken);
@@ -162,7 +179,14 @@ public sealed class TaskProcessor(
 
                 case { Command: { Tag: SystemCommandTaskTag } systemCommand }:
                     LogAction("Dispatching system command task");
-                    await ProcessSystemCommandAsync(taskKey, task.QueryId, systemCommand, cancellationToken);
+                    await ProcessSystemCommandAsync(
+                        marketingAddr,
+                        taskKey,
+                        task,
+                        systemCommand,
+                        transactionSender,
+                        sender,
+                        cancellationToken);
                     break;
 
                 case { Query: { Tag: BonusQueryTaskTag } bonusQuery }:
@@ -172,15 +196,21 @@ public sealed class TaskProcessor(
                         taskKey,
                         task,
                         bonusQuery,
-                        marketingV3Queries,
                         transactionSender,
                         sender,
                         cancellationToken);
                     break;
 
-                case { Query: { Tag: ProfileInfoQueryTaskTag } }:
-                    logger.LogWarning("[API TaskProcessor] Profile-info query processing is not implemented");
-                    // TODO: Process profile-info query task.
+                case { Query: { Tag: ProfileInfoQueryTaskTag } profileInfoQuery }:
+                    LogAction("Dispatching profile-info query task");
+                    await ProcessProfileInfoQueryAsync(
+                        marketingAddr,
+                        taskKey,
+                        task,
+                        profileInfoQuery,
+                        transactionSender,
+                        sender,
+                        cancellationToken);
                     break;
 
                 default:
@@ -206,7 +236,6 @@ public sealed class TaskProcessor(
         uint taskKey,
         MarketingV3TaskResponse task,
         MarketingV3TaskCommandResponse command,
-        IMarketingV3Queries marketingV3Queries,
         IMarketingTransactionSender transactionSender,
         ISender sender,
         CancellationToken cancellationToken)
@@ -223,22 +252,26 @@ public sealed class TaskProcessor(
                 break;
 
             case BuyFirstPlaceCommandTag:
-                logger.LogWarning("[API TaskProcessor] Buy-first-place command is not implemented");
-                // TODO: Process buy-first-place command.
-                break;
-
             case BuyPlaceCommandTag:
+            case BuyTopPlaceCommandTag:
             {
-                LogAction("Validating buy-place command");
+                var commandName = command.CommandTag switch
+                {
+                    BuyFirstPlaceCommandTag => "buy-first-place",
+                    BuyTopPlaceCommandTag => "buy-top-place",
+                    _ => "buy-place"
+                };
+
+                LogAction($"Validating {commandName} command");
                 if (command.Struct is null)
                 {
                     await CancelTaskAsync(
                         marketingAddr,
-                        marketingV3Queries,
+                        sender,
                         transactionSender,
                         task.QueryId,
                         taskKey,
-                        "Buy-place command is missing its structure number.",
+                        $"{commandName} command is missing its structure number.",
                         cancellationToken);
                     break;
                 }
@@ -247,11 +280,11 @@ public sealed class TaskProcessor(
                 {
                     await CancelTaskAsync(
                         marketingAddr,
-                        marketingV3Queries,
+                        sender,
                         transactionSender,
                         task.QueryId,
                         taskKey,
-                        "Buy-place command has no profile address.",
+                        $"{commandName} command has no profile address.",
                         cancellationToken);
                     break;
                 }
@@ -265,7 +298,7 @@ public sealed class TaskProcessor(
                 {
                     await CancelTaskAsync(
                         marketingAddr,
-                        marketingV3Queries,
+                        sender,
                         transactionSender,
                         task.QueryId,
                         taskKey,
@@ -279,7 +312,7 @@ public sealed class TaskProcessor(
                 {
                     await CancelTaskAsync(
                         marketingAddr,
-                        marketingV3Queries,
+                        sender,
                         transactionSender,
                         task.QueryId,
                         taskKey,
@@ -288,9 +321,9 @@ public sealed class TaskProcessor(
                     break;
                 }
 
-                LogAction("Deserializing buy-place child position");
+                LogAction($"Deserializing {commandName} child position");
                 var childPosition = DeserializeChildPosition(task.PayloadBocHex);
-                LogAction("Executing buy-place application command");
+                LogAction($"Executing {commandName} application command");
                 var result = await sender.Send(
                     new BuyPlaceCommand(
                         MarketingAddr: marketingAddr,
@@ -300,6 +333,12 @@ public sealed class TaskProcessor(
                         TaskKey: checked((int)taskKey),
                         QueryId: checked((long)task.QueryId),
                         SourceAddr: command.SourceAddr,
+                        Kind: command.CommandTag switch
+                        {
+                            BuyFirstPlaceCommandTag => BuyPlaceKind.First,
+                            BuyTopPlaceCommandTag => BuyPlaceKind.Top,
+                            _ => BuyPlaceKind.Regular
+                        },
                         ChildPosition: childPosition),
                     cancellationToken);
 
@@ -307,44 +346,46 @@ public sealed class TaskProcessor(
                 {
                     await CancelTaskAsync(
                         marketingAddr,
-                        marketingV3Queries,
+                        sender,
                         transactionSender,
                         task.QueryId,
                         taskKey,
-                        ErrorComment(result.Errors, "Could not buy place."),
+                        ErrorComment(result.Errors, $"Could not execute {commandName}."),
                         cancellationToken);
                     break;
                 }
 
-                LogAction("Buy-place application command completed");
-                var matrixTopPlace = result.Value.Source;
-                LogAction("Building buy-place command response");
-                var response = marketingV3Queries.SendCommandResponse(
-                    task.QueryId,
-                    taskKey,
-                    result.Value.Code,
-                    new MarketingV3SourcePlace
-                    {
-                        Place = new MarketingV3PlaceRef
+                LogAction($"{commandName} application command completed");
+                var sourcePlace = result.Value.Source;
+                LogAction($"Building {commandName} command response");
+                var response = await sender.Send(
+                    new BuildCommandResponseQuery(
+                        task.QueryId,
+                        taskKey,
+                        result.Value.Code,
+                        new MarketingV3SourcePlace
                         {
-                            Struct = matrixTopPlace.StructNumber,
-                            ProfileAddr = matrixTopPlace.ProfileAddr,
-                            PlaceNumber = matrixTopPlace.PlaceNumber
-                        },
-                        ProfileLogin = matrixTopPlace.ProfileLogin
-                    });
+                            Place = new MarketingV3PlaceRef
+                            {
+                                Struct = sourcePlace.StructNumber,
+                                ProfileAddr = sourcePlace.ProfileAddr,
+                                PlaceNumber = sourcePlace.PlaceNumber
+                            },
+                            ProfileLogin = sourcePlace.ProfileLogin
+                        }),
+                    cancellationToken);
 
                 if (!response.IsSuccess)
                     throw new InvalidOperationException(
                         $"Could not build command response: {string.Join(", ", response.Errors)}");
 
-                LogAction("Sending buy-place command response transaction");
+                LogAction($"Sending {commandName} command response transaction");
                 await transactionSender.SendAsync(
                     marketingAddr,
                     taskKey,
                     response.Value.BocHex,
                     cancellationToken);
-                LogAction("Buy-place command response transaction sent");
+                LogAction($"{commandName} command response transaction sent");
                 break;
             }
 
@@ -355,7 +396,7 @@ public sealed class TaskProcessor(
                 {
                     await CancelTaskAsync(
                         marketingAddr,
-                        marketingV3Queries,
+                        sender,
                         transactionSender,
                         task.QueryId,
                         taskKey,
@@ -383,7 +424,7 @@ public sealed class TaskProcessor(
                 {
                     await CancelTaskAsync(
                         marketingAddr,
-                        marketingV3Queries,
+                        sender,
                         transactionSender,
                         task.QueryId,
                         taskKey,
@@ -393,22 +434,24 @@ public sealed class TaskProcessor(
                 }
 
                 LogAction("Buy-system-place application command completed");
-                var matrixTopPlace = result.Value.Source;
+                var sourcePlace = result.Value.Source;
                 LogAction("Building buy-system-place command response");
-                var response = marketingV3Queries.SendCommandResponse(
-                    task.QueryId,
-                    taskKey,
-                    result.Value.Code,
-                    new MarketingV3SourcePlace
-                    {
-                        Place = new MarketingV3PlaceRef
+                var response = await sender.Send(
+                    new BuildCommandResponseQuery(
+                        task.QueryId,
+                        taskKey,
+                        result.Value.Code,
+                        new MarketingV3SourcePlace
                         {
-                            Struct = matrixTopPlace.StructNumber,
-                            ProfileAddr = matrixTopPlace.ProfileAddr,
-                            PlaceNumber = matrixTopPlace.PlaceNumber
-                        },
-                        ProfileLogin = matrixTopPlace.ProfileLogin
-                    });
+                            Place = new MarketingV3PlaceRef
+                            {
+                                Struct = sourcePlace.StructNumber,
+                                ProfileAddr = sourcePlace.ProfileAddr,
+                                PlaceNumber = sourcePlace.PlaceNumber
+                            },
+                            ProfileLogin = sourcePlace.ProfileLogin
+                        }),
+                    cancellationToken);
 
                 if (!response.IsSuccess)
                     throw new InvalidOperationException(
@@ -424,11 +467,6 @@ public sealed class TaskProcessor(
                 break;
             }
 
-            case BuyTopPlaceCommandTag:
-                logger.LogWarning("[API TaskProcessor] Buy-top-place command is not implemented");
-                // TODO: Process buy-top-place command.
-                break;
-
             case ChooseInviterCommandTag:
             {
                 LogAction("Deserializing choose-inviter command");
@@ -439,7 +477,7 @@ public sealed class TaskProcessor(
                 {
                     await CancelTaskAsync(
                         marketingAddr,
-                        marketingV3Queries,
+                        sender,
                         transactionSender,
                         task.QueryId,
                         taskKey,
@@ -457,7 +495,7 @@ public sealed class TaskProcessor(
                 {
                     await CancelTaskAsync(
                         marketingAddr,
-                        marketingV3Queries,
+                        sender,
                         transactionSender,
                         task.QueryId,
                         taskKey,
@@ -471,7 +509,7 @@ public sealed class TaskProcessor(
                 {
                     await CancelTaskAsync(
                         marketingAddr,
-                        marketingV3Queries,
+                        sender,
                         transactionSender,
                         task.QueryId,
                         taskKey,
@@ -496,7 +534,7 @@ public sealed class TaskProcessor(
                 {
                     await CancelTaskAsync(
                         marketingAddr,
-                        marketingV3Queries,
+                        sender,
                         transactionSender,
                         task.QueryId,
                         taskKey,
@@ -506,22 +544,24 @@ public sealed class TaskProcessor(
                 }
 
                 LogAction("Choose-inviter application command completed");
-                var createdPlace = result.Value.Source;
+                var sourcePlace = result.Value.Source;
                 LogAction("Building choose-inviter command response");
-                var response = marketingV3Queries.SendCommandResponse(
-                    task.QueryId,
-                    taskKey,
-                    code: result.Value.Code,
-                    source: new MarketingV3SourcePlace
-                    {
-                        Place = new MarketingV3PlaceRef
+                var response = await sender.Send(
+                    new BuildCommandResponseQuery(
+                        task.QueryId,
+                        taskKey,
+                        result.Value.Code,
+                        new MarketingV3SourcePlace
                         {
-                            Struct = createdPlace.StructNumber,
-                            ProfileAddr = createdPlace.ProfileAddr,
-                            PlaceNumber = createdPlace.PlaceNumber
-                        },
-                        ProfileLogin = createdPlace.ProfileLogin
-                    });
+                            Place = new MarketingV3PlaceRef
+                            {
+                                Struct = sourcePlace.StructNumber,
+                                ProfileAddr = sourcePlace.ProfileAddr,
+                                PlaceNumber = sourcePlace.PlaceNumber
+                            },
+                            ProfileLogin = sourcePlace.ProfileLogin
+                        }),
+                    cancellationToken);
 
                 if (!response.IsSuccess)
                     throw new InvalidOperationException(
@@ -538,14 +578,146 @@ public sealed class TaskProcessor(
             }
 
             case LockPositionCommandTag:
-                logger.LogWarning("[API TaskProcessor] Lock-position command is not implemented");
-                // TODO: Process lock-position command.
+            {
+                LogAction("Validating lock-position command");
+                if (command.Struct is null
+                    || string.IsNullOrWhiteSpace(command.ProfileAddr))
+                {
+                    await CancelTaskAsync(
+                        marketingAddr,
+                        sender,
+                        transactionSender,
+                        task.QueryId,
+                        taskKey,
+                        "Lock-position command is missing its structure or profile address.",
+                        cancellationToken);
+                    break;
+                }
+
+                if (!TryDeserializeRequiredPosition(
+                        task.PayloadBocHex,
+                        "Lock-position",
+                        out var position,
+                        out var positionError))
+                {
+                    await CancelTaskAsync(
+                        marketingAddr,
+                        sender,
+                        transactionSender,
+                        task.QueryId,
+                        taskKey,
+                        positionError,
+                        cancellationToken);
+                    break;
+                }
+
+                var result = await sender.Send(
+                    new LockPositionCommand(
+                        MarketingAddr: marketingAddr,
+                        StructureNumber: command.Struct.Value,
+                        PlaceStructureNumber: position.Parent.StructureNumber,
+                        ProfileAddr: command.ProfileAddr,
+                        PlaceProfileAddr: position.Parent.ProfileAddr,
+                        PlaceNumber: position.Parent.PlaceNumber,
+                        LockedPos: position.Position,
+                        TaskKey: checked((int)taskKey),
+                        QueryId: checked((long)task.QueryId),
+                        SourceAddr: command.SourceAddr),
+                    cancellationToken);
+
+                if (!result.IsSuccess)
+                {
+                    await CancelTaskAsync(
+                        marketingAddr,
+                        sender,
+                        transactionSender,
+                        task.QueryId,
+                        taskKey,
+                        ErrorComment(result.Errors, "Could not lock the position."),
+                        cancellationToken);
+                    break;
+                }
+
+                await SendCommandResponseAsync(
+                    marketingAddr,
+                    task.QueryId,
+                    taskKey,
+                    result.Value,
+                    sender,
+                    transactionSender,
+                    cancellationToken);
                 break;
+            }
 
             case UnlockPositionCommandTag:
-                logger.LogWarning("[API TaskProcessor] Unlock-position command is not implemented");
-                // TODO: Process unlock-position command.
+            {
+                LogAction("Validating unlock-position command");
+                if (command.Struct is null
+                    || string.IsNullOrWhiteSpace(command.ProfileAddr))
+                {
+                    await CancelTaskAsync(
+                        marketingAddr,
+                        sender,
+                        transactionSender,
+                        task.QueryId,
+                        taskKey,
+                        "Unlock-position command is missing its structure or profile address.",
+                        cancellationToken);
+                    break;
+                }
+
+                if (!TryDeserializeRequiredPosition(
+                        task.PayloadBocHex,
+                        "Unlock-position",
+                        out var position,
+                        out var positionError))
+                {
+                    await CancelTaskAsync(
+                        marketingAddr,
+                        sender,
+                        transactionSender,
+                        task.QueryId,
+                        taskKey,
+                        positionError,
+                        cancellationToken);
+                    break;
+                }
+
+                var result = await sender.Send(
+                    new UnlockPositionCommand(
+                        MarketingAddr: marketingAddr,
+                        StructureNumber: command.Struct.Value,
+                        PlaceStructureNumber: position.Parent.StructureNumber,
+                        ProfileAddr: command.ProfileAddr,
+                        PlaceProfileAddr: position.Parent.ProfileAddr,
+                        PlaceNumber: position.Parent.PlaceNumber,
+                        LockedPos: position.Position,
+                        SourceAddr: command.SourceAddr),
+                    cancellationToken);
+
+                if (!result.IsSuccess)
+                {
+                    await CancelTaskAsync(
+                        marketingAddr,
+                        sender,
+                        transactionSender,
+                        task.QueryId,
+                        taskKey,
+                        ErrorComment(result.Errors, "Could not unlock the position."),
+                        cancellationToken);
+                    break;
+                }
+
+                await SendCommandResponseAsync(
+                    marketingAddr,
+                    task.QueryId,
+                    taskKey,
+                    result.Value,
+                    sender,
+                    transactionSender,
+                    cancellationToken);
                 break;
+            }
 
             default:
                 logger.LogWarning(
@@ -561,7 +733,6 @@ public sealed class TaskProcessor(
         uint taskKey,
         MarketingV3TaskResponse task,
         MarketingV3TaskQueryResponse query,
-        IMarketingV3Queries marketingV3Queries,
         IMarketingTransactionSender transactionSender,
         ISender sender,
         CancellationToken cancellationToken)
@@ -571,7 +742,7 @@ public sealed class TaskProcessor(
         {
             await CancelTaskAsync(
                 marketingAddr,
-                marketingV3Queries,
+                sender,
                 transactionSender,
                 task.QueryId,
                 taskKey,
@@ -595,7 +766,7 @@ public sealed class TaskProcessor(
         {
             await CancelTaskAsync(
                 marketingAddr,
-                marketingV3Queries,
+                sender,
                 transactionSender,
                 task.QueryId,
                 taskKey,
@@ -614,7 +785,7 @@ public sealed class TaskProcessor(
         {
             await CancelTaskAsync(
                 marketingAddr,
-                marketingV3Queries,
+                sender,
                 transactionSender,
                 task.QueryId,
                 taskKey,
@@ -628,7 +799,7 @@ public sealed class TaskProcessor(
         {
             await CancelTaskAsync(
                 marketingAddr,
-                marketingV3Queries,
+                sender,
                 transactionSender,
                 task.QueryId,
                 taskKey,
@@ -638,20 +809,22 @@ public sealed class TaskProcessor(
         }
 
         LogAction("Building bonus query response");
-        var response = marketingV3Queries.SendBonusQueryResponse(
-            task.QueryId,
-            taskKey,
-            new MarketingV3PlaceInfo
-            {
-                PlaceNumber = bonusResult.Value.Reason.PlaceNumber,
-                ProfileLogin = bonusResult.Value.Reason.ProfileLogin
-            },
-            new MarketingV3ProfileData
-            {
-                ProfileAddr = bonusResult.Value.RecipientProfileAddr,
-                ProfileLogin = profileLogin,
-                OwnerAddr = profileResult.Value.OwnerAddr
-            });
+        var response = await sender.Send(
+            new BuildBonusQueryResponseQuery(
+                task.QueryId,
+                taskKey,
+                new MarketingV3PlaceInfo
+                {
+                    PlaceNumber = bonusResult.Value.Reason.PlaceNumber,
+                    ProfileLogin = bonusResult.Value.Reason.ProfileLogin
+                },
+                new MarketingV3ProfileData
+                {
+                    ProfileAddr = bonusResult.Value.RecipientProfileAddr,
+                    ProfileLogin = profileLogin,
+                    OwnerAddr = profileResult.Value.OwnerAddr
+                }),
+            cancellationToken);
 
         if (!response.IsSuccess)
             throw new InvalidOperationException(
@@ -664,6 +837,100 @@ public sealed class TaskProcessor(
             response.Value.BocHex,
             cancellationToken);
         LogAction("Bonus query response transaction sent");
+    }
+
+    private async Task ProcessProfileInfoQueryAsync(
+        string marketingAddr,
+        uint taskKey,
+        MarketingV3TaskResponse task,
+        MarketingV3TaskQueryResponse query,
+        IMarketingTransactionSender transactionSender,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(query.RecipientProfileAddr))
+        {
+            await CancelTaskAsync(
+                marketingAddr,
+                sender,
+                transactionSender,
+                task.QueryId,
+                taskKey,
+                "Profile-info query has no recipient profile address.",
+                cancellationToken);
+            return;
+        }
+
+        LogAction("Loading profile-info query recipient");
+        var profileResult = await sender.Send(
+            new GetNftDataQuery(query.RecipientProfileAddr),
+            cancellationToken);
+
+        if (!profileResult.IsSuccess)
+        {
+            await CancelTaskAsync(
+                marketingAddr,
+                sender,
+                transactionSender,
+                task.QueryId,
+                taskKey,
+                ErrorComment(profileResult.Errors, "Could not get recipient profile info."),
+                cancellationToken);
+            return;
+        }
+
+        var profileLogin = profileResult.Value.Content?.Login;
+        if (string.IsNullOrWhiteSpace(profileLogin))
+        {
+            await CancelTaskAsync(
+                marketingAddr,
+                sender,
+                transactionSender,
+                task.QueryId,
+                taskKey,
+                "Profile-info query recipient has no login.",
+                cancellationToken);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(profileResult.Value.OwnerAddr))
+        {
+            await CancelTaskAsync(
+                marketingAddr,
+                sender,
+                transactionSender,
+                task.QueryId,
+                taskKey,
+                "Profile-info query recipient has no owner address.",
+                cancellationToken);
+            return;
+        }
+
+        LogAction("Building profile-info query response");
+        var response = await sender.Send(
+            new BuildProfileInfoQueryResponseQuery(
+                task.QueryId,
+                taskKey,
+                new MarketingV3ProfileInfo
+                {
+                    ProfileLogin = profileLogin,
+                    OwnerAddr = profileResult.Value.OwnerAddr
+                }),
+            cancellationToken);
+
+        if (!response.IsSuccess)
+        {
+            throw new InvalidOperationException(
+                $"Could not build profile-info query response: {string.Join(", ", response.Errors)}");
+        }
+
+        LogAction("Sending profile-info query response transaction");
+        await transactionSender.SendAsync(
+            marketingAddr,
+            taskKey,
+            response.Value.BocHex,
+            cancellationToken);
+        LogAction("Profile-info query response transaction sent");
     }
 
     private static ChooseInviterCommandParameters DeserializeChooseInviterCommand(
@@ -718,9 +985,37 @@ public sealed class TaskProcessor(
         return new ChildPosition(parent, position);
     }
 
+    private static bool TryDeserializeRequiredPosition(
+        string? payloadBocHex,
+        string commandName,
+        out ChildPosition position,
+        out string error)
+    {
+        try
+        {
+            var parsed = DeserializeChildPosition(payloadBocHex);
+            if (parsed is null)
+            {
+                position = null!;
+                error = $"{commandName} command is missing its position payload.";
+                return false;
+            }
+
+            position = parsed;
+            error = string.Empty;
+            return true;
+        }
+        catch (Exception exception)
+        {
+            position = null!;
+            error = $"{commandName} position payload is invalid: {exception.Message}";
+            return false;
+        }
+    }
+
     private async Task CancelTaskAsync(
         string marketingAddr,
-        IMarketingV3Queries marketingV3Queries,
+        ISender sender,
         IMarketingTransactionSender transactionSender,
         ulong queryId,
         uint taskKey,
@@ -728,7 +1023,9 @@ public sealed class TaskProcessor(
         CancellationToken cancellationToken)
     {
         LogAction("Building task cancellation response");
-        var result = marketingV3Queries.SendCancelTask(queryId, taskKey, comment);
+        var result = await sender.Send(
+            new BuildCancelTaskQuery(queryId, taskKey, comment),
+            cancellationToken);
 
         if (!result.IsSuccess)
             throw new InvalidOperationException(
@@ -747,6 +1044,46 @@ public sealed class TaskProcessor(
         LogAction("Task cancellation transaction sent");
     }
 
+    private async Task SendCommandResponseAsync(
+        string marketingAddr,
+        ulong queryId,
+        uint taskKey,
+        CommandResponse commandResponse,
+        ISender sender,
+        IMarketingTransactionSender transactionSender,
+        CancellationToken cancellationToken)
+    {
+        var source = commandResponse.Source;
+        var response = await sender.Send(
+            new BuildCommandResponseQuery(
+                queryId,
+                taskKey,
+                commandResponse.Code,
+                new MarketingV3SourcePlace
+                {
+                    Place = new MarketingV3PlaceRef
+                    {
+                        Struct = source.StructNumber,
+                        ProfileAddr = source.ProfileAddr,
+                        PlaceNumber = source.PlaceNumber
+                    },
+                    ProfileLogin = source.ProfileLogin
+                }),
+            cancellationToken);
+
+        if (!response.IsSuccess)
+        {
+            throw new InvalidOperationException(
+                $"Could not build command response: {string.Join(", ", response.Errors)}");
+        }
+
+        await transactionSender.SendAsync(
+            marketingAddr,
+            taskKey,
+            response.Value.BocHex,
+            cancellationToken);
+    }
+
     private static string ErrorComment(
         IEnumerable<string> errors,
         string fallback)
@@ -755,10 +1092,121 @@ public sealed class TaskProcessor(
         return string.IsNullOrWhiteSpace(comment) ? fallback : comment;
     }
 
-    private Task ProcessSystemCommandAsync(
+    private async Task ProcessMoveOrStructBonusAsync(
+        string marketingAddr,
         uint taskKey,
-        ulong queryId,
+        MarketingV3TaskResponse task,
         MarketingV3TaskCommandResponse command,
+        MarketingV3TaskQueryResponse query,
+        IMarketingTransactionSender transactionSender,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        if (command.CommandTag != CreateCloneCommandTag
+            || query.BonusTypeTag != StructBonusTag)
+        {
+            await CancelTaskAsync(
+                marketingAddr,
+                sender,
+                transactionSender,
+                task.QueryId,
+                taskKey,
+                "Combined task must contain create-clone and structure-bonus operations.",
+                cancellationToken);
+            return;
+        }
+
+        if (command.CommandStruct is null
+            || command.Relative?.Source is not { } commandSource
+            || query.Relative?.Source is not { } querySource)
+        {
+            await CancelTaskAsync(
+                marketingAddr,
+                sender,
+                transactionSender,
+                task.QueryId,
+                taskKey,
+                "Move-or-structure-bonus task is missing its structure or relative place.",
+                cancellationToken);
+            return;
+        }
+
+        var relativeMatches = command.Relative.Level == query.Relative.Level
+            && commandSource.Struct == querySource.Struct
+            && commandSource.PlaceNumber == querySource.PlaceNumber
+            && string.Equals(
+                commandSource.ProfileAddr,
+                querySource.ProfileAddr,
+                StringComparison.Ordinal);
+        if (!relativeMatches)
+        {
+            await CancelTaskAsync(
+                marketingAddr,
+                sender,
+                transactionSender,
+                task.QueryId,
+                taskKey,
+                "Move-or-structure-bonus command and query reference different places.",
+                cancellationToken);
+            return;
+        }
+
+        var decision = await sender.Send(
+            new ResolveMoveOrStructBonusQuery(
+                MarketingAddr: marketingAddr,
+                TargetStructureNumber: command.CommandStruct.Value,
+                SourceStructureNumber: commandSource.Struct,
+                SourceProfileAddr: commandSource.ProfileAddr,
+                SourcePlaceNumber: commandSource.PlaceNumber,
+                RelativeLevel: command.Relative.Level,
+                TaskKey: checked((int)taskKey)),
+            cancellationToken);
+
+        if (!decision.IsSuccess)
+        {
+            await CancelTaskAsync(
+                marketingAddr,
+                sender,
+                transactionSender,
+                task.QueryId,
+                taskKey,
+                ErrorComment(decision.Errors, "Could not resolve move-or-structure-bonus task."),
+                cancellationToken);
+            return;
+        }
+
+        if (decision.Value.CreateClone)
+        {
+            LogAction("Move-or-structure-bonus selected clone creation");
+            await ProcessSystemCommandAsync(
+                marketingAddr,
+                taskKey,
+                task,
+                command,
+                transactionSender,
+                sender,
+                cancellationToken);
+            return;
+        }
+
+        LogAction("Move-or-structure-bonus selected structure bonus");
+        await ProcessBonusQueryAsync(
+            marketingAddr,
+            taskKey,
+            task,
+            query,
+            transactionSender,
+            sender,
+            cancellationToken);
+    }
+
+    private async Task ProcessSystemCommandAsync(
+        string marketingAddr,
+        uint taskKey,
+        MarketingV3TaskResponse task,
+        MarketingV3TaskCommandResponse command,
+        IMarketingTransactionSender transactionSender,
+        ISender sender,
         CancellationToken cancellationToken)
     {
         logger.LogInformation(
@@ -768,24 +1216,89 @@ public sealed class TaskProcessor(
         switch (command.CommandTag)
         {
             case CreateCloneCommandTag:
-                logger.LogWarning("[API TaskProcessor] Create-clone command is not implemented");
-                // TODO: Process create-clone command.
-                break;
-
             case CreateReinvestCloneCommandTag:
-                logger.LogWarning("[API TaskProcessor] Create-reinvest-clone command is not implemented");
-                // TODO: Process create-reinvest-clone command.
+            {
+                var commandName = command.CommandTag == CreateCloneCommandTag
+                    ? "create-clone"
+                    : "create-reinvest-clone";
+
+                if (command.CommandStruct is null)
+                {
+                    await CancelTaskAsync(
+                        marketingAddr,
+                        sender,
+                        transactionSender,
+                        task.QueryId,
+                        taskKey,
+                        $"{commandName} command is missing its structure number.",
+                        cancellationToken);
+                    break;
+                }
+
+                if (command.Relative?.Source is null)
+                {
+                    await CancelTaskAsync(
+                        marketingAddr,
+                        sender,
+                        transactionSender,
+                        task.QueryId,
+                        taskKey,
+                        $"{commandName} command is missing its relative source place.",
+                        cancellationToken);
+                    break;
+                }
+
+                LogAction($"Executing {commandName} application command");
+                var relative = command.Relative;
+                var result = await sender.Send(
+                    new CreateSystemCloneCommand(
+                        MarketingAddr: marketingAddr,
+                        StructureNumber: command.CommandStruct.Value,
+                        SourceStructureNumber: relative.Source.Struct,
+                        SourceProfileAddr: relative.Source.ProfileAddr,
+                        SourcePlaceNumber: relative.Source.PlaceNumber,
+                        RelativeLevel: relative.Level,
+                        TaskKey: checked((int)taskKey),
+                        QueryId: checked((long)task.QueryId)),
+                    cancellationToken);
+
+                if (!result.IsSuccess)
+                {
+                    await CancelTaskAsync(
+                        marketingAddr,
+                        sender,
+                        transactionSender,
+                        task.QueryId,
+                        taskKey,
+                        ErrorComment(result.Errors, $"Could not execute {commandName}."),
+                        cancellationToken);
+                    break;
+                }
+
+                LogAction($"Sending {commandName} command response");
+                await SendCommandResponseAsync(
+                    marketingAddr,
+                    task.QueryId,
+                    taskKey,
+                    result.Value,
+                    sender,
+                    transactionSender,
+                    cancellationToken);
+                LogAction($"{commandName} command response transaction sent");
                 break;
+            }
 
             default:
-                logger.LogWarning(
-                    "[API TaskProcessor] System command {CommandTag} is not supported",
-                    $"0x{command.CommandTag:x8}");
-                // TODO: Process an unknown system command.
+                await CancelTaskAsync(
+                    marketingAddr,
+                    sender,
+                    transactionSender,
+                    task.QueryId,
+                    taskKey,
+                    $"System command 0x{command.CommandTag:x8} is not supported.",
+                    cancellationToken);
                 break;
         }
-
-        return Task.CompletedTask;
     }
 
     private void LogAction(string action) =>

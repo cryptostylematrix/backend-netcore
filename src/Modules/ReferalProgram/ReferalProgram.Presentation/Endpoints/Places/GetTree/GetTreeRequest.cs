@@ -14,6 +14,12 @@ public sealed class GetTreeRequest
     [BindFrom("place_number")]
     public uint PlaceNumber { get; init; }
 
+    [BindFrom("viewer_profile_addr")]
+    public string ViewerProfileAddr { get; init; } = null!;
+
+    [BindFrom("viewer_wallet_addr")]
+    public string ViewerWalletAddr { get; init; } = null!;
+
     [BindFrom("from_pos")]
     public uint FromPos { get; init; }
 

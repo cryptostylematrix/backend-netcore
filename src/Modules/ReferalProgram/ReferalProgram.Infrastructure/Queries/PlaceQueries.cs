@@ -8,7 +8,8 @@ using ReferalProgram.Dto;
 namespace ReferalProgram.Infrastructure.Queries;
 
 public sealed class PlaceQueries(
-    [FromKeyedServices("Programs")] NpgsqlDataSource dataSource) : IPlaceQueries
+    [FromKeyedServices("Programs")] NpgsqlDataSource dataSource)
+    : IPlaceQueries, IPositionCandidateQueries
 {
     private const string PlaceSelectSql = """
         SELECT
@@ -172,7 +173,7 @@ public sealed class PlaceQueries(
         string? profileAddr,
         CancellationToken cancellationToken)
     {
-        const string sql = """
+        var sql = """
             SELECT COUNT(*)::bigint
             FROM public.places
             WHERE marketing_addr = @marketingAddr
@@ -190,6 +191,44 @@ public sealed class PlaceQueries(
                     marketingAddr,
                     structureNumber = (short)structureNumber,
                     profileAddr
+                },
+                cancellationToken: cancellationToken));
+    }
+
+    public async Task<PlaceSubtreeCounts> GetPlaceSubtreeCountsAsync(
+        string marketingAddr,
+        byte structureNumber,
+        string mpPrefix,
+        byte height,
+        CancellationToken cancellationToken)
+    {
+        const string sql = """
+            SELECT
+                GREATEST(
+                    COUNT(*) FILTER (
+                        WHERE length(mp) <= length(@mpPrefix) + @height * 8
+                    ) - 1,
+                    0
+                )::bigint AS "MatrixPlacesCount",
+                GREATEST(COUNT(*) - 1, 0)::bigint AS "DescendantsCount"
+            FROM public.places
+            WHERE marketing_addr = @marketingAddr
+              AND structure_number = @structureNumber
+              AND mp LIKE @prefix;
+            """;
+
+        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
+
+        return await connection.QuerySingleAsync<PlaceSubtreeCounts>(
+            new CommandDefinition(
+                sql,
+                new
+                {
+                    marketingAddr,
+                    structureNumber = (short)structureNumber,
+                    mpPrefix,
+                    prefix = mpPrefix + "%",
+                    height = (int)height
                 },
                 cancellationToken: cancellationToken));
     }
@@ -225,14 +264,15 @@ public sealed class PlaceQueries(
             row => row.PlaceCount);
     }
 
-    public async Task<IReadOnlyList<PlaceResponse>> GetUnfilledPlacesAtMinDepthAsync(
+    public async Task<IReadOnlyList<PlaceResponse>> GetUnfilledPlacesInDepthWindowAsync(
         string marketingAddr,
         byte structureNumber,
         string rootMp,
         byte width,
+        byte depthSpread,
         CancellationToken cancellationToken)
     {
-        const string sql = """
+        var sql = """
             WITH candidates AS
             (
                 SELECT *
@@ -271,8 +311,9 @@ public sealed class PlaceQueries(
                 personal_volume       AS "PersonalVolume",
                 group_volume          AS "GroupVolume"
             FROM candidates
-            WHERE deep = (SELECT value FROM min_depth)
-            ORDER BY mp ASC, id ASC;
+            WHERE deep >= (SELECT value FROM min_depth)
+              AND deep < (SELECT value FROM min_depth) + @depthSpread
+            ORDER BY deep ASC, mp ASC, id ASC;
             """;
 
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
@@ -284,7 +325,8 @@ public sealed class PlaceQueries(
                     marketingAddr,
                     structureNumber = (short)structureNumber,
                     mpPrefix = rootMp + "%",
-                    width = (long)width
+                    width = (long)width,
+                    depthSpread = (long)depthSpread
                 },
                 cancellationToken: cancellationToken));
 
@@ -296,19 +338,38 @@ public sealed class PlaceQueries(
         byte structureNumber,
         string rootMp,
         byte width,
+        bool profiledPlacesPrioritized,
+        byte depthSpread,
         CancellationToken cancellationToken)
     {
-        const string sql = PlaceSelectSql + "\n" + """
-            WHERE marketing_addr = @marketingAddr
-              AND structure_number = @structureNumber
-              AND mp LIKE @mpPrefix
-              AND is_active = true
-              AND filling < @width
+        var sql = """
+            WITH candidates AS
+            (
+                SELECT *
+                FROM public.places
+                WHERE marketing_addr = @marketingAddr
+                  AND structure_number = @structureNumber
+                  AND mp LIKE @mpPrefix
+                  AND is_active = true
+                  AND filling < @width
+            ),
+            min_depth AS
+            (
+                SELECT MIN(deep) AS value
+                FROM candidates
+            )
+            """ + PlaceSelectSql.Replace("FROM public.places", "FROM candidates") + "\n" + """
+            WHERE deep >= (SELECT value FROM min_depth)
+              AND deep < (SELECT value FROM min_depth) + @depthSpread
             ORDER BY
-                deep ASC,
-                (profile_addr IS NULL) ASC,
+                CASE
+                    WHEN @profiledPlacesPrioritized AND profile_addr IS NULL THEN 1
+                    ELSE 0
+                END ASC,
                 filling ASC,
                 activated_at ASC NULLS LAST,
+                deep ASC,
+                mp ASC,
                 id ASC
             LIMIT 1;
             """;
@@ -322,15 +383,58 @@ public sealed class PlaceQueries(
                     marketingAddr,
                     structureNumber = (short)structureNumber,
                     mpPrefix = rootMp + "%",
-                    width = (long)width
+                    width = (long)width,
+                    profiledPlacesPrioritized,
+                    depthSpread = (long)depthSpread
                 },
                 cancellationToken: cancellationToken));
+    }
+
+    public async Task<IReadOnlyList<PlaceResponse>> GetOpenPlacesByMpPrefixAsync(
+        string marketingAddr,
+        byte structureNumber,
+        string mpPrefix,
+        byte width,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken)
+    {
+        var safePage = page > 0 ? page : 1;
+        var safePageSize = pageSize > 0 ? pageSize : 50;
+        var offset = (safePage - 1) * safePageSize;
+
+        const string sql = PlaceSelectSql + "\n" + """
+            WHERE marketing_addr = @marketingAddr
+              AND structure_number = @structureNumber
+              AND mp LIKE @mpPrefix
+              AND is_active = true
+              AND (@width = 0 OR filling < @width)
+            ORDER BY length(mp) ASC, mp ASC, id ASC
+            LIMIT @limit OFFSET @offset;
+            """;
+
+        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        var places = await connection.QueryAsync<PlaceResponse>(
+            new CommandDefinition(
+                sql,
+                new
+                {
+                    marketingAddr,
+                    structureNumber = (short)structureNumber,
+                    mpPrefix = mpPrefix + "%",
+                    width = (long)width,
+                    limit = safePageSize,
+                    offset
+                },
+                cancellationToken: cancellationToken));
+
+        return places.AsList();
     }
 
     public async Task<Paginated<PlaceResponse>> SearchPlacesAsync(
         string marketingAddr,
         byte structureNumber,
-        string profileAddr,
+        string rootMp,
         string query,
         int page,
         int pageSize,
@@ -341,38 +445,6 @@ public sealed class PlaceQueries(
         var offset = (safePage - 1) * safePageSize;
 
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
-
-        const string rootSql = """
-            SELECT mp
-            FROM public.places
-            WHERE marketing_addr = @marketingAddr
-              AND structure_number = @structureNumber
-              AND profile_addr = @profileAddr
-              AND place_number = 1
-            LIMIT 1;
-            """;
-
-        var parameters = new
-        {
-            marketingAddr,
-            structureNumber = (short)structureNumber,
-            profileAddr
-        };
-        var rootMp = await connection.QuerySingleOrDefaultAsync<string>(
-            new CommandDefinition(
-                rootSql,
-                parameters,
-                cancellationToken: cancellationToken));
-
-        if (rootMp is null)
-        {
-            return new Paginated<PlaceResponse>
-            {
-                Items = Array.Empty<PlaceResponse>(),
-                Page = safePage,
-                TotalPages = 1
-            };
-        }
 
         var searchParameters = new
         {

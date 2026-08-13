@@ -15,6 +15,8 @@ public sealed record ChooseInviterCommand(
 internal sealed class ChooseInviterCommandHandler(
     IPlaceQueries placeQueries,
     IPlaceRepository placeRepository,
+    IStructureQueries structureQueries,
+    ISourcePlaceResolver sourcePlaceResolver,
     IUnitOfWork unitOfWork) : ICommandHandler<ChooseInviterCommand, CommandResponse>
 {
     private const byte StructureNumber = 0;
@@ -26,6 +28,14 @@ internal sealed class ChooseInviterCommandHandler(
     {
         try
         {
+            var structure = await structureQueries.GetStructureAsync(
+                request.MarketingAddr,
+                StructureNumber,
+                cancellationToken);
+
+            if (structure is null)
+                return Result<CommandResponse>.Error("Structure was not found.");
+
             var inviter = await placeQueries.GetPlaceAsync(
                 request.MarketingAddr,
                 StructureNumber,
@@ -36,67 +46,79 @@ internal sealed class ChooseInviterCommandHandler(
             if (inviter is null)
                 return Result<CommandResponse>.Error("Inviter place was not found.");
 
-            var taskPlace = await placeQueries.GetPlaceByTaskKeyAsync(
+            var placeWithTaskKey = await placeRepository.GetByTaskKeyAsync(
                 inviter.MarketingAddr,
                 request.TaskKey,
                 cancellationToken);
 
-            if (taskPlace is not null)
-                return Result.Success(new CommandResponse(0, taskPlace));
+            if (placeWithTaskKey is null)
+            {
+                var existingInvite = await placeQueries.GetPlaceAsync(
+                    inviter.MarketingAddr,
+                    StructureNumber,
+                    request.ProfileAddr,
+                    PlaceNumber,
+                    cancellationToken);
 
-            var existingInvite = await placeQueries.GetPlaceAsync(
-                inviter.MarketingAddr,
-                StructureNumber,
-                request.ProfileAddr,
-                PlaceNumber,
+                if (existingInvite is not null)
+                    return Result<CommandResponse>.Error("Invite is already created.");
+
+                if (!inviter.IsActive)
+                    return Result<CommandResponse>.Error("Inviter is not active.");
+
+                var inviterProfileAddr = inviter.ProfileAddr;
+                if (string.IsNullOrWhiteSpace(inviterProfileAddr))
+                    return Result<CommandResponse>.Error("Inviter place has no profile address.");
+
+                var pos = checked(inviter.Filling + 1);
+
+                var parent = await placeRepository.GetByIdAsync(inviter.Id, cancellationToken);
+                if (parent is null)
+                    return Result<CommandResponse>.Error("Inviter place was not found.");
+
+                var createdPlace = Place.Create(
+                    parentId: inviter.Id,
+                    marketingAddr: inviter.MarketingAddr,
+                    structureNumber: inviter.StructNumber,
+                    profileAddr: request.ProfileAddr,
+                    profileLogin: request.ProfileLogin,
+                    index: request.ProfileLogin + PlaceNumber.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    placeNumber: PlaceNumber,
+                    parentProfileAddr: inviterProfileAddr,
+                    parentProfileLogin: inviter.ProfileLogin,
+                    parentPlaceNumber: inviter.PlaceNumber,
+                    mp: inviter.Mp + pos.ToString("X8"),
+                    posGroup: 0,
+                    kind: 0,
+                    pos: pos,
+                    filling: 0,
+                    deep: checked(inviter.Deep + 1),
+                    isActive: false,
+                    createdAt: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                    activatedAt: null,
+                    personalVolume: 0,
+                    groupVolume: 0,
+                    taskKey: request.TaskKey,
+                    taskQueryId: request.QueryId,
+                    taskSourceAddr: request.SourceAddr);
+
+                placeRepository.Add(createdPlace);
+                await unitOfWork.SaveChangesAsync(cancellationToken);
+                placeWithTaskKey = createdPlace;
+            }
+
+            var source = await sourcePlaceResolver.ResolveAsync(
+                placeWithTaskKey,
+                structure.Height,
                 cancellationToken);
 
-            if (existingInvite is not null)
-                return Result<CommandResponse>.Error("Invite is already created.");
+            if (source is null)
+                return Result<CommandResponse>.Error(
+                    $"Could not find a parent at height {structure.Height}.");
 
-            if (!inviter.IsActive)
-                return Result<CommandResponse>.Error("Inviter is not active.");
-
-            var inviterProfileAddr = inviter.ProfileAddr;
-            if (string.IsNullOrWhiteSpace(inviterProfileAddr))
-                return Result<CommandResponse>.Error("Inviter place has no profile address.");
-
-            var pos = checked(inviter.Filling + 1);
-
-            var parent = await placeRepository.GetByIdAsync(inviter.Id, cancellationToken);
-            if (parent is null)
-                return Result<CommandResponse>.Error("Inviter place was not found.");
-
-            var createdPlace = Place.Create(
-                parentId: inviter.Id,
-                marketingAddr: inviter.MarketingAddr,
-                structureNumber: inviter.StructNumber,
-                profileAddr: request.ProfileAddr,
-                profileLogin: request.ProfileLogin,
-                index: request.ProfileLogin + PlaceNumber.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                placeNumber: PlaceNumber,
-                parentProfileAddr: inviterProfileAddr,
-                parentProfileLogin: inviter.ProfileLogin,
-                parentPlaceNumber: inviter.PlaceNumber,
-                mp: inviter.Mp + pos.ToString("X8"),
-                posGroup: 0,
-                kind: 0,
-                pos: pos,
-                filling: 0,
-                deep: checked(inviter.Deep + 1),
-                isActive: false,
-                createdAt: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                activatedAt: null,
-                personalVolume: 0,
-                groupVolume: 0,
-                taskKey: request.TaskKey,
-                taskQueryId: request.QueryId,
-                taskSourceAddr: request.SourceAddr);
-
-            placeRepository.Add(createdPlace);
-            await unitOfWork.SaveChangesAsync(cancellationToken);
-
-            return Result.Success(new CommandResponse(0, ToResponse(createdPlace)));
+            return Result.Success(new CommandResponse(
+                source.Code,
+                source.SourcePlace));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -108,29 +130,4 @@ internal sealed class ChooseInviterCommandHandler(
         }
     }
 
-    private static PlaceResponse ToResponse(Place place) => new()
-    {
-        Id = place.Id,
-        ParentId = place.ParentId,
-        Mp = place.Mp,
-        PosGroup = place.PosGroup,
-        MarketingAddr = place.MarketingAddr,
-        StructNumber = place.StructureNumber,
-        ProfileAddr = place.ProfileAddr,
-        PlaceNumber = place.PlaceNumber,
-        ProfileLogin = place.ProfileLogin,
-        Index = place.Index,
-        ParentProfileAddr = place.ParentProfileAddr,
-        ParentProfileLogin = place.ParentProfileLogin,
-        ParentPlaceNumber = place.ParentPlaceNumber,
-        CreatedAt = place.CreatedAt,
-        ActivatedAt = place.ActivatedAt,
-        IsActive = place.IsActive,
-        Kind = place.Kind,
-        Pos = place.Pos,
-        Filling = place.Filling,
-        Deep = place.Deep,
-        PersonalVolume = place.PersonalVolume,
-        GroupVolume = place.GroupVolume
-    };
 }

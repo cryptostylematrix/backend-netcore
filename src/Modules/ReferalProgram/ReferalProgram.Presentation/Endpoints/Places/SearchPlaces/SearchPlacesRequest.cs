@@ -8,8 +8,8 @@ public sealed class SearchPlacesRequest
     [BindFrom("structure_number")]
     public byte StructureNumber { get; init; }
 
-    [BindFrom("profile_addr")]
-    public string ProfileAddr { get; init; } = null!;
+    [BindFrom("viewer_profile_addr")]
+    public string ViewerProfileAddr { get; init; } = null!;
 
     [BindFrom("query")]
     public string Query { get; init; } = null!;

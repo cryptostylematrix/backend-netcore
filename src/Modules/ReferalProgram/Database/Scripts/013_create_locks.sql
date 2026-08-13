@@ -19,7 +19,7 @@ CREATE TABLE public.locks
     CONSTRAINT marketing_locks_pkey
         PRIMARY KEY (id),
     CONSTRAINT marketing_locks_structure_number_check
-        CHECK (structure_number BETWEEN 1 AND 255),
+        CHECK (structure_number BETWEEN 0 AND 255),
     CONSTRAINT marketing_locks_locked_pos_check
         CHECK (locked_pos BETWEEN 1 AND 4294967295),
     CONSTRAINT marketing_locks_place_number_check
@@ -40,7 +40,7 @@ CREATE INDEX idx_locks_profile_created_at
     ON public.locks
         (marketing_addr, structure_number, profile_addr, created_at, id);
 
-GRANT SELECT, INSERT
+GRANT SELECT, INSERT, DELETE
     ON TABLE public.locks
     TO cs_programs_user;
 

@@ -13,7 +13,8 @@ public sealed class SearchPlacesEndpoint(ISender sender)
         Summary(summary =>
         {
             summary.Summary = "Search places";
-            summary.Description = "Searches profile logins within a profile's referral-program subtree.";
+            summary.Description =
+                "Searches profile logins within the positioning root resolved for viewer_profile_addr.";
         });
     }
 
@@ -22,7 +23,7 @@ public sealed class SearchPlacesEndpoint(ISender sender)
         var result = await sender.Send(new SearchPlacesQuery(
             request.MarketingAddr,
             request.StructureNumber,
-            request.ProfileAddr,
+            request.ViewerProfileAddr,
             request.Query,
             request.Page,
             request.PageSize), ct);

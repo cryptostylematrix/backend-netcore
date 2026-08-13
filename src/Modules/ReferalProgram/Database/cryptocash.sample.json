@@ -6,12 +6,16 @@
     {
       "id": 1,
       "algo": "chess",
-      "weight": 987
+      "weight": 5,
+      "profiled_places_prioritized": true,
+      "depth_spread": 1
     },
     {
       "id": 2,
       "algo": "radar",
-      "weight": 610
+      "weight": 5,
+      "profiled_places_prioritized": true,
+      "depth_spread": 3
     }
   ]
 }

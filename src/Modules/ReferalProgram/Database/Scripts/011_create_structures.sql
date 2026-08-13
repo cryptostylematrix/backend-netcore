@@ -18,7 +18,7 @@ CREATE TABLE public.structures
     CONSTRAINT structures_structure_number_check
         CHECK (structure_number BETWEEN 0 AND 255),
     CONSTRAINT structures_max_places_per_profile_check
-        CHECK (max_places_per_profile > 0),
+        CHECK (max_places_per_profile >= 0),
     CONSTRAINT structures_width_check
         CHECK (width BETWEEN 0 AND 255),
     CONSTRAINT structures_height_check

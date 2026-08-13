@@ -8,7 +8,9 @@ public sealed record ResolveBonusQuery(
     uint RelativePlaceNumber,
     ushort Level) : IQuery<BonusResponse>;
 
-internal sealed class ResolveBonusQueryHandler(IPlaceQueries placeQueries)
+internal sealed class ResolveBonusQueryHandler(
+    IPlaceQueries placeQueries,
+    IRelativePlaceResolver relativePlaceResolver)
     : IQueryHandler<ResolveBonusQuery, BonusResponse>
 {
     private const uint RefBonusTag = 0xb5ce6bf5;
@@ -19,23 +21,19 @@ internal sealed class ResolveBonusQueryHandler(IPlaceQueries placeQueries)
         ResolveBonusQuery request,
         CancellationToken cancellationToken)
     {
-        var sourcePlace = await placeQueries.GetPlaceAsync(
+        var resolution = await relativePlaceResolver.ResolveAsync(
             request.MarketingAddr,
             request.StructureNumber,
             request.RelativeProfileAddr,
             request.RelativePlaceNumber,
-            cancellationToken);
-
-        if (sourcePlace is null)
-            return Result<BonusResponse>.Error("The source place was not found.");
-
-        var relativePlace = await FindEligiblePlaceAsync(
-            sourcePlace,
             request.Level,
             cancellationToken);
 
-        if (relativePlace is null)
+        if (resolution is null)
             return Result<BonusResponse>.Error("An eligible relative place was not found.");
+
+        var sourcePlace = resolution.SourcePlace;
+        var relativePlace = resolution.RelativePlace;
 
         PlaceResponse? recipientPlace;
 
@@ -49,10 +47,20 @@ internal sealed class ResolveBonusQueryHandler(IPlaceQueries placeQueries)
                     placeNumber: 1,
                     cancellationToken);
 
-                recipientPlace = await FindEligiblePlaceAsync(
-                    invite,
+                if (invite is null)
+                {
+                    recipientPlace = null;
+                    break;
+                }
+
+                var inviterResolution = await relativePlaceResolver.ResolveAsync(
+                    invite.MarketingAddr,
+                    invite.StructNumber,
+                    invite.ProfileAddr,
+                    invite.PlaceNumber,
                     level: 1,
                     cancellationToken);
+                recipientPlace = inviterResolution?.RelativePlace;
                 break;
 
             case StructBonusTag:
@@ -74,42 +82,5 @@ internal sealed class ResolveBonusQueryHandler(IPlaceQueries placeQueries)
         return Result.Success(new BonusResponse(
             Reason: sourcePlace,
             RecipientProfileAddr: recipientPlace.ProfileAddr));
-    }
-
-    /* 
-        level cannot be a starting ppint becasue in this casse we can 
-        take the same place twice
-    */
-
-    private async Task<PlaceResponse?> FindEligiblePlaceAsync(
-        PlaceResponse? start,
-        ushort level,
-        CancellationToken cancellationToken)
-    {
-        var current = start;
-        var eligibleLevel = 0;
-
-        while (current is not null)
-        {
-            var isEligible = current.IsActive
-                && !string.IsNullOrWhiteSpace(current.ProfileAddr);
-
-            if (isEligible)
-            {
-                if (eligibleLevel == level)
-                    return current;
-
-                eligibleLevel++;
-            }
-
-            if (current.ParentId is null)
-                return isEligible ? current : null;
-
-            current = await placeQueries.GetPlaceAsync(
-                current.ParentId.Value,
-                cancellationToken);
-        }
-
-        return null;
     }
 }

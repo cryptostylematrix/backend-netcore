@@ -13,6 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Libs\TonSdk.Core\TonSdk.Core.csproj" />
     <ProjectReference Include="..\ReferalProgram.Application\ReferalProgram.Application.csproj" />
     <ProjectReference Include="..\ReferalProgram.Core\ReferalProgram.Core.csproj" />
     <ProjectReference Include="..\ReferalProgram.Presentation\ReferalProgram.Presentation.csproj" />

@@ -1,5 +1,3 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Common.Domain;
 using ReferalProgram.Core.PlaceAggregate;
 
@@ -22,13 +20,14 @@ public sealed record BuyPlaceCommand(
     int TaskKey,
     long QueryId,
     string? SourceAddr,
+    BuyPlaceKind Kind,
     ChildPosition? ChildPosition) : ICommand<CommandResponse>;
 
 internal sealed class BuyPlaceCommandHandler(
     IPlaceRepository placeRepository,
-    IPlaceQueries placeQueries,
     IStructureQueries structureQueries,
-    INextPosService nextPosService,
+    IBuyPlacePolicy buyPlacePolicy,
+    ISourcePlaceResolver sourcePlaceResolver,
     IUnitOfWork unitOfWork) : ICommandHandler<BuyPlaceCommand, CommandResponse>
 {
     public async Task<Result<CommandResponse>> Handle(
@@ -52,44 +51,34 @@ internal sealed class BuyPlaceCommandHandler(
 
             if (placeWithTaskKey is null)
             {
-                var actualPlacesCount = await placeQueries.GetPlacesCountAsync(
+                var requestedPosition = request.ChildPosition is null
+                    ? null
+                    : new RequestedPosition(
+                        request.ChildPosition.Parent.StructureNumber,
+                        request.ChildPosition.Parent.ProfileAddr,
+                        request.ChildPosition.Parent.PlaceNumber,
+                        request.ChildPosition.Position);
+
+                var decision = await buyPlacePolicy.EvaluateAsync(
                     request.MarketingAddr,
                     request.StructureNumber,
                     request.ProfileAddr,
+                    requestedPosition,
                     cancellationToken);
 
-                if (actualPlacesCount >= structure.MaxPlacesPerProfile)
-                {
+                if (!decision.CanBuy || decision.Position is null)
                     return Result<CommandResponse>.Error(
-                        $"The profile already has the maximum number of places ({structure.MaxPlacesPerProfile}).");
-                }
+                        $"Place purchase is not allowed: {decision.Reason ?? "unknown_reason"}.");
 
-                var posAlgo = structure.PosAlgo.Deserialize<PositionAlgorithm>()
-                    ?? throw new InvalidOperationException("Structure pos_algo is empty or invalid.");
-
-                var root = posAlgo.Root?.ToLowerInvariant();
-                if (root == "owner" && request.ChildPosition is not null)
-                {
+                if (decision.IncludePosition && requestedPosition is null)
                     return Result<CommandResponse>.Error(
-                        "A child position cannot be provided for an owner-rooted structure.");
-                }
+                        "Place purchase is not allowed: position_is_required.");
 
-                if (root is not ("owner" or "profile"))
-                    return Result<CommandResponse>.Error($"Unknown pos_algo root '{posAlgo.Root}'.");
+                if (decision.Kind != request.Kind)
+                    return Result<CommandResponse>.Error(
+                        "Place purchase is not allowed: buy_command_kind_mismatch.");
 
-                var nextPosition = await nextPosService.GetNextPosAsync(
-                    request.MarketingAddr,
-                    request.StructureNumber,
-                    request.ProfileAddr,
-                    cancellationToken);
-
-                if (nextPosition is null)
-                    return Result<CommandResponse>.Error("No available position was found.");
-
-                if (root == "profile" && request.ChildPosition is not null)
-                {
-                    // TODO: Check the requested ChildPosition against the calculated next position.
-                }
+                var nextPosition = decision.Position;
 
                 var parent = await placeRepository.GetAsync(
                     request.MarketingAddr,
@@ -99,10 +88,8 @@ internal sealed class BuyPlaceCommandHandler(
                     cancellationToken);
 
                 if (parent is null)
-                    return Result<CommandResponse>.Error("Parent place was not found.");
-
-                if (nextPosition.Pos == 0)
-                    return Result<CommandResponse>.Error("The calculated position is invalid.");
+                    return Result<CommandResponse>.Error(
+                        "Authorized parent place disappeared before execution.");
 
                 var placeNumber = await placeRepository.GetNextPlaceNumberAsync(
                     request.MarketingAddr,
@@ -139,25 +126,18 @@ internal sealed class BuyPlaceCommandHandler(
                 placeWithTaskKey = boughtPlace;
             }
             
-            var matrixTopPlace = await placeRepository.GetAncestorAsync(
+            var source = await sourcePlaceResolver.ResolveAsync(
                 placeWithTaskKey,
                 structure.Height,
                 cancellationToken);
 
-            if (matrixTopPlace is null)
+            if (source is null)
                 return Result<CommandResponse>.Error(
                     $"Could not find a parent at height {structure.Height}.");
 
-            var matrixPlacesCount = await placeRepository.CountAtDepthAsync(
-                request.MarketingAddr,
-                request.StructureNumber,
-                matrixTopPlace.Mp,
-                placeWithTaskKey.Deep,
-                cancellationToken);
-
             return Result.Success(new CommandResponse(
-                Code: checked((uint)matrixPlacesCount),
-                Source: ToResponse(matrixTopPlace)));
+                source.Code,
+                source.SourcePlace));
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -169,35 +149,4 @@ internal sealed class BuyPlaceCommandHandler(
         }
     }
 
-    private static PlaceResponse ToResponse(Place place) => new()
-    {
-        Id = place.Id,
-        ParentId = place.ParentId,
-        Mp = place.Mp,
-        PosGroup = place.PosGroup,
-        MarketingAddr = place.MarketingAddr,
-        StructNumber = place.StructureNumber,
-        ProfileAddr = place.ProfileAddr,
-        PlaceNumber = place.PlaceNumber,
-        ProfileLogin = place.ProfileLogin,
-        Index = place.Index,
-        ParentProfileAddr = place.ParentProfileAddr,
-        ParentProfileLogin = place.ParentProfileLogin,
-        ParentPlaceNumber = place.ParentPlaceNumber,
-        CreatedAt = place.CreatedAt,
-        ActivatedAt = place.ActivatedAt,
-        IsActive = place.IsActive,
-        Kind = place.Kind,
-        Pos = place.Pos,
-        Filling = place.Filling,
-        Deep = place.Deep,
-        PersonalVolume = place.PersonalVolume,
-        GroupVolume = place.GroupVolume
-    };
-
-    private sealed class PositionAlgorithm
-    {
-        [JsonPropertyName("root")]
-        public string? Root { get; init; }
-    }
 }

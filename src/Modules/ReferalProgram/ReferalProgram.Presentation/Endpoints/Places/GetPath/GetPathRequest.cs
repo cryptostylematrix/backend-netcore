@@ -8,15 +8,12 @@ public sealed class GetPathRequest
     [BindFrom("structure_number")]
     public byte StructureNumber { get; init; }
 
-    [BindFrom("from_profile_addr")]
-    public string? FromProfileAddr { get; init; }
+    [BindFrom("viewer_profile_addr")]
+    public string ViewerProfileAddr { get; init; } = null!;
 
-    [BindFrom("from_place_number")]
-    public uint FromPlaceNumber { get; init; }
+    [BindFrom("target_profile_addr")]
+    public string? TargetProfileAddr { get; init; }
 
-    [BindFrom("to_profile_addr")]
-    public string? ToProfileAddr { get; init; }
-
-    [BindFrom("to_place_number")]
-    public uint ToPlaceNumber { get; init; }
+    [BindFrom("target_place_number")]
+    public uint TargetPlaceNumber { get; init; }
 }

@@ -6,10 +6,15 @@ using Npgsql;
 using ReferalProgram.Application;
 using ReferalProgram.Application.Abstractions;
 using ReferalProgram.Application.Services;
+using ReferalProgram.Application.Policies;
+using ReferalProgram.Application.Services.PositionStrategies;
+using ReferalProgram.Application.Services.RootStrategies;
+using ReferalProgram.Core.LockAggregate;
 using ReferalProgram.Core.PlaceAggregate;
 using ReferalProgram.Infrastructure.Persistence;
 using ReferalProgram.Infrastructure.Queries;
 using ReferalProgram.Infrastructure.Repositories;
+using ReferalProgram.Infrastructure.Services;
 
 namespace ReferalProgram.Infrastructure;
 
@@ -41,10 +46,34 @@ public static class ReferalProgramModule
             services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
             services.AddScoped<IUnitOfWork>(provider => provider.GetRequiredService<DataContext>());
             services.AddScoped<IPlaceRepository, PlaceRepository>();
+            services.AddScoped<IPositionLockRepository, PositionLockRepository>();
 
             services.AddScoped<IPlaceQueries, PlaceQueries>();
             services.AddScoped<ILockQueries, LockQueries>();
+            services.AddScoped<IPositionCandidateQueries>(provider =>
+                (IPositionCandidateQueries)provider.GetRequiredService<IPlaceQueries>());
+            services.AddScoped<IPositionLockQueries>(provider =>
+                (IPositionLockQueries)provider.GetRequiredService<ILockQueries>());
             services.AddScoped<IStructureQueries, StructureQueries>();
+            services.AddScoped<IProfileRootPlaceResolver, ProfileRootPlaceResolver>();
+            services.AddScoped<IPositionRootResolver, PositionRootResolver>();
+            services.AddScoped<INextPositionQueries, NextPositionQueries>();
+            services.AddSingleton<IPositionAlgorithmConfigurationParser,
+                PositionAlgorithmConfigurationParser>();
+            services.AddSingleton<IPositionGroupSelector, PositionGroupSelector>();
+            services.AddScoped<IPositionAlgorithmResolver, PositionAlgorithmResolver>();
+            services.AddScoped<IProgramCommandQueries, ProgramCommandQueries>();
+            services.AddScoped<IBuyPlacePolicy, BuyPlacePolicy>();
+            services.AddScoped<ISourcePlaceResolver, SourcePlaceResolver>();
+            services.AddScoped<IRelativePlaceResolver, RelativePlaceResolver>();
+            services.AddSingleton<ITonAddressComparer, TonAddressComparer>();
+            services.AddSingleton<IPositionLockPolicy, PositionLockPolicy>();
+            services.AddScoped<IPositionNodeActionPolicy, PositionNodeActionPolicy>();
+            services.AddScoped<IRootPlaceStrategy, OwnerRootPlaceStrategy>();
+            services.AddScoped<IRootPlaceStrategy, ProfileRootPlaceStrategy>();
+            services.AddScoped<IPositionAlgorithmStrategy, ChessPositionAlgorithmStrategy>();
+            services.AddScoped<IPositionAlgorithmStrategy, RadarPositionAlgorithmStrategy>();
+            services.AddScoped<IPositionAlgorithmStrategy, ClassicPositionAlgorithmStrategy>();
             services.AddScoped<INextPosService, NextPosService>();
             services.AddScoped<IMarketingTaskStore, MarketingTaskStore>();
             services.AddScoped<IReferalProgramQueries, ReferalProgramQueries>();

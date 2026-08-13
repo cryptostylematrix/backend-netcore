@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\BuildingBlocks\Common\Common.csproj" />
+    <ProjectReference Include="..\..\Contracts\Contracts.Application\Contracts.Application.csproj" />
     <ProjectReference Include="..\ReferalProgram.Core\ReferalProgram.Core.csproj" />
     <ProjectReference Include="..\ReferalProgram.Dto\ReferalProgram.Dto.csproj" />
   </ItemGroup>

@@ -13,7 +13,8 @@ public sealed class GetPathEndpoint(ISender sender)
         Summary(summary =>
         {
             summary.Summary = "Get place path";
-            summary.Description = "Gets the ancestor path between two places in a referral-program structure.";
+            summary.Description =
+                "Gets the path from the positioning root resolved for viewer_profile_addr to the target place.";
         });
     }
 
@@ -22,10 +23,9 @@ public sealed class GetPathEndpoint(ISender sender)
         var result = await sender.Send(new GetPathQuery(
             request.MarketingAddr,
             request.StructureNumber,
-            request.FromProfileAddr,
-            request.FromPlaceNumber,
-            request.ToProfileAddr,
-            request.ToPlaceNumber), ct);
+            request.ViewerProfileAddr,
+            request.TargetProfileAddr,
+            request.TargetPlaceNumber), ct);
 
         if (!result.IsSuccess)
         {

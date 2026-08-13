@@ -8,8 +8,39 @@ using ReferalProgram.Dto;
 namespace ReferalProgram.Infrastructure.Queries;
 
 public sealed class LockQueries(
-    [FromKeyedServices("Programs")] NpgsqlDataSource dataSource) : ILockQueries
+    [FromKeyedServices("Programs")] NpgsqlDataSource dataSource)
+    : ILockQueries, IPositionLockQueries
 {
+    public async Task<string[]> GetAllLockMpsAsync(
+        string marketingAddr,
+        byte structNumber,
+        string? profileAddr,
+        CancellationToken ct)
+    {
+        const string sql = """
+            SELECT mp
+            FROM public.locks
+            WHERE marketing_addr = @marketingAddr
+              AND structure_number = @structNumber
+              AND profile_addr IS NOT DISTINCT FROM @profileAddr
+            ORDER BY length(mp) ASC, mp ASC;
+            """;
+
+        await using var connection = await dataSource.OpenConnectionAsync(ct);
+        var lockMps = await connection.QueryAsync<string>(
+            new CommandDefinition(
+                sql,
+                new
+                {
+                    marketingAddr,
+                    structNumber = (short)structNumber,
+                    profileAddr
+                },
+                cancellationToken: ct));
+
+        return lockMps.ToArray();
+    }
+
     public async Task<Paginated<LockResponse>> GetLocksAsync(
         string marketingAddr,
         byte structNumber,

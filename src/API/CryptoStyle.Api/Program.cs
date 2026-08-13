@@ -55,7 +55,8 @@ builder.Host.UseSerilog((_, _, loggerConfiguration) =>
         .WriteTo.Console();
 
     var seqUrl = builder.Configuration["SEQ_URL"];
-    if (!string.IsNullOrWhiteSpace(seqUrl))
+    if (builder.Environment.IsProduction()
+        && !string.IsNullOrWhiteSpace(seqUrl))
     {
         loggerConfiguration.WriteTo.Seq(
             seqUrl,
@@ -94,7 +95,7 @@ builder.Services.AddOptions<TaskProcessorOptions>()
         "TaskProcessor.IntervalSeconds must be greater than zero.")
     .ValidateOnStart();
 
-if (!builder.Environment.IsDevelopment())
+//if (!builder.Environment.IsDevelopment())
     builder.Services.AddHostedService<TaskProcessor>();
 
 // Distributed cache (choose ONE):
@@ -150,7 +151,8 @@ var app = builder.Build();
 app.Logger.LogInformation(
     "CryptoStyle API logging initialized for {EnvironmentName}; Seq enabled: {SeqEnabled}",
     app.Environment.EnvironmentName,
-    !string.IsNullOrWhiteSpace(builder.Configuration["SEQ_URL"]));
+    app.Environment.IsProduction()
+        && !string.IsNullOrWhiteSpace(builder.Configuration["SEQ_URL"]));
 
 if (app.Environment.IsDevelopment())
 {
