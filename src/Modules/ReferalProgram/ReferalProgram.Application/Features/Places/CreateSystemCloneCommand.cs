@@ -123,7 +123,6 @@ internal sealed class CreateSystemCloneCommandHandler(
                     taskSourceAddr: null);
 
                 placeRepository.Add(createdPlace);
-                await unitOfWork.SaveChangesAsync(cancellationToken);
                 placeWithTaskKey = createdPlace;
             }
 
@@ -137,6 +136,9 @@ internal sealed class CreateSystemCloneCommandHandler(
                 return Result<CommandResponse>.Error(
                     $"Could not find a parent at height {structure.Height}.");
             }
+
+            if (placeWithTaskKey.Id == 0)
+                await unitOfWork.SaveChangesAsync(cancellationToken);
 
             return Result.Success(new CommandResponse(
                 source.Code,

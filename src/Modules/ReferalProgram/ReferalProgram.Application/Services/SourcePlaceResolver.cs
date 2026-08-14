@@ -10,13 +10,20 @@ public sealed class SourcePlaceResolver(IPlaceRepository placeRepository)
         byte structureHeight,
         CancellationToken cancellationToken)
     {
-        var sourcePlace = await placeRepository.GetAncestorAsync(
-            place,
-            structureHeight,
-            cancellationToken);
+        var sourcePlace = place;
+        for (var level = 0; level < structureHeight; level++)
+        {
+            if (sourcePlace.ParentId is null)
+                break;
 
-        if (sourcePlace is null)
-            return null;
+            var parent = await placeRepository.GetByIdAsync(
+                sourcePlace.ParentId.Value,
+                cancellationToken);
+            if (parent is null)
+                break;
+
+            sourcePlace = parent;
+        }
 
         var placesCount = await placeRepository.CountAtDepthAsync(
             place.MarketingAddr,
@@ -24,6 +31,12 @@ public sealed class SourcePlaceResolver(IPlaceRepository placeRepository)
             sourcePlace.Mp,
             place.Deep,
             cancellationToken);
+
+        // Resolution happens before SaveChanges so a cancelled command cannot
+        // persist its place. The database count therefore does not yet contain
+        // the pending place, although it belongs to the source's depth slice.
+        if (place.Id == 0)
+            placesCount = checked(placesCount + 1);
 
         return new SourcePlaceResolution(
             Code: checked((uint)placesCount),

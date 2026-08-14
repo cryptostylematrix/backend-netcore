@@ -48,28 +48,6 @@ internal sealed class PlaceRepository(DataContext dataContext) : IPlaceRepositor
         return checked((lastPlaceNumber ?? 0) + 1);
     }
 
-    public async Task<Place?> GetAncestorAsync(
-        Place place,
-        byte levels,
-        CancellationToken cancellationToken)
-    {
-        var current = place;
-
-        for (var level = 0; level < levels; level++)
-        {
-            if (current.ParentId is null)
-                return null;
-
-            var parent = await GetByIdAsync(current.ParentId.Value, cancellationToken);
-            if (parent is null)
-                return null;
-
-            current = parent;
-        }
-
-        return current;
-    }
-
     public Task<long> CountAtDepthAsync(
         string marketingAddr,
         byte structureNumber,

@@ -32,7 +32,6 @@ internal abstract class PlaceRepositoryStub : IPlaceRepository
     public virtual Task<Place?> GetAsync(string marketingAddr, byte structureNumber, string? profileAddr, uint placeNumber, CancellationToken cancellationToken) => throw new NotSupportedException();
     public virtual Task<Place?> GetByTaskKeyAsync(string marketingAddr, int taskKey, CancellationToken cancellationToken) => throw new NotSupportedException();
     public virtual Task<uint> GetNextPlaceNumberAsync(string marketingAddr, byte structureNumber, string? profileAddr, CancellationToken cancellationToken) => throw new NotSupportedException();
-    public virtual Task<Place?> GetAncestorAsync(Place place, byte levels, CancellationToken cancellationToken) => throw new NotSupportedException();
     public virtual Task<long> CountAtDepthAsync(string marketingAddr, byte structureNumber, string mpPrefix, uint depth, CancellationToken cancellationToken) => throw new NotSupportedException();
     public virtual void Add(Place place) => throw new NotSupportedException();
 }

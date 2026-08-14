@@ -24,11 +24,6 @@ public interface IPlaceRepository : IRepository<Place>
         string? profileAddr,
         CancellationToken cancellationToken);
 
-    Task<Place?> GetAncestorAsync(
-        Place place,
-        byte levels,
-        CancellationToken cancellationToken);
-
     Task<long> CountAtDepthAsync(
         string marketingAddr,
         byte structureNumber,
