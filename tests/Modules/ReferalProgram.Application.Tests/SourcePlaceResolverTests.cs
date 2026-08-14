@@ -39,9 +39,9 @@ public sealed class SourcePlaceResolverTests
 
         Assert.NotNull(result);
         Assert.Equal("top", result.SourcePlace.Mp);
-        Assert.Equal((uint)1, result.Code);
+        Assert.Equal((uint)0, result.Code);
         Assert.Equal(2, repository.ParentLookupCount);
-        Assert.Equal(("marketing", (byte)4, "top", (uint)2), repository.CountCall);
+        Assert.Null(repository.CountCall);
     }
 
     [Fact]

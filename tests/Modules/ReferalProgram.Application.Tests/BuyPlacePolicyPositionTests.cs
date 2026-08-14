@@ -70,12 +70,11 @@ public sealed class BuyPlacePolicyPositionTests
     }
 
     [Fact]
-    public void Candidate_under_top_place_uses_buy_top_before_buy_first()
+    public void Candidate_for_profile_without_places_uses_buy_first()
     {
         var decision = Decision(requireNext: false) with
         {
-            PlacesCount = 0,
-            TopPlaceMp = "ROOT"
+            PlacesCount = 0
         };
 
         var result = policy.EvaluatePosition(
@@ -85,7 +84,7 @@ public sealed class BuyPlacePolicyPositionTests
             1,
             isLocked: false);
 
-        Assert.Equal(ProgramCommandTags.BuyTopPlace, result.CommandTag);
+        Assert.Equal(ProgramCommandTags.BuyFirstPlace, result.CommandTag);
     }
 
     private static BuyPlaceDecision Decision(bool requireNext) =>
@@ -100,10 +99,8 @@ public sealed class BuyPlacePolicyPositionTests
             RequireNextPosition = requireNext,
             ViewerRootMp = "ROOT",
             PlacesCount = 1,
-            TopPlaceMp = "ROOT",
             AvailableCommandTags = new HashSet<uint>
             {
-                ProgramCommandTags.BuyTopPlace,
                 ProgramCommandTags.BuyFirstPlace,
                 ProgramCommandTags.BuyPlace
             }

@@ -17,7 +17,6 @@ public sealed record BuyPlaceDecision(
     public bool RequireNextPosition { get; init; }
     public string? ViewerRootMp { get; init; }
     public long PlacesCount { get; init; }
-    public string? TopPlaceMp { get; init; }
     public IReadOnlySet<uint> AvailableCommandTags { get; init; } = new HashSet<uint>();
 }
 

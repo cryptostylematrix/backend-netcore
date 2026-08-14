@@ -28,7 +28,6 @@ public sealed class TaskProcessor(
     private const uint BuyFirstPlaceCommandTag = 0xd7dd1e7a;
     private const uint BuyPlaceCommandTag = 0xb070143f;
     private const uint BuySystemPlaceCommandTag = 0xe9cfbb76;
-    private const uint BuyTopPlaceCommandTag = 0x3f6eb1fa;
     private const uint ChooseInviterCommandTag = 0xbc13b755;
     private const uint LockPositionCommandTag = 0x6292cd93;
     private const uint UnlockPositionCommandTag = 0xcc64122d;
@@ -292,12 +291,10 @@ public sealed class TaskProcessor(
 
             case BuyFirstPlaceCommandTag:
             case BuyPlaceCommandTag:
-            case BuyTopPlaceCommandTag:
             {
                 var commandName = command.CommandTag switch
                 {
                     BuyFirstPlaceCommandTag => "buy-first-place",
-                    BuyTopPlaceCommandTag => "buy-top-place",
                     _ => "buy-place"
                 };
 
@@ -375,7 +372,6 @@ public sealed class TaskProcessor(
                         Kind: command.CommandTag switch
                         {
                             BuyFirstPlaceCommandTag => BuyPlaceKind.First,
-                            BuyTopPlaceCommandTag => BuyPlaceKind.Top,
                             _ => BuyPlaceKind.Regular
                         },
                         ChildPosition: childPosition),

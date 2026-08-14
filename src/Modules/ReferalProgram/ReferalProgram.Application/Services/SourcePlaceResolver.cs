@@ -11,7 +11,8 @@ public sealed class SourcePlaceResolver(IPlaceRepository placeRepository)
         CancellationToken cancellationToken)
     {
         var sourcePlace = place;
-        for (var level = 0; level < structureHeight; level++)
+        byte reachedHeight = 0;
+        while (reachedHeight < structureHeight)
         {
             if (sourcePlace.ParentId is null)
                 break;
@@ -23,6 +24,14 @@ public sealed class SourcePlaceResolver(IPlaceRepository placeRepository)
                 break;
 
             sourcePlace = parent;
+            reachedHeight++;
+        }
+
+        if (reachedHeight < structureHeight)
+        {
+            return new SourcePlaceResolution(
+                Code: 0,
+                SourcePlace: ToResponse(sourcePlace));
         }
 
         var placesCount = await placeRepository.CountAtDepthAsync(

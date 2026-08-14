@@ -28,8 +28,6 @@ public sealed class BuyPlacePolicy(
 
         var command = SelectCommand(
             decision.PlacesCount,
-            parent.Mp,
-            decision.TopPlaceMp,
             decision.AvailableCommandTags);
 
         return command is null
@@ -156,15 +154,8 @@ public sealed class BuyPlacePolicy(
             marketingAddr,
             structureNumber,
             cancellationToken);
-        var topPlace = await placeQueries.GetRootPlaceAsync(
-            marketingAddr,
-            structureNumber,
-            cancellationToken);
-
         var command = SelectCommand(
             placesCount,
-            parent.Mp,
-            topPlace?.Mp,
             commandTags);
         if (command is null)
             return Denied("buy_command_not_configured");
@@ -180,24 +171,14 @@ public sealed class BuyPlacePolicy(
             RequireNextPosition = requireNextPosition,
             ViewerRootMp = viewerRoot.Mp,
             PlacesCount = placesCount,
-            TopPlaceMp = topPlace?.Mp,
             AvailableCommandTags = commandTags
         };
     }
 
     private static (BuyPlaceKind Kind, uint Tag)? SelectCommand(
         long placesCount,
-        string parentMp,
-        string? topPlaceMp,
         IReadOnlySet<uint> availableTags)
     {
-        if (topPlaceMp is not null
-            && string.Equals(parentMp, topPlaceMp, StringComparison.Ordinal)
-            && availableTags.Contains(ProgramCommandTags.BuyTopPlace))
-        {
-            return (BuyPlaceKind.Top, ProgramCommandTags.BuyTopPlace);
-        }
-
         if (placesCount == 0 && availableTags.Contains(ProgramCommandTags.BuyFirstPlace))
             return (BuyPlaceKind.First, ProgramCommandTags.BuyFirstPlace);
 

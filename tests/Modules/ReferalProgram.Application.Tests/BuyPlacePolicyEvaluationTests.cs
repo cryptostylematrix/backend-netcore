@@ -34,7 +34,7 @@ public sealed class BuyPlacePolicyEvaluationTests
     }
 
     [Fact]
-    public async Task Owner_root_selects_buy_top_before_buy_first()
+    public async Task Owner_root_selects_buy_first_for_profiles_without_places()
     {
         var parent = Place("ROOT", "parent", 1, filling: 1);
         var next = new NextPosResponse
@@ -51,17 +51,15 @@ public sealed class BuyPlacePolicyEvaluationTests
             nextPosition: next,
             viewerRoot: parent,
             places: [parent],
-            topPlace: parent,
             tags: new HashSet<uint> {
                 ProgramCommandTags.BuyPlace,
-                ProgramCommandTags.BuyFirstPlace,
-                ProgramCommandTags.BuyTopPlace });
+                ProgramCommandTags.BuyFirstPlace });
 
         var result = await policy.EvaluateAsync("marketing", 4, "profile", null, default);
 
         Assert.True(result.CanBuy);
-        Assert.Equal(BuyPlaceKind.Top, result.Kind);
-        Assert.Equal(ProgramCommandTags.BuyTopPlace, result.CommandTag);
+        Assert.Equal(BuyPlaceKind.First, result.Kind);
+        Assert.Equal(ProgramCommandTags.BuyFirstPlace, result.CommandTag);
         Assert.False(result.IncludePosition);
         Assert.True(result.RequireNextPosition);
         Assert.Same(next, result.Position);
@@ -85,7 +83,6 @@ public sealed class BuyPlacePolicyEvaluationTests
             nextPosition: calculated,
             viewerRoot: root,
             places: [root, parent],
-            topPlace: root,
             tags: new HashSet<uint> { ProgramCommandTags.BuyPlace });
 
         var result = await policy.EvaluateAsync(
@@ -135,11 +132,10 @@ public sealed class BuyPlacePolicyEvaluationTests
         NextPosResponse? nextPosition = null,
         PlaceResponse? viewerRoot = null,
         IReadOnlyCollection<PlaceResponse>? places = null,
-        PlaceResponse? topPlace = null,
         IReadOnlySet<uint>? tags = null,
         string[]? lockMps = null)
     {
-        var placeQueries = new Queries(placesCount, places ?? [], topPlace);
+        var placeQueries = new Queries(placesCount, places ?? []);
         return new BuyPlacePolicy(
             new StructureQueries(structure),
             placeQueries,
@@ -197,8 +193,7 @@ public sealed class BuyPlacePolicyEvaluationTests
 
     private sealed class Queries(
         long count,
-        IReadOnlyCollection<PlaceResponse> places,
-        PlaceResponse? topPlace) : PlaceQueriesStub
+        IReadOnlyCollection<PlaceResponse> places) : PlaceQueriesStub
     {
         public override Task<long> GetPlacesCountAsync(string marketingAddr, byte structureNumber, string? profileAddr, CancellationToken cancellationToken) => Task.FromResult(count);
 
@@ -209,7 +204,6 @@ public sealed class BuyPlacePolicyEvaluationTests
                 && place.ProfileAddr == profileAddr
                 && place.PlaceNumber == placeNumber));
 
-        public override Task<PlaceResponse?> GetRootPlaceAsync(string marketingAddr, byte structureNumber, CancellationToken cancellationToken) => Task.FromResult(topPlace);
     }
 
     private sealed class Locks(string[] mps) : ILockQueries
