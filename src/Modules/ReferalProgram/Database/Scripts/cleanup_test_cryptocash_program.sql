@@ -12,6 +12,9 @@ DECLARE
     v_marketing_addr text :=
         'EQCFZmVrYR-tLGIWDHjBb-Oyk1tcePk2_ThcytEZA08dNLbO';
 BEGIN
+    DELETE FROM public.marketing_tasks
+    WHERE marketing_addr = v_marketing_addr;
+
     DELETE FROM public.locks
     WHERE marketing_addr = v_marketing_addr;
 
@@ -52,5 +55,12 @@ UNION ALL
 
 SELECT 'locks', COUNT(*)
 FROM public.locks
+WHERE marketing_addr =
+    'EQCFZmVrYR-tLGIWDHjBb-Oyk1tcePk2_ThcytEZA08dNLbO'
+
+UNION ALL
+
+SELECT 'marketing_tasks', COUNT(*)
+FROM public.marketing_tasks
 WHERE marketing_addr =
     'EQCFZmVrYR-tLGIWDHjBb-Oyk1tcePk2_ThcytEZA08dNLbO';

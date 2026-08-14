@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using ReferalProgram.Application.Abstractions;
 using ReferalProgram.Application.Features.Invites;
 using ReferalProgram.Application.Features.Locks;
+using ReferalProgram.Application.Features.MarketingTasks;
 using ReferalProgram.Application.Features.Places;
 using ReferalProgram.Dto;
 using TonSdk.Core.Boc;
@@ -90,17 +91,58 @@ public sealed class TaskProcessor(
 
             if (taskResult.IsSuccess && taskResult.Value is { Key: not null, Val: not null })
             {
+                var taskKey = checked((int)taskResult.Value.Key.Value);
+                var taskQueryId = checked((long)taskResult.Value.Val.QueryId);
+
+                var processedResult = await sender.Send(
+                    new IsMarketingTaskProcessedQuery(
+                        program.MarketingAddr,
+                        taskKey),
+                    cancellationToken);
+                if (!processedResult.IsSuccess)
+                {
+                    throw new InvalidOperationException(
+                        $"Could not check processed task: {string.Join(", ", processedResult.Errors)}");
+                }
+
+                if (processedResult.Value)
+                {
+                    logger.LogError(
+                        "[API TaskProcessor] Marketing {MarketingAddr} returned already processed task {TaskKey} with query {QueryId}; skipping without cancellation",
+                        program.MarketingAddr,
+                        taskKey,
+                        taskQueryId);
+                    continue;
+                }
+
                 logger.LogInformation(
                     "[API TaskProcessor] Task {TaskKey} received for marketing {MarketingAddr}",
                     taskResult.Value.Key.Value,
                     program.MarketingAddr);
-                await ProcessMarketingTaskAsync(
+                var processed = await ProcessMarketingTaskAsync(
                     program.MarketingAddr,
                     taskResult.Value.Key.Value,
                     taskResult.Value.Val,
                     transactionSender,
                     sender,
                     cancellationToken);
+
+                if (processed)
+                {
+                    var markResult = await sender.Send(
+                        new MarkMarketingTaskProcessedCommand(
+                            program.MarketingAddr,
+                            taskKey,
+                            taskQueryId),
+                        cancellationToken);
+                    if (!markResult.IsSuccess)
+                    {
+                        throw new InvalidOperationException(
+                            $"Could not record processed task: {string.Join(", ", markResult.Errors)}");
+                    }
+
+                    LogAction("Marketing task processing completed and recorded");
+                }
             }
             else if (!taskResult.IsSuccess)
             {
@@ -118,7 +160,7 @@ public sealed class TaskProcessor(
         }
     }
 
-    private async Task ProcessMarketingTaskAsync(
+    private async Task<bool> ProcessMarketingTaskAsync(
         string marketingAddr,
         uint taskKey,
         MarketingV3TaskResponse task,
@@ -163,11 +205,11 @@ public sealed class TaskProcessor(
                         transactionSender,
                         sender,
                         cancellationToken);
-                    break;
+                    return true;
 
                 case { Command: { Tag: UserCommandTaskTag } userCommand }:
                     LogAction("Dispatching user command task");
-                    await ProcessUserCommandAsync(
+                    return await ProcessUserCommandAsync(
                         marketingAddr,
                         taskKey,
                         task,
@@ -175,7 +217,6 @@ public sealed class TaskProcessor(
                         transactionSender,
                         sender,
                         cancellationToken);
-                    break;
 
                 case { Command: { Tag: SystemCommandTaskTag } systemCommand }:
                     LogAction("Dispatching system command task");
@@ -187,7 +228,7 @@ public sealed class TaskProcessor(
                         transactionSender,
                         sender,
                         cancellationToken);
-                    break;
+                    return true;
 
                 case { Query: { Tag: BonusQueryTaskTag } bonusQuery }:
                     LogAction("Dispatching bonus query task");
@@ -199,7 +240,7 @@ public sealed class TaskProcessor(
                         transactionSender,
                         sender,
                         cancellationToken);
-                    break;
+                    return true;
 
                 case { Query: { Tag: ProfileInfoQueryTaskTag } profileInfoQuery }:
                     LogAction("Dispatching profile-info query task");
@@ -211,14 +252,12 @@ public sealed class TaskProcessor(
                         transactionSender,
                         sender,
                         cancellationToken);
-                    break;
+                    return true;
 
                 default:
                     logger.LogWarning("[API TaskProcessor] Marketing task type is not supported");
-                    break;
+                    return false;
             }
-
-            LogAction("Marketing task processing completed");
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -231,7 +270,7 @@ public sealed class TaskProcessor(
         }
     }
 
-    private async Task ProcessUserCommandAsync(
+    private async Task<bool> ProcessUserCommandAsync(
         string marketingAddr,
         uint taskKey,
         MarketingV3TaskResponse task,
@@ -249,7 +288,7 @@ public sealed class TaskProcessor(
             case ActivatePlaceCommandTag:
                 logger.LogWarning("[API TaskProcessor] Activate-place command is not implemented");
                 // TODO: Process activate-place command.
-                break;
+                return false;
 
             case BuyFirstPlaceCommandTag:
             case BuyPlaceCommandTag:
@@ -724,8 +763,10 @@ public sealed class TaskProcessor(
                     "[API TaskProcessor] User command {CommandTag} is not supported",
                     $"0x{command.CommandTag:x8}");
                 // TODO: Process an unknown user command.
-                break;
+                return false;
         }
+
+        return true;
     }
 
     private async Task ProcessBonusQueryAsync(

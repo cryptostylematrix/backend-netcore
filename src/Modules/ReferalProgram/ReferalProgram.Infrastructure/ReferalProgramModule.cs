@@ -10,6 +10,7 @@ using ReferalProgram.Application.Policies;
 using ReferalProgram.Application.Services.PositionStrategies;
 using ReferalProgram.Application.Services.RootStrategies;
 using ReferalProgram.Core.LockAggregate;
+using ReferalProgram.Core.MarketingTaskAggregate;
 using ReferalProgram.Core.PlaceAggregate;
 using ReferalProgram.Infrastructure.Persistence;
 using ReferalProgram.Infrastructure.Queries;
@@ -47,6 +48,7 @@ public static class ReferalProgramModule
             services.AddScoped<IUnitOfWork>(provider => provider.GetRequiredService<DataContext>());
             services.AddScoped<IPlaceRepository, PlaceRepository>();
             services.AddScoped<IPositionLockRepository, PositionLockRepository>();
+            services.AddScoped<IMarketingTaskRepository, MarketingTaskRepository>();
 
             services.AddScoped<IPlaceQueries, PlaceQueries>();
             services.AddScoped<ILockQueries, LockQueries>();
@@ -75,7 +77,6 @@ public static class ReferalProgramModule
             services.AddScoped<IPositionAlgorithmStrategy, RadarPositionAlgorithmStrategy>();
             services.AddScoped<IPositionAlgorithmStrategy, ClassicPositionAlgorithmStrategy>();
             services.AddScoped<INextPosService, NextPosService>();
-            services.AddScoped<IMarketingTaskStore, MarketingTaskStore>();
             services.AddScoped<IReferalProgramQueries, ReferalProgramQueries>();
 
             return services;

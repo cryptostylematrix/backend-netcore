@@ -1,0 +1,20 @@
+using Microsoft.EntityFrameworkCore;
+using ReferalProgram.Core.MarketingTaskAggregate;
+using ReferalProgram.Infrastructure.Persistence;
+
+namespace ReferalProgram.Infrastructure.Repositories;
+
+internal sealed class MarketingTaskRepository(DataContext dataContext)
+    : IMarketingTaskRepository
+{
+    public Task<MarketingTask?> GetAsync(
+        string marketingAddr,
+        int taskKey,
+        CancellationToken cancellationToken) =>
+        dataContext.MarketingTasks.SingleOrDefaultAsync(
+            task => task.MarketingAddr == marketingAddr
+                && task.TaskKey == taskKey,
+            cancellationToken);
+
+    public void Add(MarketingTask task) => dataContext.MarketingTasks.Add(task);
+}

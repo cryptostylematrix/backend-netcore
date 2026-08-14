@@ -1,6 +1,7 @@
 using Common.Domain;
 using Microsoft.EntityFrameworkCore;
 using ReferalProgram.Core.LockAggregate;
+using ReferalProgram.Core.MarketingTaskAggregate;
 using ReferalProgram.Core.PlaceAggregate;
 
 namespace ReferalProgram.Infrastructure.Persistence;
@@ -19,6 +20,7 @@ public sealed class DataContext : DbContext, IUnitOfWork
 
     public DbSet<Place> Places => Set<Place>();
     public DbSet<PositionLock> PositionLocks => Set<PositionLock>();
+    public DbSet<MarketingTask> MarketingTasks => Set<MarketingTask>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
