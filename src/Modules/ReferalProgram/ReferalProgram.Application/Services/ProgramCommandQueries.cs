@@ -6,9 +6,8 @@ namespace ReferalProgram.Application.Services;
 public sealed class ProgramCommandQueries(ISender sender)
     : IProgramCommandQueries
 {
-    public async Task<IReadOnlySet<uint>> GetAvailableCommandTagsAsync(
+    public async Task<ProgramCommandConfiguration> GetConfigurationAsync(
         string marketingAddr,
-        byte structureNumber,
         CancellationToken cancellationToken)
     {
         var result = await sender.Send(
@@ -19,8 +18,10 @@ public sealed class ProgramCommandQueries(ISender sender)
             throw new InvalidOperationException(
                 $"Could not load marketing command configuration: {string.Join(", ", result.Errors)}");
 
-        return result.Value.Structures.TryGetValue(structureNumber, out var structure)
-            ? structure.Commands.Keys.ToHashSet()
-            : new HashSet<uint>();
+        var commandTagsByStructure = result.Value.Structures.ToDictionary(
+            entry => entry.Key,
+            entry => (IReadOnlySet<uint>)entry.Value.Commands.Keys.ToHashSet());
+
+        return new ProgramCommandConfiguration(commandTagsByStructure);
     }
 }

@@ -1,5 +1,3 @@
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using Common.Domain;
 using ReferalProgram.Core.PlaceAggregate;
 
@@ -42,32 +40,78 @@ internal sealed class BuySystemPlaceCommandHandler(
 
             if (placeWithTaskKey is null)
             {
-                var posAlgo = structure.PosAlgo.Deserialize<PositionAlgorithm>()
-                    ?? throw new InvalidOperationException("Structure pos_algo is empty or invalid.");
-
-                var root = posAlgo.Root?.ToLowerInvariant();
-                if (root == "owner" && request.ChildPosition is not null)
-                {
-                    return Result<CommandResponse>.Error(
-                        "A child position cannot be provided for an owner-rooted structure.");
-                }
-
-                if (root is not ("owner" or "profile"))
-                    return Result<CommandResponse>.Error($"Unknown pos_algo root '{posAlgo.Root}'.");
-
-                var nextPosition = await nextPosService.GetNextPosAsync(
+                var selection = await nextPosService.ResolveSelectionAsync(
                     request.MarketingAddr,
                     request.StructureNumber,
                     null,
                     cancellationToken);
 
-                if (nextPosition is null)
+                if (selection is null)
                     return Result<CommandResponse>.Error("No available position was found.");
 
-                if (root == "profile" && request.ChildPosition is not null)
+                NextPosResponse? nextPosition;
+                if (request.ChildPosition is not null
+                    && selection.Algorithm.Equals(
+                        "classic",
+                        StringComparison.OrdinalIgnoreCase))
                 {
-                    // TODO: Check the requested ChildPosition against the calculated next position.
+                    var requestedPosition = request.ChildPosition;
+                    if (requestedPosition.Parent.StructureNumber
+                        != request.StructureNumber)
+                    {
+                        return Result<CommandResponse>.Error(
+                            "Requested parent belongs to a different structure.");
+                    }
+
+                    if (requestedPosition.Position == 0
+                        || (structure.Width > 0
+                            && requestedPosition.Position > structure.Width))
+                    {
+                        return Result<CommandResponse>.Error(
+                            "Requested position is outside the structure width.");
+                    }
+
+                    var requestedParent = await placeRepository.GetAsync(
+                        request.MarketingAddr,
+                        request.StructureNumber,
+                        requestedPosition.Parent.ProfileAddr,
+                        requestedPosition.Parent.PlaceNumber,
+                        cancellationToken);
+                    if (requestedParent is null)
+                        return Result<CommandResponse>.Error("Requested parent place was not found.");
+
+                    if (requestedPosition.Position
+                        != checked(requestedParent.Filling + 1))
+                    {
+                        return Result<CommandResponse>.Error(
+                            "Requested position is not the parent's next available position.");
+                    }
+
+                    var requestedMp = requestedParent.Mp
+                        + requestedPosition.Position.ToString("X8");
+                    if (selection.Context.IsLocked(requestedMp))
+                        return Result<CommandResponse>.Error("Requested position is locked.");
+
+                    nextPosition = new NextPosResponse
+                    {
+                        Mp = requestedMp,
+                        PosGroup = selection.Context.PosGroup,
+                        ProfileAddr = requestedParent.ProfileAddr,
+                        PlaceNumber = requestedParent.PlaceNumber,
+                        Pos = requestedPosition.Position
+                    };
                 }
+                else
+                {
+                    // Radar and Chess ignore a supplied position and calculate
+                    // their own candidate.
+                    nextPosition = await nextPosService.FindNextAsync(
+                        selection,
+                        cancellationToken);
+                }
+
+                if (nextPosition is null)
+                    return Result<CommandResponse>.Error("No available position was found.");
 
                 var parent = await placeRepository.GetAsync(
                     request.MarketingAddr,
@@ -140,9 +184,4 @@ internal sealed class BuySystemPlaceCommandHandler(
         }
     }
 
-    private sealed class PositionAlgorithm
-    {
-        [JsonPropertyName("root")]
-        public string? Root { get; init; }
-    }
 }

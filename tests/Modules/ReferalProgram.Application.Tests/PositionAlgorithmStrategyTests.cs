@@ -31,14 +31,16 @@ public sealed class PositionAlgorithmStrategyTests
     {
         var candidates = new CandidateQueries
         {
-            FirstActive = Place("ROOT00000001", "profile", 7, filling: 2)
+            DepthWindow =
+            [
+                Place("ROOT00000001", "profile", 7, filling: 2)
+            ]
         };
         var strategy = new RadarPositionAlgorithmStrategy(candidates);
 
         var result = await strategy.FindNextAsync(
             Context(profiledFirst: false, depthSpread: 3), CancellationToken.None);
 
-        Assert.False(candidates.LastProfiledFirst);
         Assert.Equal((byte)3, candidates.LastDepthSpread);
         Assert.Equal((uint)3, result?.Pos);
         Assert.Equal("ROOT0000000100000003", result?.Mp);
@@ -55,13 +57,54 @@ public sealed class PositionAlgorithmStrategyTests
                 Place("ROOT00000002", "second", 2, filling: 0)
             ]
         };
-        var locks = new LockQueries("ROOT0000000100000001");
-        var strategy = new ClassicPositionAlgorithmStrategy(candidates, locks);
+        var strategy = new ClassicPositionAlgorithmStrategy(candidates);
 
-        var result = await strategy.FindNextAsync(Context(), CancellationToken.None);
+        var result = await strategy.FindNextAsync(
+            Context(lockMps: ["ROOT0000000100000001"]),
+            CancellationToken.None);
 
         Assert.Equal("second", result?.ProfileAddr);
         Assert.Equal("ROOT0000000200000001", result?.Mp);
+    }
+
+    [Fact]
+    public async Task Chess_skips_root_profile_locked_branch()
+    {
+        var candidates = new CandidateQueries
+        {
+            DepthWindow =
+            [
+                Place("ROOT00000001", "first", 1, filling: 0),
+                Place("ROOT00000002", "second", 2, filling: 0)
+            ]
+        };
+        var strategy = new ChessPositionAlgorithmStrategy(candidates);
+
+        var result = await strategy.FindNextAsync(
+            Context(lockMps: ["ROOT0000000100000001"]),
+            CancellationToken.None);
+
+        Assert.Equal("second", result?.ProfileAddr);
+    }
+
+    [Fact]
+    public async Task Radar_skips_root_profile_locked_branch()
+    {
+        var candidates = new CandidateQueries
+        {
+            DepthWindow =
+            [
+                Place("ROOT00000001", "first", 1, filling: 0),
+                Place("ROOT00000002", "second", 2, filling: 0)
+            ]
+        };
+        var strategy = new RadarPositionAlgorithmStrategy(candidates);
+
+        var result = await strategy.FindNextAsync(
+            Context(lockMps: ["ROOT0000000100000001"]),
+            CancellationToken.None);
+
+        Assert.Equal("second", result?.ProfileAddr);
     }
 
     [Fact]
@@ -77,14 +120,16 @@ public sealed class PositionAlgorithmStrategyTests
 
     private static PositionAlgorithmStrategyContext Context(
         bool profiledFirst = true,
-        byte depthSpread = 1) => new(
+        byte depthSpread = 1,
+        string[]? lockMps = null) => new(
             "marketing",
             4,
             3,
             Place("ROOT", "root", 1, filling: 0),
             2,
             profiledFirst,
-            depthSpread);
+            depthSpread,
+            lockMps ?? []);
 
     private static PlaceResponse Place(
         string mp,
@@ -104,24 +149,29 @@ public sealed class PositionAlgorithmStrategyTests
     private sealed class CandidateQueries : IPositionCandidateQueries
     {
         public IReadOnlyList<PlaceResponse> DepthWindow { get; init; } = [];
-        public PlaceResponse? FirstActive { get; init; }
         public IReadOnlyList<PlaceResponse> OpenPlaces { get; init; } = [];
-        public bool LastProfiledFirst { get; private set; }
         public byte LastDepthSpread { get; private set; }
 
         public Task<IReadOnlyList<PlaceResponse>> GetUnfilledPlacesInDepthWindowAsync(
             string marketingAddr, byte structureNumber, string rootMp, byte width,
-            byte depthSpread, CancellationToken cancellationToken) =>
-            Task.FromResult(DepthWindow);
+            byte depthSpread, IReadOnlyCollection<string> lockMps,
+            CancellationToken cancellationToken)
+        {
+            LastDepthSpread = depthSpread;
+            return Task.FromResult(DepthWindow);
+        }
 
         public Task<PlaceResponse?> GetFirstActiveUnfilledPlaceAsync(
             string marketingAddr, byte structureNumber, string rootMp, byte width,
             bool profiledPlacesPrioritized, byte depthSpread,
+            IReadOnlyCollection<string> lockMps,
             CancellationToken cancellationToken)
         {
-            LastProfiledFirst = profiledPlacesPrioritized;
             LastDepthSpread = depthSpread;
-            return Task.FromResult(FirstActive);
+            return Task.FromResult(DepthWindow.FirstOrDefault(candidate =>
+                !lockMps.Any(lockMp =>
+                    (candidate.Mp + checked(candidate.Filling + 1).ToString("X8"))
+                        .StartsWith(lockMp, StringComparison.Ordinal))));
         }
 
         public Task<IReadOnlyList<PlaceResponse>> GetOpenPlacesByMpPrefixAsync(
@@ -130,10 +180,4 @@ public sealed class PositionAlgorithmStrategyTests
             Task.FromResult(page == 1 ? OpenPlaces : (IReadOnlyList<PlaceResponse>)[]);
     }
 
-    private sealed class LockQueries(params string[] lockMps) : IPositionLockQueries
-    {
-        public Task<string[]> GetAllLockMpsAsync(
-            string marketingAddr, byte structureNumber, string? profileAddr,
-            CancellationToken cancellationToken) => Task.FromResult(lockMps);
-    }
 }

@@ -19,12 +19,14 @@ public sealed class NextPosServiceTests
             Mp = "ROOT"
         };
         var algorithm = new CapturingAlgorithm();
+        var locks = new LockQueries("LOCK");
         var service = new NextPosService(
             new Queries(Structure(), new Dictionary<byte, long> { [0] = 5, [1] = 0 }),
             new PositionAlgorithmConfigurationParser(),
             new PositionGroupSelector(),
             new RootResolver(root),
-            new AlgorithmResolver(algorithm));
+            new AlgorithmResolver(algorithm),
+            locks);
 
         var result = await service.GetNextPosAsync(
             "marketing", 4, "viewer", CancellationToken.None);
@@ -36,6 +38,8 @@ public sealed class NextPosServiceTests
         Assert.Equal((byte)3, algorithm.Context.Width);
         Assert.Equal((byte)2, algorithm.Context.DepthSpread);
         Assert.False(algorithm.Context.ProfiledPlacesPrioritized);
+        Assert.Equal(["LOCK"], algorithm.Context.RootProfileLockMps);
+        Assert.Equal("root", locks.ProfileAddr);
     }
 
     [Fact]
@@ -46,7 +50,8 @@ public sealed class NextPosServiceTests
             new PositionAlgorithmConfigurationParser(),
             new PositionGroupSelector(),
             new RootResolver(null),
-            new AlgorithmResolver(new CapturingAlgorithm()));
+            new AlgorithmResolver(new CapturingAlgorithm()),
+            new LockQueries());
 
         var result = await service.GetNextPosAsync(
             "marketing", 4, "viewer", CancellationToken.None);
@@ -111,6 +116,21 @@ public sealed class NextPosServiceTests
         {
             Assert.Equal("capturing", name);
             return algorithm;
+        }
+    }
+
+    private sealed class LockQueries(params string[] lockMps) : IPositionLockQueries
+    {
+        public string? ProfileAddr { get; private set; }
+
+        public Task<string[]> GetAllLockMpsAsync(
+            string marketingAddr,
+            byte structureNumber,
+            string? profileAddr,
+            CancellationToken cancellationToken)
+        {
+            ProfileAddr = profileAddr;
+            return Task.FromResult(lockMps);
         }
     }
 

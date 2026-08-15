@@ -21,6 +21,7 @@ public sealed class ChessPositionAlgorithmStrategy(IPositionCandidateQueries pla
             context.Root.Mp,
             context.Width,
             context.DepthSpread,
+            context.RootProfileLockMps,
             cancellationToken);
 
         IReadOnlyList<PlaceResponse>[] placeGroups = context.ProfiledPlacesPrioritized
@@ -41,12 +42,16 @@ public sealed class ChessPositionAlgorithmStrategy(IPositionCandidateQueries pla
                         continue;
 
                     var pos = checked(place.Filling + 1);
+                    var mp = place.Mp + pos.ToString("X8");
+                    if (context.IsLocked(mp))
+                        continue;
+
                     return new NextPosResponse
                     {
                         ProfileAddr = place.ProfileAddr,
                         PlaceNumber = place.PlaceNumber,
                         Pos = pos,
-                        Mp = place.Mp + pos.ToString("X8"),
+                        Mp = mp,
                         PosGroup = context.PosGroup
                     };
                 }

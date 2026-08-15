@@ -16,7 +16,7 @@ public sealed record BuyPlaceDecision(
 {
     public bool RequireNextPosition { get; init; }
     public string? ViewerRootMp { get; init; }
-    public long PlacesCount { get; init; }
+    public bool HasPlacesInBuyFirstPlaceStructures { get; init; }
     public IReadOnlySet<uint> AvailableCommandTags { get; init; } = new HashSet<uint>();
 }
 
@@ -41,10 +41,24 @@ public interface IBuyPlacePolicy
         bool isLocked);
 }
 
+public sealed record ProgramCommandConfiguration(
+    IReadOnlyDictionary<byte, IReadOnlySet<uint>> CommandTagsByStructure)
+{
+    public IReadOnlySet<uint> GetAvailableCommandTags(byte structureNumber) =>
+        CommandTagsByStructure.TryGetValue(structureNumber, out var tags)
+            ? tags
+            : new HashSet<uint>();
+
+    public IReadOnlySet<byte> GetStructureNumbers(uint commandTag) =>
+        CommandTagsByStructure
+            .Where(entry => entry.Value.Contains(commandTag))
+            .Select(entry => entry.Key)
+            .ToHashSet();
+}
+
 public interface IProgramCommandQueries
 {
-    Task<IReadOnlySet<uint>> GetAvailableCommandTagsAsync(
+    Task<ProgramCommandConfiguration> GetConfigurationAsync(
         string marketingAddr,
-        byte structureNumber,
         CancellationToken cancellationToken);
 }

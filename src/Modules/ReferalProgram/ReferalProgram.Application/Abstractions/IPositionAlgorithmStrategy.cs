@@ -7,7 +7,12 @@ public sealed record PositionAlgorithmStrategyContext(
     PlaceResponse Root,
     byte PosGroup,
     bool ProfiledPlacesPrioritized,
-    byte DepthSpread);
+    byte DepthSpread,
+    string[] RootProfileLockMps)
+{
+    public bool IsLocked(string mp) => RootProfileLockMps.Any(lockMp =>
+        mp.StartsWith(lockMp, StringComparison.Ordinal));
+}
 
 public interface IPositionAlgorithmStrategy
 {

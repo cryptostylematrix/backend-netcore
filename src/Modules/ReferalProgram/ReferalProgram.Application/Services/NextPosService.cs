@@ -5,9 +5,27 @@ public sealed class NextPosService(
     IPositionAlgorithmConfigurationParser configurationParser,
     IPositionGroupSelector groupSelector,
     IPositionRootResolver positionRootResolver,
-    IPositionAlgorithmResolver algorithmResolver) : INextPosService
+    IPositionAlgorithmResolver algorithmResolver,
+    IPositionLockQueries lockQueries) : INextPosService
 {
     public async Task<NextPosResponse?> GetNextPosAsync(
+        string marketingAddr,
+        byte structureNumber,
+        string? profileAddr,
+        CancellationToken ct)
+    {
+        var selection = await ResolveSelectionAsync(
+            marketingAddr,
+            structureNumber,
+            profileAddr,
+            ct);
+
+        return selection is null
+            ? null
+            : await FindNextAsync(selection, ct);
+    }
+
+    public async Task<PositionSelection?> ResolveSelectionAsync(
         string marketingAddr,
         byte structureNumber,
         string? profileAddr,
@@ -40,9 +58,14 @@ public sealed class NextPosService(
         if (root is null)
             return null;
 
-        var positionStrategy = algorithmResolver.Resolve(group.Algorithm);
+        var lockMps = await lockQueries.GetAllLockMpsAsync(
+            marketingAddr,
+            structureNumber,
+            root.ProfileAddr,
+            ct);
 
-        return await positionStrategy.FindNextAsync(
+        return new PositionSelection(
+            group.Algorithm,
             new PositionAlgorithmStrategyContext(
                 marketingAddr,
                 structureNumber,
@@ -50,7 +73,16 @@ public sealed class NextPosService(
                 root,
                 checked((byte)group.Id),
                 group.ProfiledPlacesPrioritized,
-                group.DepthSpread),
-            ct);
+                group.DepthSpread,
+                lockMps));
+    }
+
+    public Task<NextPosResponse?> FindNextAsync(
+        PositionSelection selection,
+        CancellationToken ct)
+    {
+        var positionStrategy = algorithmResolver.Resolve(selection.Algorithm);
+
+        return positionStrategy.FindNextAsync(selection.Context, ct);
     }
 }

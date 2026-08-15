@@ -28,6 +28,12 @@ public interface IPlaceQueries
         string? profileAddr,
         CancellationToken cancellationToken);
 
+    Task<bool> HasProfilePlacesInStructuresAsync(
+        string marketingAddr,
+        string profileAddr,
+        IReadOnlyCollection<byte> structureNumbers,
+        CancellationToken cancellationToken);
+
     Task<PlaceSubtreeCounts> GetPlaceSubtreeCountsAsync(
         string marketingAddr,
         byte structureNumber,
@@ -46,6 +52,7 @@ public interface IPlaceQueries
         string rootMp,
         byte width,
         byte depthSpread,
+        IReadOnlyCollection<string> lockMps,
         CancellationToken cancellationToken);
 
     Task<PlaceResponse?> GetFirstActiveUnfilledPlaceAsync(
@@ -55,6 +62,7 @@ public interface IPlaceQueries
         byte width,
         bool profiledPlacesPrioritized,
         byte depthSpread,
+        IReadOnlyCollection<string> lockMps,
         CancellationToken cancellationToken);
 
     Task<IReadOnlyList<PlaceResponse>> GetOpenPlacesByMpPrefixAsync(

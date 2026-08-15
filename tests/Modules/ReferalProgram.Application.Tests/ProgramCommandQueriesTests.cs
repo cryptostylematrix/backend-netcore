@@ -15,6 +15,13 @@ public sealed class ProgramCommandQueriesTests
         {
             Structures = new Dictionary<byte, MarketingV3StructureConfigResponse>
             {
+                [2] = new()
+                {
+                    Commands = new Dictionary<uint, MarketingV3CommandConfigResponse>
+                    {
+                        [10] = new()
+                    }
+                },
                 [4] = new()
                 {
                     Commands = new Dictionary<uint, MarketingV3CommandConfigResponse>
@@ -28,9 +35,12 @@ public sealed class ProgramCommandQueriesTests
         var sender = new SenderStub(Result.Success(data));
         var queries = new ProgramCommandQueries(sender);
 
-        var result = await queries.GetAvailableCommandTagsAsync("marketing", 4, default);
+        var configuration = await queries.GetConfigurationAsync("marketing", default);
+        var result = configuration.GetAvailableCommandTags(4);
 
         Assert.Equal(new uint[] { 10, 20 }, result.Order());
+        Assert.Equal(new byte[] { 2, 4 }, configuration.GetStructureNumbers(10).Order());
+        Assert.Equal(new byte[] { 4 }, configuration.GetStructureNumbers(20).Order());
         Assert.Equal("marketing", sender.MarketingAddr);
     }
 
@@ -40,7 +50,8 @@ public sealed class ProgramCommandQueriesTests
         var queries = new ProgramCommandQueries(
             new SenderStub(Result.Success(new MarketingV3DataResponse())));
 
-        var result = await queries.GetAvailableCommandTagsAsync("marketing", 9, default);
+        var configuration = await queries.GetConfigurationAsync("marketing", default);
+        var result = configuration.GetAvailableCommandTags(9);
 
         Assert.Empty(result);
     }
@@ -52,7 +63,7 @@ public sealed class ProgramCommandQueriesTests
             new SenderStub(Result<MarketingV3DataResponse>.Error("contract failed")));
 
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            queries.GetAvailableCommandTagsAsync("marketing", 1, default));
+            queries.GetConfigurationAsync("marketing", default));
 
         Assert.Contains("contract failed", exception.Message);
     }

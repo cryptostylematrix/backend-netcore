@@ -45,7 +45,7 @@ DECLARE
             "width": 2,
             "height": 2,
             "display_height": 2,
-            "prev_required": false,
+            "prev_required": true,
             "pos_algo": {"v":1,"root":"profile","groups":[{"id":0,"algo":"classic","weight":1}],"relation":"relative"}
         },
 	  	{
@@ -54,7 +54,7 @@ DECLARE
             "width": 2,
             "height": 2,
             "display_height": 2,
-            "prev_required": false,
+            "prev_required": true,
             "pos_algo": {"v":1,"root":"profile","groups":[{"id":0,"algo":"classic","weight":1}],"relation":"relative"}
         },
 	  	{
@@ -63,7 +63,7 @@ DECLARE
             "width": 2,
             "height": 2,
             "display_height": 2,
-            "prev_required": false,
+            "prev_required": true,
             "pos_algo": {"v":1,"root":"profile","groups":[{"id":0,"algo":"classic","weight":1}],"relation":"relative"}
         },
 		{
@@ -72,7 +72,7 @@ DECLARE
             "width": 2,
             "height": 2,
             "display_height": 2,
-            "prev_required": false,
+            "prev_required": true,
             "pos_algo": {"v":1,"root":"profile","groups":[{"id":0,"algo":"classic","weight":1}],"relation":"relative"}
         },
 		{
@@ -81,7 +81,7 @@ DECLARE
             "width": 2,
             "height": 2,
             "display_height": 2,
-            "prev_required": false,
+            "prev_required": true,
             "pos_algo": {"v":1,"root":"profile","groups":[{"id":0,"algo":"classic","weight":1}],"relation":"relative"}
         }
     ]'::jsonb;

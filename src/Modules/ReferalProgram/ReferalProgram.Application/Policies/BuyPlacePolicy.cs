@@ -5,8 +5,6 @@ public sealed class BuyPlacePolicy(
     IPlaceQueries placeQueries,
     ILockQueries lockQueries,
     INextPosService nextPosService,
-    IPositionRootResolver positionRootResolver,
-    IPositionAlgorithmConfigurationParser configurationParser,
     IProgramCommandQueries commandQueries) : IBuyPlacePolicy
 {
     public BuyPositionDecision EvaluatePosition(
@@ -27,7 +25,7 @@ public sealed class BuyPlacePolicy(
             return new BuyPositionDecision(false, null);
 
         var command = SelectCommand(
-            decision.PlacesCount,
+            decision.HasPlacesInBuyFirstPlaceStructures,
             decision.AvailableCommandTags);
 
         return command is null
@@ -50,10 +48,6 @@ public sealed class BuyPlacePolicy(
         if (structure is null)
             return Denied("structure_not_found");
 
-        var configuration = configurationParser.Parse(structure.PosAlgo);
-        var requireNextPosition = configuration.Root.Equals(
-            "owner",
-            StringComparison.OrdinalIgnoreCase);
         var placesCount = await placeQueries.GetPlacesCountAsync(
             marketingAddr,
             structureNumber,
@@ -66,36 +60,64 @@ public sealed class BuyPlacePolicy(
             return Denied("max_places_reached");
         }
 
-        var nextPosition = await nextPosService.GetNextPosAsync(
+        if (structure.PrevRequired)
+        {
+            if (structureNumber == 0)
+                return Denied("previous_structure_does_not_exist");
+
+            var previousStructurePlacesCount =
+                await placeQueries.GetPlacesCountAsync(
+                    marketingAddr,
+                    checked((byte)(structureNumber - 1)),
+                    profileAddr,
+                    cancellationToken);
+
+            if (previousStructurePlacesCount == 0)
+                return Denied("previous_structure_place_required");
+        }
+
+        var commandConfiguration = await commandQueries.GetConfigurationAsync(
+            marketingAddr,
+            cancellationToken);
+        var buyFirstPlaceStructures = commandConfiguration.GetStructureNumbers(
+            ProgramCommandTags.BuyFirstPlace);
+        var hasPlacesInBuyFirstPlaceStructures = buyFirstPlaceStructures.Count > 0
+            && await placeQueries.HasProfilePlacesInStructuresAsync(
+                marketingAddr,
+                profileAddr,
+                buyFirstPlaceStructures,
+                cancellationToken);
+
+        var selection = await nextPosService.ResolveSelectionAsync(
             marketingAddr,
             structureNumber,
             profileAddr,
             cancellationToken);
 
-        if (nextPosition is null)
+        if (selection is null)
             return Denied("no_available_position");
 
-        if (nextPosition.Pos == 0)
-            return Denied("calculated_position_is_invalid");
+        var isClassic = selection.Algorithm.Equals(
+            "classic",
+            StringComparison.OrdinalIgnoreCase);
+        var profileRoot = isClassic
+            ? await placeQueries.GetFirstPlaceAsync(
+                marketingAddr,
+                structureNumber,
+                profileAddr,
+                cancellationToken)
+            : null;
+        var canSelectPosition = isClassic && profileRoot is not null;
 
-        var viewerRoot = await positionRootResolver.ResolveAsync(
-            configuration.Root,
-            marketingAddr,
-            structureNumber,
-            profileAddr,
-            cancellationToken);
-        if (viewerRoot is null)
-            return Denied("viewer_root_not_found");
+        NextPosResponse? selectedPosition;
 
-        var selectedPosition = nextPosition;
-
-        if (requestedPosition is not null)
+        if (requestedPosition is not null && isClassic)
         {
             if (requestedPosition.StructureNumber != structureNumber)
                 return Denied("position_structure_mismatch");
 
-            if (requireNextPosition)
-                return Denied("position_not_allowed");
+            if (profileRoot is null)
+                return Denied("profile_root_not_found_for_selected_position");
 
             if (requestedPosition.Position == 0
                 || (structure.Width > 0 && requestedPosition.Position > structure.Width))
@@ -117,7 +139,7 @@ public sealed class BuyPlacePolicy(
 
             var requestedMp = requestedParent.Mp
                 + requestedPosition.Position.ToString("X8");
-            if (!requestedMp.StartsWith(viewerRoot.Mp, StringComparison.Ordinal))
+            if (!requestedMp.StartsWith(profileRoot.Mp, StringComparison.Ordinal))
                 return Denied("position_is_outside_viewer_root");
 
             var lockMps = await lockQueries.GetAllLockMpsAsync(
@@ -134,12 +156,26 @@ public sealed class BuyPlacePolicy(
             selectedPosition = new NextPosResponse
             {
                 Mp = requestedMp,
-                PosGroup = nextPosition.PosGroup,
+                PosGroup = selection.Context.PosGroup,
                 ProfileAddr = requestedParent.ProfileAddr,
                 PlaceNumber = requestedParent.PlaceNumber,
                 Pos = requestedPosition.Position
             };
         }
+        else
+        {
+            // Radar and Chess always calculate their own position. A supplied
+            // position is intentionally ignored for those algorithms.
+            selectedPosition = await nextPosService.FindNextAsync(
+                selection,
+                cancellationToken);
+        }
+
+        if (selectedPosition is null)
+            return Denied("no_available_position");
+
+        if (selectedPosition.Pos == 0)
+            return Denied("calculated_position_is_invalid");
 
         var parent = await placeQueries.GetPlaceAsync(
             marketingAddr,
@@ -150,12 +186,10 @@ public sealed class BuyPlacePolicy(
         if (parent is null)
             return Denied("parent_place_not_found");
 
-        var commandTags = await commandQueries.GetAvailableCommandTagsAsync(
-            marketingAddr,
-            structureNumber,
-            cancellationToken);
+        var commandTags = commandConfiguration.GetAvailableCommandTags(
+            structureNumber);
         var command = SelectCommand(
-            placesCount,
+            hasPlacesInBuyFirstPlaceStructures,
             commandTags);
         if (command is null)
             return Denied("buy_command_not_configured");
@@ -164,23 +198,26 @@ public sealed class BuyPlacePolicy(
             CanBuy: true,
             command.Value.Kind,
             command.Value.Tag,
-            IncludePosition: !requireNextPosition,
+            IncludePosition: canSelectPosition,
             Position: selectedPosition,
             Reason: null)
         {
-            RequireNextPosition = requireNextPosition,
-            ViewerRootMp = viewerRoot.Mp,
-            PlacesCount = placesCount,
+            RequireNextPosition = !canSelectPosition,
+            ViewerRootMp = profileRoot?.Mp ?? selection.Context.Root.Mp,
+            HasPlacesInBuyFirstPlaceStructures = hasPlacesInBuyFirstPlaceStructures,
             AvailableCommandTags = commandTags
         };
     }
 
     private static (BuyPlaceKind Kind, uint Tag)? SelectCommand(
-        long placesCount,
+        bool hasPlacesInBuyFirstPlaceStructures,
         IReadOnlySet<uint> availableTags)
     {
-        if (placesCount == 0 && availableTags.Contains(ProgramCommandTags.BuyFirstPlace))
+        if (!hasPlacesInBuyFirstPlaceStructures
+            && availableTags.Contains(ProgramCommandTags.BuyFirstPlace))
+        {
             return (BuyPlaceKind.First, ProgramCommandTags.BuyFirstPlace);
+        }
 
         return availableTags.Contains(ProgramCommandTags.BuyPlace)
             ? (BuyPlaceKind.Regular, ProgramCommandTags.BuyPlace)

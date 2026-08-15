@@ -112,10 +112,11 @@ internal sealed class GetTreeQueryHandler(
             request.StructureNumber,
             request.ViewerProfileAddr,
             ct);
-        var availableCommandTags = await commandQueries.GetAvailableCommandTagsAsync(
+        var commandConfiguration = await commandQueries.GetConfigurationAsync(
             request.MarketingAddr,
-            request.StructureNumber,
             ct);
+        var availableCommandTags = commandConfiguration.GetAvailableCommandTags(
+            request.StructureNumber);
 
         var profileResult = await sender.Send(
             new GetNftDataQuery(request.ViewerProfileAddr),

@@ -7,7 +7,7 @@ namespace ReferalProgram.Application.Tests;
 public sealed class BuyPlacePolicyPositionTests
 {
     private readonly BuyPlacePolicy policy = new(
-        null!, null!, null!, null!, null!, null!, null!);
+        null!, null!, null!, null!, null!);
 
     [Fact]
     public void Owner_root_allows_only_the_calculated_next_position()
@@ -74,7 +74,7 @@ public sealed class BuyPlacePolicyPositionTests
     {
         var decision = Decision(requireNext: false) with
         {
-            PlacesCount = 0
+            HasPlacesInBuyFirstPlaceStructures = false
         };
 
         var result = policy.EvaluatePosition(
@@ -98,7 +98,7 @@ public sealed class BuyPlacePolicyPositionTests
         {
             RequireNextPosition = requireNext,
             ViewerRootMp = "ROOT",
-            PlacesCount = 1,
+            HasPlacesInBuyFirstPlaceStructures = true,
             AvailableCommandTags = new HashSet<uint>
             {
                 ProgramCommandTags.BuyFirstPlace,

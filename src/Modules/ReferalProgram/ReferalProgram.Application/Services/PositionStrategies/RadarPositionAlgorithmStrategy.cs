@@ -22,6 +22,7 @@ public sealed class RadarPositionAlgorithmStrategy(IPositionCandidateQueries pla
             context.Width,
             context.ProfiledPlacesPrioritized,
             context.DepthSpread,
+            context.RootProfileLockMps,
             cancellationToken);
 
         if (place is null)

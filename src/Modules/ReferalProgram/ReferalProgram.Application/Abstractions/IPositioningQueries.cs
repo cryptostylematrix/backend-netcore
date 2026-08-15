@@ -21,6 +21,7 @@ public interface IPositionCandidateQueries
         string rootMp,
         byte width,
         byte depthSpread,
+        IReadOnlyCollection<string> lockMps,
         CancellationToken cancellationToken);
 
     Task<PlaceResponse?> GetFirstActiveUnfilledPlaceAsync(
@@ -30,6 +31,7 @@ public interface IPositionCandidateQueries
         byte width,
         bool profiledPlacesPrioritized,
         byte depthSpread,
+        IReadOnlyCollection<string> lockMps,
         CancellationToken cancellationToken);
 
     Task<IReadOnlyList<PlaceResponse>> GetOpenPlacesByMpPrefixAsync(

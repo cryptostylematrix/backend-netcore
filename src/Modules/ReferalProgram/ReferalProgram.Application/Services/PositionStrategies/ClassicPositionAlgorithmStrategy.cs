@@ -1,8 +1,7 @@
 namespace ReferalProgram.Application.Services.PositionStrategies;
 
 public sealed class ClassicPositionAlgorithmStrategy(
-    IPositionCandidateQueries placeQueries,
-    IPositionLockQueries lockQueries) : IPositionAlgorithmStrategy
+    IPositionCandidateQueries placeQueries) : IPositionAlgorithmStrategy
 {
     public string Name => "classic";
 
@@ -10,20 +9,6 @@ public sealed class ClassicPositionAlgorithmStrategy(
         PositionAlgorithmStrategyContext context,
         CancellationToken cancellationToken)
     {
-        var lockMps = await lockQueries.GetAllLockMpsAsync(
-            context.Root.MarketingAddr,
-            context.Root.StructNumber,
-            context.Root.ProfileAddr,
-            cancellationToken);
-
-        Array.Sort(lockMps, static (left, right) =>
-        {
-            var lengthComparison = left.Length.CompareTo(right.Length);
-            return lengthComparison != 0
-                ? lengthComparison
-                : string.CompareOrdinal(left, right);
-        });
-
         var page = 1;
         const int pageSize = 50;
 
@@ -48,7 +33,7 @@ public sealed class ClassicPositionAlgorithmStrategy(
                 var pos = checked(place.Filling + 1);
                 var childMp = place.Mp + pos.ToString("X8");
 
-                if (IsLockedMp(childMp, lockMps))
+                if (context.IsLocked(childMp))
                     continue;
 
                 return new NextPosResponse
@@ -67,7 +52,4 @@ public sealed class ClassicPositionAlgorithmStrategy(
             page++;
         }
     }
-
-    private static bool IsLockedMp(string mp, string[] lockMps) =>
-        lockMps.Any(lockMp => mp.StartsWith(lockMp, StringComparison.Ordinal));
 }

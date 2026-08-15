@@ -195,6 +195,38 @@ public sealed class PlaceQueries(
                 cancellationToken: cancellationToken));
     }
 
+    public async Task<bool> HasProfilePlacesInStructuresAsync(
+        string marketingAddr,
+        string profileAddr,
+        IReadOnlyCollection<byte> structureNumbers,
+        CancellationToken cancellationToken)
+    {
+        const string sql = """
+            SELECT EXISTS (
+                SELECT 1
+                FROM public.places AS p
+                WHERE p.marketing_addr = @marketingAddr
+                  AND p.profile_addr = @profileAddr
+                  AND p.structure_number = ANY(@structureNumbers)
+            );
+            """;
+
+        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
+
+        return await connection.ExecuteScalarAsync<bool>(
+            new CommandDefinition(
+                sql,
+                new
+                {
+                    marketingAddr,
+                    profileAddr,
+                    structureNumbers = structureNumbers
+                        .Select(number => (short)number)
+                        .ToArray()
+                },
+                cancellationToken: cancellationToken));
+    }
+
     public async Task<PlaceSubtreeCounts> GetPlaceSubtreeCountsAsync(
         string marketingAddr,
         byte structureNumber,
@@ -270,6 +302,7 @@ public sealed class PlaceQueries(
         string rootMp,
         byte width,
         byte depthSpread,
+        IReadOnlyCollection<string> lockMps,
         CancellationToken cancellationToken)
     {
         var sql = """
@@ -280,7 +313,15 @@ public sealed class PlaceQueries(
                 WHERE marketing_addr = @marketingAddr
                   AND structure_number = @structureNumber
                   AND mp LIKE @mpPrefix
+                  AND is_active = true
                   AND filling < @width
+                  AND NOT EXISTS
+                  (
+                      SELECT 1
+                      FROM unnest(@lockMps) AS locks(lock_mp)
+                      WHERE lower(mp || lpad(to_hex(filling + 1), 8, '0'))
+                          LIKE lower(lock_mp) || '%'
+                  )
             ),
             min_depth AS
             (
@@ -326,7 +367,8 @@ public sealed class PlaceQueries(
                     structureNumber = (short)structureNumber,
                     mpPrefix = rootMp + "%",
                     width = (long)width,
-                    depthSpread = (long)depthSpread
+                    depthSpread = (long)depthSpread,
+                    lockMps = lockMps.ToArray()
                 },
                 cancellationToken: cancellationToken));
 
@@ -340,6 +382,7 @@ public sealed class PlaceQueries(
         byte width,
         bool profiledPlacesPrioritized,
         byte depthSpread,
+        IReadOnlyCollection<string> lockMps,
         CancellationToken cancellationToken)
     {
         var sql = """
@@ -352,6 +395,13 @@ public sealed class PlaceQueries(
                   AND mp LIKE @mpPrefix
                   AND is_active = true
                   AND filling < @width
+                  AND NOT EXISTS
+                  (
+                      SELECT 1
+                      FROM unnest(@lockMps) AS locks(lock_mp)
+                      WHERE lower(mp || lpad(to_hex(filling + 1), 8, '0'))
+                          LIKE lower(lock_mp) || '%'
+                  )
             ),
             min_depth AS
             (
@@ -385,7 +435,8 @@ public sealed class PlaceQueries(
                     mpPrefix = rootMp + "%",
                     width = (long)width,
                     profiledPlacesPrioritized,
-                    depthSpread = (long)depthSpread
+                    depthSpread = (long)depthSpread,
+                    lockMps = lockMps.ToArray()
                 },
                 cancellationToken: cancellationToken));
     }
