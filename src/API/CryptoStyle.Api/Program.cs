@@ -95,7 +95,7 @@ builder.Services.AddOptions<TaskProcessorOptions>()
         "TaskProcessor.IntervalSeconds must be greater than zero.")
     .ValidateOnStart();
 
-//if (!builder.Environment.IsDevelopment())
+if (!builder.Environment.IsDevelopment())
     builder.Services.AddHostedService<TaskProcessor>();
 
 // Distributed cache (choose ONE):
