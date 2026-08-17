@@ -68,6 +68,9 @@ public sealed class TreeFilledNodeResponse : TreeNodeResponse
     [JsonPropertyName("filling")]
     public uint Filling { get; init; }
 
+    [JsonPropertyName("rank")]
+    public string? Rank { get; init; }
+
     [JsonPropertyName("matrix_places_count")]
     public long MatrixPlacesCount { get; init; }
 

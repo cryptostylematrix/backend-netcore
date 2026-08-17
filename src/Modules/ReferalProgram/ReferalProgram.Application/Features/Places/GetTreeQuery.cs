@@ -1,5 +1,6 @@
 using Contracts.Application.Features.ProfileItem;
 using MediatR;
+using ReferalProgram.Application.Services;
 
 namespace ReferalProgram.Application.Features.Places;
 
@@ -17,6 +18,7 @@ internal sealed class GetTreeQueryHandler(
     IPlaceQueries placeQueries,
     ILockQueries lockQueries,
     IStructureQueries structureQueries,
+    IStructureRankQueries structureRankQueries,
     IPositionRootResolver positionRootResolver,
     IPositionAlgorithmConfigurationParser configurationParser,
     INextPosService nextPosService,
@@ -66,6 +68,11 @@ internal sealed class GetTreeQueryHandler(
 
         if (selected is null)
             return Result<TreeNodeResponse>.NotFound();
+
+        var structureRanks = await structureRankQueries.GetAllAsync(
+            request.MarketingAddr,
+            request.StructureNumber,
+            ct);
 
         PlaceResponse? selectedParent = null;
         if (selected.ParentPlaceNumber is not null)
@@ -237,6 +244,9 @@ internal sealed class GetTreeQueryHandler(
                 ProfileLogin = row.ProfileLogin,
                 Kind = row.Kind,
                 Filling = row.Filling,
+                Rank = StructureRankCalculator.Resolve(
+                    structureRanks,
+                    row.PersonalVolume),
                 MatrixPlacesCount = subtreeCounts.MatrixPlacesCount,
                 Descendants = subtreeCounts.DescendantsCount,
                 Level = row.Deep,
