@@ -246,6 +246,7 @@ internal sealed class GetTreeQueryHandler(
                 Filling = row.Filling,
                 Rank = StructureRankCalculator.Resolve(
                     structureRanks,
+                    row.ProfileAddr,
                     row.PersonalVolume),
                 MatrixPlacesCount = subtreeCounts.MatrixPlacesCount,
                 Descendants = subtreeCounts.DescendantsCount,

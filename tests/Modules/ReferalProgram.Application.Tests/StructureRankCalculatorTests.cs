@@ -17,7 +17,10 @@ public sealed class StructureRankCalculatorTests
         uint personalVolume,
         string expected)
     {
-        var result = StructureRankCalculator.Resolve(Ranks(), personalVolume);
+        var result = StructureRankCalculator.Resolve(
+            Ranks(),
+            profileAddr: "profile",
+            personalVolume);
 
         Assert.Equal(expected, result);
     }
@@ -27,7 +30,21 @@ public sealed class StructureRankCalculatorTests
     {
         var ranks = new[] { Rank("Silver", 5) };
 
-        var result = StructureRankCalculator.Resolve(ranks, personalVolume: 4);
+        var result = StructureRankCalculator.Resolve(
+            ranks,
+            profileAddr: "profile",
+            personalVolume: 4);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void Returns_null_for_system_place_even_when_zero_threshold_exists()
+    {
+        var result = StructureRankCalculator.Resolve(
+            Ranks(),
+            profileAddr: null,
+            personalVolume: 5000);
 
         Assert.Null(result);
     }
