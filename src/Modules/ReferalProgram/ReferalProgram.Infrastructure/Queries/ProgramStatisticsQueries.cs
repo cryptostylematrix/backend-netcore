@@ -49,7 +49,14 @@ public sealed class ProgramStatisticsQueries(
                 SELECT
                     structure_number,
                     COUNT(*)::bigint AS total_places,
-                    COUNT(*) FILTER (WHERE is_active)::bigint AS active_places
+                    COUNT(*) FILTER (WHERE is_active)::bigint AS active_places,
+                    COUNT(DISTINCT profile_addr)
+                        FILTER (WHERE profile_addr IS NOT NULL)::bigint AS total_profiles,
+                    COUNT(DISTINCT profile_addr)
+                        FILTER (
+                            WHERE profile_addr IS NOT NULL
+                              AND is_active
+                        )::bigint AS active_profiles
                 FROM public.places
                 WHERE marketing_addr = @marketingAddr
                 GROUP BY structure_number
@@ -73,6 +80,8 @@ public sealed class ProgramStatisticsQueries(
                 structure.structure_number AS "StructureNumber",
                 COALESCE(all_places.total_places, 0)::bigint AS "TotalPlaces",
                 COALESCE(all_places.active_places, 0)::bigint AS "ActivePlaces",
+                COALESCE(all_places.total_profiles, 0)::bigint AS "TotalProfiles",
+                COALESCE(all_places.active_profiles, 0)::bigint AS "ActiveProfiles",
                 COALESCE(referral_places.total_referrals, 0)::bigint AS "ReferralTotal",
                 COALESCE(referral_places.active_referrals, 0)::bigint AS "ReferralActive",
                 (
@@ -107,6 +116,8 @@ public sealed class ProgramStatisticsQueries(
                 StructureNumber = checked((byte)row.StructureNumber),
                 TotalPlaces = row.TotalPlaces,
                 ActivePlaces = row.ActivePlaces,
+                TotalProfiles = row.TotalProfiles,
+                ActiveProfiles = row.ActiveProfiles,
                 Referrals = new StructureReferralStatisticsResponse
                 {
                     Total = row.ReferralTotal,
@@ -143,6 +154,8 @@ public sealed class ProgramStatisticsQueries(
         public short StructureNumber { get; init; }
         public long TotalPlaces { get; init; }
         public long ActivePlaces { get; init; }
+        public long TotalProfiles { get; init; }
+        public long ActiveProfiles { get; init; }
         public long ReferralTotal { get; init; }
         public long ReferralActive { get; init; }
         public long ReferralInactive { get; init; }

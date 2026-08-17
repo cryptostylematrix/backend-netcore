@@ -14,8 +14,8 @@ public sealed class GetProgramStatisticsEndpoint(ISender sender)
         {
             summary.Summary = "Get referral-program statistics";
             summary.Description =
-                "Gets overall place totals and direct-referral participation "
-                + "statistics for every configured structure.";
+                "Gets distinct profile and place totals plus direct-referral "
+                + "participation statistics for every configured structure.";
         });
     }
 

@@ -38,6 +38,12 @@ public sealed class StructureStatisticsResponse
     [JsonPropertyName("active_places")]
     public long ActivePlaces { get; init; }
 
+    [JsonPropertyName("total_profiles")]
+    public long TotalProfiles { get; init; }
+
+    [JsonPropertyName("active_profiles")]
+    public long ActiveProfiles { get; init; }
+
     [JsonPropertyName("referrals")]
     public StructureReferralStatisticsResponse Referrals { get; init; } = null!;
 }
