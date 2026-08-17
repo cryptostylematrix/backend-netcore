@@ -58,6 +58,7 @@ public static class ReferalProgramModule
                 (IPositionLockQueries)provider.GetRequiredService<ILockQueries>());
             services.AddScoped<IStructureQueries, StructureQueries>();
             services.AddScoped<IStructureRankQueries, StructureRankQueries>();
+            services.AddScoped<IProgramStatisticsQueries, ProgramStatisticsQueries>();
             services.AddScoped<IProfileRootPlaceResolver, ProfileRootPlaceResolver>();
             services.AddScoped<IPositionRootResolver, PositionRootResolver>();
             services.AddScoped<INextPositionQueries, NextPositionQueries>();
