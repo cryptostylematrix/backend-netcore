@@ -3,10 +3,11 @@ using Microsoft.EntityFrameworkCore;
 using ReferalProgram.Core.LockAggregate;
 using ReferalProgram.Core.MarketingTaskAggregate;
 using ReferalProgram.Core.PlaceAggregate;
+using ReferalProgram.Application.Abstractions;
 
 namespace ReferalProgram.Infrastructure.Persistence;
 
-public sealed class DataContext : DbContext, IUnitOfWork
+public sealed class DataContext : DbContext, IProgramUnitOfWork
 {
     private readonly IDomainEventDispatcher? _domainEventDispatcher;
 

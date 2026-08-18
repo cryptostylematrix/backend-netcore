@@ -36,7 +36,7 @@ public static class UIModule
             services.AddDbContext<DataContext>(options =>
                 options.UseNpgsql(connectionString));
             services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
-            services.AddScoped<IUnitOfWork>(provider =>
+            services.AddScoped<IUiUnitOfWork>(provider =>
                 provider.GetRequiredService<DataContext>());
             services.AddScoped<ICachedProfileRepository, CachedProfileRepository>();
             services.AddScoped<IWalletProfileIntentRepository,

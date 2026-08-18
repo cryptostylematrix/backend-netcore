@@ -1,4 +1,5 @@
 using Common.Domain;
+using ReferalProgram.Application.Abstractions;
 using ReferalProgram.Application.Features.MarketingTasks;
 using ReferalProgram.Core.MarketingTaskAggregate;
 
@@ -98,7 +99,7 @@ public sealed class MarketingTaskTests
         public void Add(MarketingTask task) => Added = task;
     }
 
-    private sealed class UnitOfWork : IUnitOfWork
+    private sealed class UnitOfWork : IProgramUnitOfWork
     {
         public int SaveCount { get; private set; }
 

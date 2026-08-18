@@ -17,7 +17,7 @@ internal sealed class BuySystemPlaceCommandHandler(
     IStructureQueries structureQueries,
     INextPosService nextPosService,
     ISourcePlaceResolver sourcePlaceResolver,
-    IUnitOfWork unitOfWork) : ICommandHandler<BuySystemPlaceCommand, CommandResponse>
+    IProgramUnitOfWork unitOfWork) : ICommandHandler<BuySystemPlaceCommand, CommandResponse>
 {
     public async Task<Result<CommandResponse>> Handle(
         BuySystemPlaceCommand request,

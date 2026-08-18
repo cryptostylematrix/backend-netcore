@@ -10,7 +10,7 @@ public sealed record MarkMarketingTaskProcessedCommand(
 
 internal sealed class MarkMarketingTaskProcessedCommandHandler(
     IMarketingTaskRepository repository,
-    IUnitOfWork unitOfWork)
+    IProgramUnitOfWork unitOfWork)
     : ICommandHandler<MarkMarketingTaskProcessedCommand>
 {
     public async Task<Result> Handle(

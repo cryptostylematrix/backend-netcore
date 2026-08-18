@@ -10,7 +10,7 @@ public sealed record RemoveProfileIntentCommand(
 internal sealed class RemoveProfileIntentCommandHandler(
     IWalletAddressService walletAddressService,
     IWalletProfileIntentRepository intentRepository,
-    IUnitOfWork unitOfWork,
+    IUiUnitOfWork unitOfWork,
     TimeProvider timeProvider)
     : ICommandHandler<RemoveProfileIntentCommand, ProfileIntentOperationResponse>
 {

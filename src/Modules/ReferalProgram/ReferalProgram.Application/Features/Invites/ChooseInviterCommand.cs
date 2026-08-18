@@ -17,7 +17,7 @@ internal sealed class ChooseInviterCommandHandler(
     IPlaceRepository placeRepository,
     IStructureQueries structureQueries,
     ISourcePlaceResolver sourcePlaceResolver,
-    IUnitOfWork unitOfWork) : ICommandHandler<ChooseInviterCommand, CommandResponse>
+    IProgramUnitOfWork unitOfWork) : ICommandHandler<ChooseInviterCommand, CommandResponse>
 {
     private const byte StructureNumber = 0;
     private const uint PlaceNumber = 1;

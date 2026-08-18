@@ -235,7 +235,7 @@ public sealed class BuySystemPlaceCommandHandlerTests
                 }));
     }
 
-    private sealed class UnitOfWork : IUnitOfWork
+    private sealed class UnitOfWork : IProgramUnitOfWork
     {
         public Task<int> SaveChangesAsync(
             CancellationToken cancellationToken = default) => Task.FromResult(1);

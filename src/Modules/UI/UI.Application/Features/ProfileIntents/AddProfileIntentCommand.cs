@@ -13,7 +13,7 @@ internal sealed class AddProfileIntentCommandHandler(
     IWalletAddressService walletAddressService,
     ProfileSynchronizer profileSynchronizer,
     IWalletProfileIntentRepository intentRepository,
-    IUnitOfWork unitOfWork,
+    IUiUnitOfWork unitOfWork,
     TimeProvider timeProvider)
     : ICommandHandler<AddProfileIntentCommand, ProfileIntentOperationResponse>
 {

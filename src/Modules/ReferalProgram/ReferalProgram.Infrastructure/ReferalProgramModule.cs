@@ -45,7 +45,8 @@ public static class ReferalProgramModule
 
             services.AddDbContext<DataContext>(options => options.UseNpgsql(connectionString));
             services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
-            services.AddScoped<IUnitOfWork>(provider => provider.GetRequiredService<DataContext>());
+            services.AddScoped<IProgramUnitOfWork>(provider =>
+                provider.GetRequiredService<DataContext>());
             services.AddScoped<IPlaceRepository, PlaceRepository>();
             services.AddScoped<IPositionLockRepository, PositionLockRepository>();
             services.AddScoped<IMarketingTaskRepository, MarketingTaskRepository>();

@@ -2,10 +2,11 @@ using Common.Domain;
 using Microsoft.EntityFrameworkCore;
 using UI.Core.ProfileAggregate;
 using UI.Core.WalletProfileIntentAggregate;
+using UI.Application.Abstractions;
 
 namespace UI.Infrastructure.Persistence;
 
-public sealed class DataContext : DbContext, IUnitOfWork
+public sealed class DataContext : DbContext, IUiUnitOfWork
 {
     private readonly IDomainEventDispatcher? _domainEventDispatcher;
 

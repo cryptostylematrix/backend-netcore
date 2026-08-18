@@ -171,7 +171,7 @@ public sealed class BuyPlaceCommandHandlerTests
             CancellationToken cancellationToken) => Task.FromResult(result);
     }
 
-    private sealed class UnitOfWork : IUnitOfWork
+    private sealed class UnitOfWork : IProgramUnitOfWork
     {
         public int SaveCount { get; private set; }
 

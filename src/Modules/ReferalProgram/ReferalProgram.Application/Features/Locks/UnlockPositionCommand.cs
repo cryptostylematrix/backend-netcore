@@ -24,7 +24,7 @@ internal sealed class UnlockPositionCommandHandler(
     ILockQueries lockQueries,
     IPositionLockPolicy lockPolicy,
     IPositionLockRepository positionLockRepository,
-    IUnitOfWork unitOfWork)
+    IProgramUnitOfWork unitOfWork)
     : ICommandHandler<UnlockPositionCommand, CommandResponse>
 {
     public async Task<Result<CommandResponse>> Handle(

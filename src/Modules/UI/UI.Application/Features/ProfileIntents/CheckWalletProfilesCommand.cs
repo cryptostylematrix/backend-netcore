@@ -14,7 +14,7 @@ internal sealed class CheckWalletProfilesCommandHandler(
     ICachedProfileRepository profileRepository,
     IWalletProfileIntentRepository intentRepository,
     IWalletProfileQueries queries,
-    IUnitOfWork unitOfWork,
+    IUiUnitOfWork unitOfWork,
     TimeProvider timeProvider)
     : ICommandHandler<CheckWalletProfilesCommand, CheckWalletProfilesResponse>
 {

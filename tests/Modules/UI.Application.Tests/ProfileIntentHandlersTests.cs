@@ -285,7 +285,7 @@ public sealed class ProfileIntentHandlersTests
         public void Remove(WalletProfileIntent intent) => Items.Remove(intent);
     }
 
-    private sealed class UnitOfWorkStub : IUnitOfWork
+    private sealed class UnitOfWorkStub : IUiUnitOfWork
     {
         public int SaveCount { get; private set; }
 

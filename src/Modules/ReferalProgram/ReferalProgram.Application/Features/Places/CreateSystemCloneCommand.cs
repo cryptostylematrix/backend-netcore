@@ -19,7 +19,7 @@ internal sealed class CreateSystemCloneCommandHandler(
     IRelativePlaceResolver relativePlaceResolver,
     INextPosService nextPosService,
     ISourcePlaceResolver sourcePlaceResolver,
-    IUnitOfWork unitOfWork)
+    IProgramUnitOfWork unitOfWork)
     : ICommandHandler<CreateSystemCloneCommand, CommandResponse>
 {
     public async Task<Result<CommandResponse>> Handle(
