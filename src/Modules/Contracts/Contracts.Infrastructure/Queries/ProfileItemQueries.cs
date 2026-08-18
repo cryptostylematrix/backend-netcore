@@ -36,6 +36,15 @@ public sealed class ProfileItemQueries(
             ct: ct);
     }
 
+    public Task<Result<ProfileDataResponse>> GetFreshNftDataAsync(
+        string addr,
+        CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        var normalizedAddr = new Address(addr).ToString();
+        return FetchNftDataAsync(normalizedAddr);
+    }
+
 
     private async Task<Result<ProfileDataResponse>> FetchNftDataAsync(string addr)
     {

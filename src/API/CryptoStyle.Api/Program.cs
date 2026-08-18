@@ -4,6 +4,7 @@ using dotenv.net;
 using FastEndpoints;
 using Matrix.Infrastructure;
 using ReferalProgram.Infrastructure;
+using UI.Infrastructure;
 using Serilog;
 using Serilog.Debugging;
 using Serilog.Events;
@@ -11,6 +12,7 @@ using ContractsPresentation = Contracts.Presentation.PresentationReference;
 using MarketingPresentation = Marketing.Presentation.PresentationReference;
 using MatrixPresentation = Matrix.Presentation.PresentationReference;
 using ReferalProgramPresentation = ReferalProgram.Presentation.PresentationReference;
+using UIPresentation = UI.Presentation.PresentationReference;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -71,7 +73,8 @@ builder.Services.AddFastEndpoints(options =>
         ContractsPresentation.Assembly,
         MatrixPresentation.Assembly,
         MarketingPresentation.Assembly,
-        ReferalProgramPresentation.Assembly
+        ReferalProgramPresentation.Assembly,
+        UIPresentation.Assembly
     ];
 });
 
@@ -88,6 +91,7 @@ builder.Services.AddContractsModule(builder.Configuration);
 builder.Services.AddMatrixModule(builder.Configuration);
 builder.Services.AddMarketingModule(builder.Configuration);
 builder.Services.AddReferalProgramModule(builder.Configuration);
+builder.Services.AddUIModule(builder.Configuration);
 
 builder.Services.AddOptions<TaskProcessorOptions>()
     .Bind(builder.Configuration.GetSection(TaskProcessorOptions.SectionName))
