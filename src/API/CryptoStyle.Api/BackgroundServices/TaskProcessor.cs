@@ -1296,7 +1296,10 @@ public sealed class TaskProcessor(
                         SourcePlaceNumber: relative.Source.PlaceNumber,
                         RelativeLevel: relative.Level,
                         TaskKey: checked((int)taskKey),
-                        QueryId: checked((long)task.QueryId)),
+                        QueryId: checked((long)task.QueryId),
+                        Operation: command.CommandTag == CreateCloneCommandTag
+                            ? PositionOperation.CreateClone
+                            : PositionOperation.CreateReinvest),
                     cancellationToken);
 
                 if (!result.IsSuccess)

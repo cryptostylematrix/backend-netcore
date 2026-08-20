@@ -48,6 +48,85 @@ public sealed class PositionConfigurationTests
     }
 
     [Fact]
+    public void Version_two_uses_default_when_operation_is_omitted_or_has_no_override()
+    {
+        using var document = JsonDocument.Parse("""
+            {
+              "v": 2,
+              "default": {
+                "root": "owner",
+                "relation": "relative",
+                "groups": [{ "id": 0, "algo": "chess", "weight": 1 }]
+              },
+              "operations": {
+                "buy_first_place": {
+                  "root": "profile",
+                  "relation": "relative",
+                  "groups": [{ "id": 0, "algo": "classic", "weight": 1 }]
+                }
+              }
+            }
+            """);
+        var parser = new PositionAlgorithmConfigurationParser();
+
+        var withoutOperation = parser.Parse(document.RootElement);
+        var withoutOverride = parser.Parse(
+            document.RootElement,
+            PositionOperation.CreateClone);
+
+        Assert.Equal("owner", withoutOperation.Root);
+        Assert.Equal("chess", Assert.Single(withoutOperation.Groups).Algorithm);
+        Assert.Equal("owner", withoutOverride.Root);
+        Assert.Equal("chess", Assert.Single(withoutOverride.Groups).Algorithm);
+    }
+
+    [Fact]
+    public void Version_two_uses_the_requested_operation_override()
+    {
+        using var document = JsonDocument.Parse("""
+            {
+              "v": 2,
+              "default": {
+                "root": "owner",
+                "relation": "relative",
+                "groups": [{ "id": 0, "algo": "chess", "weight": 1 }]
+              },
+              "operations": {
+                "buy_first_place": {
+                  "root": "profile",
+                  "relation": "absolute",
+                  "groups": [{ "id": 2, "algo": "classic", "weight": 3 }]
+                }
+              }
+            }
+            """);
+
+        var result = new PositionAlgorithmConfigurationParser().Parse(
+            document.RootElement,
+            PositionOperation.BuyFirstPlace);
+
+        Assert.Equal(2, result.Version);
+        Assert.Equal("profile", result.Root);
+        Assert.Equal("absolute", result.Relation);
+        var group = Assert.Single(result.Groups);
+        Assert.Equal(2, group.Id);
+        Assert.Equal("classic", group.Algorithm);
+    }
+
+    [Fact]
+    public void Version_two_requires_a_default_configuration()
+    {
+        using var document = JsonDocument.Parse("""
+            { "v": 2, "operations": {} }
+            """);
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            new PositionAlgorithmConfigurationParser().Parse(document.RootElement));
+
+        Assert.Contains("default", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Relative_selector_chooses_most_underrepresented_group()
     {
         var configuration = Configuration("relative", (0, 1), (1, 3));

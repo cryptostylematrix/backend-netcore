@@ -88,10 +88,23 @@ public sealed class BuyPlacePolicy(
                 buyFirstPlaceStructures,
                 cancellationToken);
 
+        var commandTags = commandConfiguration.GetAvailableCommandTags(
+            structureNumber);
+        var command = SelectCommand(
+            hasPlacesInBuyFirstPlaceStructures,
+            commandTags);
+        if (command is null)
+            return Denied("buy_command_not_configured");
+
+        var operation = command.Value.Kind == BuyPlaceKind.First
+            ? PositionOperation.BuyFirstPlace
+            : PositionOperation.BuyPlace;
+
         var selection = await nextPosService.ResolveSelectionAsync(
             marketingAddr,
             structureNumber,
             profileAddr,
+            operation,
             cancellationToken);
 
         if (selection is null)
@@ -185,14 +198,6 @@ public sealed class BuyPlacePolicy(
             cancellationToken);
         if (parent is null)
             return Denied("parent_place_not_found");
-
-        var commandTags = commandConfiguration.GetAvailableCommandTags(
-            structureNumber);
-        var command = SelectCommand(
-            hasPlacesInBuyFirstPlaceStructures,
-            commandTags);
-        if (command is null)
-            return Denied("buy_command_not_configured");
 
         return new BuyPlaceDecision(
             CanBuy: true,

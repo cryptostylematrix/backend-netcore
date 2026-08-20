@@ -20,6 +20,7 @@ internal sealed class UnlockPositionCommandHandler(
     IStructureQueries structureQueries,
     ISender sender,
     ITonAddressComparer addressComparer,
+    IPositionAlgorithmConfigurationParser configurationParser,
     IPositionRootResolver positionRootResolver,
     ILockQueries lockQueries,
     IPositionLockPolicy lockPolicy,
@@ -54,15 +55,10 @@ internal sealed class UnlockPositionCommandHandler(
         if (structure is null)
             return Result<CommandResponse>.Error("Structure was not found.");
 
-        if (!structure.PosAlgo.TryGetProperty("root", out var rootProperty)
-            || rootProperty.GetString() is not { } rootStrategyName
-            || string.IsNullOrWhiteSpace(rootStrategyName))
-        {
-            return Result<CommandResponse>.Error("Structure pos_algo root is missing or invalid.");
-        }
+        var configuration = configurationParser.Parse(structure.PosAlgo);
 
         var root = await positionRootResolver.ResolveAsync(
-            rootStrategyName,
+            configuration.Root,
             request.MarketingAddr,
             request.StructureNumber,
             request.ProfileAddr,

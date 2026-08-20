@@ -29,6 +29,7 @@ public sealed class BuySystemPlaceCommandHandlerTests
         Assert.Equal((uint)2, repository.AddedPlace.Pos);
         Assert.False(repository.AddedPlace.Mp.StartsWith("ROOT", StringComparison.Ordinal));
         Assert.Equal(0, nextPosService.FindNextCallCount);
+        Assert.Equal(PositionOperation.BuySystemPlace, nextPosService.Operation);
     }
 
     [Fact]
@@ -194,12 +195,18 @@ public sealed class BuySystemPlaceCommandHandlerTests
         NextPosResponse? calculated) : INextPosService
     {
         public int FindNextCallCount { get; private set; }
+        public PositionOperation? Operation { get; private set; }
 
         public Task<PositionSelection?> ResolveSelectionAsync(
             string marketingAddr,
             byte structureNumber,
             string? profileAddr,
-            CancellationToken ct) => Task.FromResult<PositionSelection?>(selection);
+            PositionOperation? operation,
+            CancellationToken ct)
+        {
+            Operation = operation;
+            return Task.FromResult<PositionSelection?>(selection);
+        }
 
         public Task<NextPosResponse?> FindNextAsync(
             PositionSelection requestedSelection,
@@ -213,6 +220,7 @@ public sealed class BuySystemPlaceCommandHandlerTests
             string marketingAddr,
             byte structureNumber,
             string? profileAddr,
+            PositionOperation? operation,
             CancellationToken ct) => Task.FromResult(calculated);
     }
 

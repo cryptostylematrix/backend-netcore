@@ -29,7 +29,7 @@ public sealed class NextPosServiceTests
             locks);
 
         var result = await service.GetNextPosAsync(
-            "marketing", 4, "viewer", CancellationToken.None);
+            "marketing", 4, "viewer", operation: null, CancellationToken.None);
 
         Assert.Same(algorithm.Result, result);
         Assert.NotNull(algorithm.Context);
@@ -54,7 +54,7 @@ public sealed class NextPosServiceTests
             new LockQueries());
 
         var result = await service.GetNextPosAsync(
-            "marketing", 4, "viewer", CancellationToken.None);
+            "marketing", 4, "viewer", operation: null, CancellationToken.None);
 
         Assert.Null(result);
     }

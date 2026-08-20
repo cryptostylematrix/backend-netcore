@@ -11,7 +11,8 @@ public sealed record CreateSystemCloneCommand(
     uint SourcePlaceNumber,
     ushort RelativeLevel,
     int TaskKey,
-    long QueryId) : ICommand<CommandResponse>;
+    long QueryId,
+    PositionOperation Operation) : ICommand<CommandResponse>;
 
 internal sealed class CreateSystemCloneCommandHandler(
     IPlaceRepository placeRepository,
@@ -28,6 +29,13 @@ internal sealed class CreateSystemCloneCommandHandler(
     {
         try
         {
+            if (request.Operation is not PositionOperation.CreateClone
+                and not PositionOperation.CreateReinvest)
+            {
+                return Result<CommandResponse>.Error(
+                    $"Position operation '{request.Operation}' is not valid for clone creation.");
+            }
+
             var structure = await structureQueries.GetStructureAsync(
                 request.MarketingAddr,
                 request.StructureNumber,
@@ -70,6 +78,7 @@ internal sealed class CreateSystemCloneCommandHandler(
                     request.MarketingAddr,
                     request.StructureNumber,
                     profileAddr,
+                    request.Operation,
                     cancellationToken);
 
                 if (nextPosition is null)

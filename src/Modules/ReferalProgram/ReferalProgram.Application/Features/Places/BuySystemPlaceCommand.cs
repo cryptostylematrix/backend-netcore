@@ -44,6 +44,7 @@ internal sealed class BuySystemPlaceCommandHandler(
                     request.MarketingAddr,
                     request.StructureNumber,
                     null,
+                    PositionOperation.BuySystemPlace,
                     cancellationToken);
 
                 if (selection is null)

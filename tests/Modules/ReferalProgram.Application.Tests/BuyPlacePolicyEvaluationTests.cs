@@ -189,7 +189,8 @@ public sealed class BuyPlacePolicyEvaluationTests
             nextPosition: null,
             viewerRoot: root,
             places: [root, parent],
-            lockMps: ["ROOT0000000100000001"]);
+            lockMps: ["ROOT0000000100000001"],
+            tags: new HashSet<uint> { ProgramCommandTags.BuyPlace });
 
         var result = await policy.EvaluateAsync(
             "marketing", 4, "viewer",
@@ -267,7 +268,11 @@ public sealed class BuyPlacePolicyEvaluationTests
                     : structure.PosAlgo
                         .GetProperty("groups")[0]
                         .GetProperty("algo")
-                        .GetString()!),
+                        .GetString()!,
+                !hasPlacesInProgramStructures
+                    && effectiveTags.Contains(ProgramCommandTags.BuyFirstPlace)
+                        ? PositionOperation.BuyFirstPlace
+                        : PositionOperation.BuyPlace),
             new Commands(
                 effectiveTags,
                 effectiveBuyFirstPlaceStructureNumbers));
@@ -365,10 +370,12 @@ public sealed class BuyPlacePolicyEvaluationTests
     private sealed class NextPosition(
         NextPosResponse? result,
         PlaceResponse? root,
-        string algorithm) : INextPosService
+        string algorithm,
+        PositionOperation expectedOperation) : INextPosService
     {
-        public Task<PositionSelection?> ResolveSelectionAsync(string marketingAddr, byte structureNumber, string? profileAddr, CancellationToken ct) =>
-            Task.FromResult(root is null
+        public Task<PositionSelection?> ResolveSelectionAsync(string marketingAddr, byte structureNumber, string? profileAddr, PositionOperation? operation, CancellationToken ct) =>
+            operation == expectedOperation
+                ? Task.FromResult(root is null
                 ? null
                 : new PositionSelection(
                     algorithm,
@@ -380,12 +387,14 @@ public sealed class BuyPlacePolicyEvaluationTests
                         0,
                         true,
                         1,
-                        [])));
+                        [])))
+                : throw new InvalidOperationException(
+                    $"Expected operation {expectedOperation}, received {operation}.");
 
         public Task<NextPosResponse?> FindNextAsync(PositionSelection selection, CancellationToken ct) =>
             Task.FromResult(result);
 
-        public Task<NextPosResponse?> GetNextPosAsync(string marketingAddr, byte structureNumber, string? profileAddr, CancellationToken ct) => Task.FromResult(result);
+        public Task<NextPosResponse?> GetNextPosAsync(string marketingAddr, byte structureNumber, string? profileAddr, PositionOperation? operation, CancellationToken ct) => Task.FromResult(result);
     }
 
     private sealed class Commands(

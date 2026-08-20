@@ -10,4 +10,7 @@ public sealed class GetNextPosRequest
 
     [BindFrom("profile_addr")]
     public string ProfileAddr { get; init; } = null!;
+
+    [BindFrom("operation")]
+    public string? Operation { get; init; }
 }

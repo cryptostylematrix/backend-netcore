@@ -12,12 +12,14 @@ public sealed class NextPosService(
         string marketingAddr,
         byte structureNumber,
         string? profileAddr,
+        PositionOperation? operation,
         CancellationToken ct)
     {
         var selection = await ResolveSelectionAsync(
             marketingAddr,
             structureNumber,
             profileAddr,
+            operation,
             ct);
 
         return selection is null
@@ -29,6 +31,7 @@ public sealed class NextPosService(
         string marketingAddr,
         byte structureNumber,
         string? profileAddr,
+        PositionOperation? operation,
         CancellationToken ct)
     {
         var structure = await queries.GetStructureAsync(
@@ -39,7 +42,7 @@ public sealed class NextPosService(
         if (structure is null)
             return null;
 
-        var config = configurationParser.Parse(structure.PosAlgo);
+        var config = configurationParser.Parse(structure.PosAlgo, operation);
 
         var counts = await queries.GetPlaceCountsByPosGroupAsync(
             marketingAddr,

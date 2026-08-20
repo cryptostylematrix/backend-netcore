@@ -112,6 +112,7 @@ internal sealed class GetTreeQueryHandler(
                 request.MarketingAddr,
                 request.StructureNumber,
                 request.ViewerProfileAddr,
+                operation: null,
                 ct);
 
         var lockMps = await lockQueries.GetAllLockMpsAsync(

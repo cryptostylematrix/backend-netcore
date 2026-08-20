@@ -10,6 +10,7 @@ public interface INextPosService
         string marketingAddr,
         byte structureNumber,
         string? profileAddr,
+        PositionOperation? operation,
         CancellationToken ct);
 
     Task<NextPosResponse?> FindNextAsync(
@@ -20,5 +21,6 @@ public interface INextPosService
         string marketingAddr,
         byte structureNumber,
         string? profileAddr,
+        PositionOperation? operation,
         CancellationToken ct);
 }

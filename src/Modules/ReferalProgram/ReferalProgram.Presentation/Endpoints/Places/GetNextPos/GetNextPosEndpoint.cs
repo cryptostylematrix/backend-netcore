@@ -13,7 +13,8 @@ public sealed class GetNextPosEndpoint(ISender sender)
         Summary(summary =>
         {
             summary.Summary = "Get next position";
-            summary.Description = "Gets the next available position in a referral-program structure.";
+            summary.Description = "Gets the next available position in a referral-program structure. "
+                + "When operation is omitted, the default positioning configuration is used.";
         });
     }
 
@@ -22,7 +23,8 @@ public sealed class GetNextPosEndpoint(ISender sender)
         var result = await sender.Send(new GetNextPosQuery(
             request.MarketingAddr,
             request.StructureNumber,
-            request.ProfileAddr), ct);
+            request.ProfileAddr,
+            request.Operation), ct);
 
         if (!result.IsSuccess)
         {
