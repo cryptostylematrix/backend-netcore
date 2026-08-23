@@ -13,7 +13,7 @@ Entity Framework Core, MediatR, and the included TON SDK projects.
 | --- | --- |
 | `src/API/CryptoStyle.Api` | HTTP API, Swagger, dependency composition, logging, CORS, and the background task processor. |
 | `src/Modules/Contracts` | TON contract queries, message construction, transaction sending, caching, and TonCenter integration. |
-| `src/Modules/Matrix` | Legacy Multi matrix queries and endpoints. |
+| `src/Modules/Matrix` | Legacy Multi matrix code retained for internal compatibility; its presentation assembly is not registered publicly. |
 | `src/Modules/Marketing` | Legacy Marketing matrix queries and endpoints. |
 | `src/Modules/ReferalProgram` | Current referral-program domain, placement policies, APIs, persistence, and database scripts. |
 | `src/Modules/UI` | Wallet profile-display intents, cached profile data, ownership checks, and history. |
@@ -47,6 +47,8 @@ name is intentionally preserved in paths and namespaces.
   profile-intent schema.
 
 Swagger is available at `/swagger` while the API is running in Development.
+Legacy `/api/matrix/*` routes are intentionally not registered and therefore
+are unavailable both at runtime and in Swagger.
 
 ## Local setup
 

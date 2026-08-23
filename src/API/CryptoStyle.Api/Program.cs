@@ -10,7 +10,6 @@ using Serilog.Debugging;
 using Serilog.Events;
 using ContractsPresentation = Contracts.Presentation.PresentationReference;
 using MarketingPresentation = Marketing.Presentation.PresentationReference;
-using MatrixPresentation = Matrix.Presentation.PresentationReference;
 using ReferalProgramPresentation = ReferalProgram.Presentation.PresentationReference;
 using UIPresentation = UI.Presentation.PresentationReference;
 
@@ -71,7 +70,6 @@ builder.Services.AddFastEndpoints(options =>
     options.Assemblies =
     [
         ContractsPresentation.Assembly,
-        MatrixPresentation.Assembly,
         MarketingPresentation.Assembly,
         ReferalProgramPresentation.Assembly,
         UIPresentation.Assembly
