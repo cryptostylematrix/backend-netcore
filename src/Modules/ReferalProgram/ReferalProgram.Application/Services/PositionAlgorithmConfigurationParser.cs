@@ -114,6 +114,15 @@ public sealed class PositionAlgorithmConfigurationParser
             if (group.Weight <= 0)
                 throw new InvalidOperationException(
                     $"{configurationName} group {group.Id} must have a positive weight.");
+
+            if (group.Algorithm.Equals(
+                    "trimmed_classic",
+                    StringComparison.OrdinalIgnoreCase)
+                && group.CutFactor is null or < 2)
+            {
+                throw new InvalidOperationException(
+                    $"{configurationName} group {group.Id} must define a cut_factor of at least 2 for trimmed_classic.");
+            }
         }
     }
 

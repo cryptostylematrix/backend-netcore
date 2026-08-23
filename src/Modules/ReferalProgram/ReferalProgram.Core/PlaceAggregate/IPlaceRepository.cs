@@ -31,5 +31,9 @@ public interface IPlaceRepository : IRepository<Place>
         uint depth,
         CancellationToken cancellationToken);
 
+    Task<long> CountCloneChildrenAsync(
+        int parentId,
+        CancellationToken cancellationToken);
+
     void Add(Place place);
 }

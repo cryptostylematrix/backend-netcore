@@ -81,6 +81,12 @@ internal sealed class BuySystemPlaceCommandHandler(
                     if (requestedParent is null)
                         return Result<CommandResponse>.Error("Requested parent place was not found.");
 
+                    if (requestedParent.Kind == PlaceKinds.TerminalClone)
+                    {
+                        return Result<CommandResponse>.Error(
+                            "A terminal clone cannot have children.");
+                    }
+
                     if (requestedPosition.Position
                         != checked(requestedParent.Filling + 1))
                     {
@@ -123,6 +129,12 @@ internal sealed class BuySystemPlaceCommandHandler(
 
                 if (parent is null)
                     return Result<CommandResponse>.Error("Parent place was not found.");
+
+                if (parent.Kind == PlaceKinds.TerminalClone)
+                {
+                    return Result<CommandResponse>.Error(
+                        "A terminal clone cannot have children.");
+                }
 
                 if (nextPosition.Pos == 0)
                     return Result<CommandResponse>.Error("The calculated position is invalid.");

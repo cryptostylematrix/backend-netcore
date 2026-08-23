@@ -282,6 +282,12 @@ public sealed class Place : Entity, IAggregateRoot
 
     public void RegisterChild(uint expectedFilling)
     {
+        if (Kind == PlaceKinds.TerminalClone)
+        {
+            throw new InvalidOperationException(
+                "A terminal clone cannot have children.");
+        }
+
         if (Filling != expectedFilling)
             throw new InvalidOperationException("The parent place changed while creating a place.");
 

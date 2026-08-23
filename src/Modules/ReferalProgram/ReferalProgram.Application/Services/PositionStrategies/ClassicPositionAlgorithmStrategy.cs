@@ -7,6 +7,12 @@ public sealed class ClassicPositionAlgorithmStrategy(
 
     public async Task<NextPosResponse?> FindNextAsync(
         PositionAlgorithmStrategyContext context,
+        CancellationToken cancellationToken) =>
+        await FindClassicNextAsync(placeQueries, context, cancellationToken);
+
+    internal static async Task<NextPosResponse?> FindClassicNextAsync(
+        IPositionCandidateQueries placeQueries,
+        PositionAlgorithmStrategyContext context,
         CancellationToken cancellationToken)
     {
         var page = 1;

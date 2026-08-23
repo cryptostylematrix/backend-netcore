@@ -19,6 +19,7 @@ internal sealed class CreateSystemCloneCommandHandler(
     IStructureQueries structureQueries,
     IRelativePlaceResolver relativePlaceResolver,
     INextPosService nextPosService,
+    IClonePlaceKindPolicy clonePlaceKindPolicy,
     ISourcePlaceResolver sourcePlaceResolver,
     IProgramUnitOfWork unitOfWork)
     : ICommandHandler<CreateSystemCloneCommand, CommandResponse>
@@ -74,11 +75,18 @@ internal sealed class CreateSystemCloneCommandHandler(
                         "The relative place has no profile identity.");
                 }
 
-                var nextPosition = await nextPosService.GetNextPosAsync(
+                var positionSelection = await nextPosService.ResolveSelectionAsync(
                     request.MarketingAddr,
                     request.StructureNumber,
                     profileAddr,
                     request.Operation,
+                    cancellationToken);
+
+                if (positionSelection is null)
+                    return Result<CommandResponse>.Error("No available position was found.");
+
+                var nextPosition = await nextPosService.FindNextAsync(
+                    positionSelection,
                     cancellationToken);
 
                 if (nextPosition is null)
@@ -96,6 +104,11 @@ internal sealed class CreateSystemCloneCommandHandler(
 
                 if (parent is null)
                     return Result<CommandResponse>.Error("Parent place was not found.");
+
+                var placeKind = await clonePlaceKindPolicy.ResolveAsync(
+                    positionSelection,
+                    parent.Id,
+                    cancellationToken);
 
                 var placeNumber = await placeRepository.GetNextPlaceNumberAsync(
                     request.MarketingAddr,
@@ -118,7 +131,7 @@ internal sealed class CreateSystemCloneCommandHandler(
                     parentPlaceNumber: parent.PlaceNumber,
                     mp: nextPosition.Mp,
                     posGroup: nextPosition.PosGroup,
-                    kind: 1,
+                    kind: placeKind,
                     pos: nextPosition.Pos,
                     filling: 0,
                     deep: checked(parent.Deep + 1),

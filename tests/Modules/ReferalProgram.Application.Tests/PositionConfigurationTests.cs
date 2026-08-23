@@ -127,6 +127,58 @@ public sealed class PositionConfigurationTests
     }
 
     [Fact]
+    public void Parser_reads_trimmed_classic_cut_factor()
+    {
+        using var document = JsonDocument.Parse("""
+            {
+              "v": 1,
+              "root": "profile",
+              "relation": "relative",
+              "groups": [
+                {
+                  "id": 0,
+                  "algo": "trimmed_classic",
+                  "weight": 1,
+                  "cut_factor": 3
+                }
+              ]
+            }
+            """);
+
+        var result = new PositionAlgorithmConfigurationParser().Parse(
+            document.RootElement);
+
+        Assert.Equal((uint)3, Assert.Single(result.Groups).CutFactor);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    public void Parser_rejects_trimmed_classic_cut_factor_below_two(int cutFactor)
+    {
+        using var document = JsonDocument.Parse($$"""
+            {
+              "v": 1,
+              "root": "profile",
+              "relation": "relative",
+              "groups": [
+                {
+                  "id": 0,
+                  "algo": "trimmed_classic",
+                  "weight": 1,
+                  "cut_factor": {{cutFactor}}
+                }
+              ]
+            }
+            """);
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            new PositionAlgorithmConfigurationParser().Parse(document.RootElement));
+
+        Assert.Contains("at least 2", exception.Message);
+    }
+
+    [Fact]
     public void Relative_selector_chooses_most_underrepresented_group()
     {
         var configuration = Configuration("relative", (0, 1), (1, 3));

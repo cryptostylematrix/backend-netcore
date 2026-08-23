@@ -314,6 +314,7 @@ public sealed class PlaceQueries(
                   AND structure_number = @structureNumber
                   AND mp LIKE @mpPrefix
                   AND is_active = true
+                  AND kind <> 2
                   AND filling < @width
                   AND NOT EXISTS
                   (
@@ -394,6 +395,7 @@ public sealed class PlaceQueries(
                   AND structure_number = @structureNumber
                   AND mp LIKE @mpPrefix
                   AND is_active = true
+                  AND kind <> 2
                   AND filling < @width
                   AND NOT EXISTS
                   (
@@ -459,6 +461,7 @@ public sealed class PlaceQueries(
               AND structure_number = @structureNumber
               AND mp LIKE @mpPrefix
               AND is_active = true
+              AND kind <> 2
               AND (@width = 0 OR filling < @width)
             ORDER BY length(mp) ASC, mp ASC, id ASC
             LIMIT @limit OFFSET @offset;

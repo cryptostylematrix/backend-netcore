@@ -92,6 +92,9 @@ public sealed class PositionGroupConfiguration
 
     [JsonPropertyName("depth_spread")]
     public byte DepthSpread { get; init; } = 1;
+
+    [JsonPropertyName("cut_factor")]
+    public uint? CutFactor { get; init; }
 }
 
 public interface IPositionAlgorithmConfigurationParser

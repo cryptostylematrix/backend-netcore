@@ -77,7 +77,8 @@ public sealed class NextPosService(
                 checked((byte)group.Id),
                 group.ProfiledPlacesPrioritized,
                 group.DepthSpread,
-                lockMps));
+                lockMps,
+                group.CutFactor));
     }
 
     public Task<NextPosResponse?> FindNextAsync(

@@ -69,3 +69,62 @@ GET /api/program/{marketing_addr}/structures/{structure_number}/next-pos?profile
 
 When `operation` is omitted, the endpoint uses `default`. An unknown value is
 rejected. A valid operation without an override uses `default`.
+
+## Supported algorithms
+
+### `classic`
+
+Places are added from left to right. An explicitly requested position is
+honored only by `classic`; `chess` and `radar` always use their calculated
+candidate. Candidate selection excludes locked branches and terminal clones.
+
+### `chess` and `radar`
+
+Both algorithms accept these group options:
+
+- `profiled_places_prioritized`: when `true`, search profiled places before
+  system places;
+- `depth_spread`: the number of open depth levels included in the candidate
+  window, starting with the highest open depth.
+
+Locks belong to the resolved root profile. With a profile root, resolution may
+fall back through active inviters until it finds the first inviter that has a
+place in the structure; that inviter's locks are then used.
+
+### `trimmed_classic`
+
+`trimmed_classic` uses classic positioning and accepts `cut_factor`. It is
+intended for the `create_clone` and `create_reinvest` operation overrides.
+
+```json
+{
+  "v": 2,
+  "default": {
+    "root": "profile",
+    "relation": "relative",
+    "groups": [
+      { "id": 0, "algo": "classic", "weight": 1 }
+    ]
+  },
+  "operations": {
+    "create_clone": {
+      "root": "profile",
+      "relation": "relative",
+      "groups": [
+        {
+          "id": 0,
+          "algo": "trimmed_classic",
+          "weight": 1,
+          "cut_factor": 2
+        }
+      ]
+    }
+  }
+}
+```
+
+The factor must be at least `2`. The processor counts existing direct clone
+children of the selected parent. Every Nth clone, including a reinvest, is
+created as kind `2` instead of the ordinary clone kind `1`. Kind `2` is a
+terminal clone: it cannot receive children and is excluded from every
+next-position candidate query.

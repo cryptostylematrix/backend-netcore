@@ -1,3 +1,5 @@
+using ReferalProgram.Core.PlaceAggregate;
+
 namespace ReferalProgram.Application.Policies;
 
 public sealed class BuyPlacePolicy(
@@ -21,7 +23,11 @@ public sealed class BuyPlacePolicy(
               && parent is not null
               && position == checked(parent.Filling + 1);
 
-        if (!decision.CanBuy || isLocked || !positionAllowed || parent is null)
+        if (!decision.CanBuy
+            || isLocked
+            || !positionAllowed
+            || parent is null
+            || parent.Kind == PlaceKinds.TerminalClone)
             return new BuyPositionDecision(false, null);
 
         var command = SelectCommand(
@@ -147,6 +153,9 @@ public sealed class BuyPlacePolicy(
             if (requestedParent is null)
                 return Denied("parent_place_not_found");
 
+            if (requestedParent.Kind == PlaceKinds.TerminalClone)
+                return Denied("terminal_clone_cannot_have_children");
+
             if (requestedPosition.Position != checked(requestedParent.Filling + 1))
                 return Denied("position_is_not_parent_next_available");
 
@@ -198,6 +207,9 @@ public sealed class BuyPlacePolicy(
             cancellationToken);
         if (parent is null)
             return Denied("parent_place_not_found");
+
+        if (parent.Kind == PlaceKinds.TerminalClone)
+            return Denied("terminal_clone_cannot_have_children");
 
         return new BuyPlaceDecision(
             CanBuy: true,

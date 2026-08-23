@@ -69,6 +69,7 @@ public static class ReferalProgramModule
             services.AddScoped<IPositionAlgorithmResolver, PositionAlgorithmResolver>();
             services.AddScoped<IProgramCommandQueries, ProgramCommandQueries>();
             services.AddScoped<IBuyPlacePolicy, BuyPlacePolicy>();
+            services.AddScoped<IClonePlaceKindPolicy, ClonePlaceKindPolicy>();
             services.AddScoped<ISourcePlaceResolver, SourcePlaceResolver>();
             services.AddScoped<IRelativePlaceResolver, RelativePlaceResolver>();
             services.AddSingleton<ITonAddressComparer, TonAddressComparer>();
@@ -79,6 +80,8 @@ public static class ReferalProgramModule
             services.AddScoped<IPositionAlgorithmStrategy, ChessPositionAlgorithmStrategy>();
             services.AddScoped<IPositionAlgorithmStrategy, RadarPositionAlgorithmStrategy>();
             services.AddScoped<IPositionAlgorithmStrategy, ClassicPositionAlgorithmStrategy>();
+            services.AddScoped<IPositionAlgorithmStrategy,
+                TrimmedClassicPositionAlgorithmStrategy>();
             services.AddScoped<INextPosService, NextPosService>();
             services.AddScoped<IReferalProgramQueries, ReferalProgramQueries>();
 

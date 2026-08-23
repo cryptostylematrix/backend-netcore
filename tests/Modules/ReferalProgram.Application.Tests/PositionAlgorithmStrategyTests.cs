@@ -68,6 +68,28 @@ public sealed class PositionAlgorithmStrategyTests
     }
 
     [Fact]
+    public async Task Trimmed_classic_preserves_classic_position_order()
+    {
+        var candidates = new CandidateQueries
+        {
+            OpenPlaces =
+            [
+                Place("ROOT00000001", "first", 1, filling: 1),
+                Place("ROOT00000002", "second", 2, filling: 0)
+            ]
+        };
+        var strategy = new TrimmedClassicPositionAlgorithmStrategy(candidates);
+
+        var result = await strategy.FindNextAsync(
+            Context(cutFactor: 2),
+            CancellationToken.None);
+
+        Assert.Equal("first", result?.ProfileAddr);
+        Assert.Equal((uint)2, result?.Pos);
+        Assert.Equal("ROOT0000000100000002", result?.Mp);
+    }
+
+    [Fact]
     public async Task Chess_skips_root_profile_locked_branch()
     {
         var candidates = new CandidateQueries
@@ -121,7 +143,8 @@ public sealed class PositionAlgorithmStrategyTests
     private static PositionAlgorithmStrategyContext Context(
         bool profiledFirst = true,
         byte depthSpread = 1,
-        string[]? lockMps = null) => new(
+        string[]? lockMps = null,
+        uint? cutFactor = null) => new(
             "marketing",
             4,
             3,
@@ -129,7 +152,8 @@ public sealed class PositionAlgorithmStrategyTests
             2,
             profiledFirst,
             depthSpread,
-            lockMps ?? []);
+            lockMps ?? [],
+            cutFactor);
 
     private static PlaceResponse Place(
         string mp,

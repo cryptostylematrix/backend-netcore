@@ -61,5 +61,14 @@ internal sealed class PlaceRepository(DataContext dataContext) : IPlaceRepositor
                 && place.Deep == depth,
             cancellationToken);
 
+    public Task<long> CountCloneChildrenAsync(
+        int parentId,
+        CancellationToken cancellationToken) =>
+        dataContext.Places.LongCountAsync(
+            place => place.ParentId == parentId
+                && (place.Kind == PlaceKinds.Clone
+                    || place.Kind == PlaceKinds.TerminalClone),
+            cancellationToken);
+
     public void Add(Place place) => dataContext.Places.Add(place);
 }
