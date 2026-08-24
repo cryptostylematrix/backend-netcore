@@ -1,18 +1,54 @@
 using Npgsql;
+using NpgsqlTypes;
 
 namespace ProgramMatrixFillingRecalculator;
 
 internal sealed class MatrixFillingRecalculator(string connectionString)
 {
     public async Task RunAsync(
-        string marketingAddr,
+        string? marketingAddr,
         bool applyChanges,
         CancellationToken cancellationToken)
     {
         await using var dataSource = NpgsqlDataSource.Create(connectionString);
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
 
-        await ValidateSchemaAndProgramAsync(connection, marketingAddr, cancellationToken);
+        await ValidateSchemaAsync(connection, cancellationToken);
+        var marketingAddresses = await LoadMarketingAddressesAsync(
+            connection,
+            marketingAddr,
+            cancellationToken);
+
+        if (marketingAddresses.Count == 0)
+        {
+            throw new InvalidOperationException(marketingAddr is null
+                ? "No Referral Programs were found."
+                : $"Referral program {marketingAddr} was not found.");
+        }
+
+        Console.WriteLine("Programs selected: {0}", marketingAddresses.Count);
+        for (var index = 0; index < marketingAddresses.Count; index++)
+        {
+            Console.WriteLine();
+            Console.WriteLine(
+                "=== Program {0}/{1}: {2} ===",
+                index + 1,
+                marketingAddresses.Count,
+                marketingAddresses[index]);
+            await RecalculateProgramAsync(
+                connection,
+                marketingAddresses[index],
+                applyChanges,
+                cancellationToken);
+        }
+    }
+
+    private static async Task RecalculateProgramAsync(
+        NpgsqlConnection connection,
+        string marketingAddr,
+        bool applyChanges,
+        CancellationToken cancellationToken)
+    {
         var structures = await LoadStructuresAsync(connection, marketingAddr, cancellationToken);
         if (structures.Count == 0)
             throw new InvalidOperationException("The referral program has no structures.");
@@ -194,9 +230,8 @@ internal sealed class MatrixFillingRecalculator(string connectionString)
         return result;
     }
 
-    private static async Task ValidateSchemaAndProgramAsync(
+    private static async Task ValidateSchemaAsync(
         NpgsqlConnection connection,
-        string marketingAddr,
         CancellationToken cancellationToken)
     {
         const string sql = """
@@ -207,28 +242,41 @@ internal sealed class MatrixFillingRecalculator(string connectionString)
                        WHERE table_schema = 'public'
                          AND table_name = 'places'
                          AND column_name = 'matrix_filling'
-                   ),
-                   EXISTS
-                   (
-                       SELECT 1
-                       FROM public.referal_program
-                       WHERE marketing_addr = @marketingAddr
                    );
             """;
 
         await using var command = new NpgsqlCommand(sql, connection);
-        command.Parameters.AddWithValue("marketingAddr", marketingAddr);
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        await reader.ReadAsync(cancellationToken);
+        var exists = (bool)(await command.ExecuteScalarAsync(cancellationToken)
+            ?? false);
 
-        if (!reader.GetBoolean(0))
+        if (!exists)
         {
             throw new InvalidOperationException(
                 "Column public.places.matrix_filling does not exist. Run database script 020 first.");
         }
+    }
 
-        if (!reader.GetBoolean(1))
-            throw new InvalidOperationException($"Referral program {marketingAddr} was not found.");
+    private static async Task<IReadOnlyList<string>> LoadMarketingAddressesAsync(
+        NpgsqlConnection connection,
+        string? marketingAddr,
+        CancellationToken cancellationToken)
+    {
+        const string sql = """
+            SELECT marketing_addr
+            FROM public.referal_program
+            WHERE @marketingAddr IS NULL OR marketing_addr = @marketingAddr
+            ORDER BY marketing_addr;
+            """;
+
+        await using var command = new NpgsqlCommand(sql, connection);
+        command.Parameters.Add("marketingAddr", NpgsqlDbType.Varchar).Value =
+            marketingAddr is null ? DBNull.Value : marketingAddr;
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        var result = new List<string>();
+        while (await reader.ReadAsync(cancellationToken))
+            result.Add(reader.GetString(0));
+
+        return result;
     }
 
     private static async Task<IReadOnlyList<StructureInfo>> LoadStructuresAsync(

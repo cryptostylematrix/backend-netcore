@@ -2,7 +2,7 @@ namespace ProgramMatrixFillingRecalculator;
 
 internal sealed record RecalculationOptions(
     string ConnectionString,
-    string MarketingAddr,
+    string? MarketingAddr,
     bool ApplyChanges)
 {
     public static RecalculationOptions Parse(string[] args)
@@ -24,17 +24,14 @@ internal sealed record RecalculationOptions(
         if (string.IsNullOrWhiteSpace(connectionString))
             throw Error("The Programs database connection string is required.");
 
-        if (string.IsNullOrWhiteSpace(marketingAddr))
-            throw Error("Marketing address is required.");
-
         return new RecalculationOptions(
             connectionString,
-            marketingAddr.Trim(),
+            string.IsNullOrWhiteSpace(marketingAddr) ? null : marketingAddr.Trim(),
             arguments.ContainsKey("apply"));
     }
 
     public const string Usage = """
-        Recalculates persisted matrix filling for every place of one Referral Program.
+        Recalculates persisted matrix filling for Referral Programs.
 
         The command is a dry run unless --apply is supplied. Run --apply while the
         API task processor and other writers for the Programs database are stopped.
@@ -43,10 +40,12 @@ internal sealed record RecalculationOptions(
           dotnet run --project src/ProgramMatrixFillingRecalculator -- [options]
 
         Required options (or corresponding environment variables):
-          --marketing-addr VALUE       PROGRAM_MATRIX_FILLING_MARKETING_ADDR
           --connection-string VALUE    PROGRAM_MATRIX_FILLING_CONNECTION_STRING
                                        or ConnectionStrings__Programs
         Optional:
+          --marketing-addr VALUE       Process only this marketing address; uses
+                                       PROGRAM_MATRIX_FILLING_MARKETING_ADDR.
+                                       Omit it to process every Referral Program.
           --env-file VALUE             Load settings from this .env file
           --apply                      Update PostgreSQL; otherwise dry-run
           --help                       Show this help

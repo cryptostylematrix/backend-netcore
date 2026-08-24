@@ -1,7 +1,7 @@
 # Program Matrix Filling Recalculator
 
 This console application calculates `places.matrix_filling` for every place of
-one Referral Program. It is intended for existing programs that were created or
+every Referral Program, or one selected program. It is intended for existing programs that were created or
 migrated before the persisted matrix-filling counter was introduced.
 
 For a matrix structure (`width > 0` and `height > 0`), a place's filling is the
@@ -17,7 +17,8 @@ before using this tool.
 
 Copy `.env.example` to `.env` in this directory and fill in the values. Real
 `.env` files are ignored by Git. Command-line options override environment
-variables.
+variables. Leave `PROGRAM_MATRIX_FILLING_MARKETING_ADDR` unset to process all
+Referral Programs, or set it to restrict the operation to one program.
 
 ## Run
 
@@ -44,7 +45,8 @@ dotnet run --project src/ProgramMatrixFillingRecalculator -- \
   --connection-string 'Host=localhost;Database=cs_programs;Username=program_user;Password=replace_me'
 ```
 
-The apply operation locks `public.places` for one transaction and verifies the
-result before committing. Run it during maintenance with the API task processor
-and all other Programs-database writers stopped. The tool prints progress per
-structure and never prints the connection string.
+Each program is verified and committed in its own transaction. Apply operations
+lock `public.places` while the current program is recalculated. Run the tool
+during maintenance with the API task processor and all other Programs-database
+writers stopped. The tool prints progress per program and structure and never
+prints the connection string.
