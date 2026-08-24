@@ -157,14 +157,20 @@ internal sealed class GetTreeQueryHandler(
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
         rowsByMp[selected.Mp] = selected;
 
-        return Result.Success(await BuildNode(
+        var treeCounts = await placeQueries.GetTreeCountsByMpAsync(
+            request.MarketingAddr,
+            request.StructureNumber,
+            rowsByMp.Keys.ToArray(),
+            ct);
+
+        return Result.Success(BuildNode(
             selected,
             selectedParent,
             selected.Mp,
             selected.Pos,
             structure.DisplayHeight));
 
-        async Task<TreeNodeResponse> BuildNode(
+        TreeNodeResponse BuildNode(
             PlaceResponse? row,
             PlaceResponse? parent,
             string mp,
@@ -180,7 +186,7 @@ internal sealed class GetTreeQueryHandler(
                 {
                     var childMp = mp + childPos.ToString("X8");
                     rowsByMp.TryGetValue(childMp, out var childRow);
-                    childNodes.Add(await BuildNode(
+                    childNodes.Add(BuildNode(
                         childRow,
                         row,
                         childMp,
@@ -222,12 +228,9 @@ internal sealed class GetTreeQueryHandler(
             }
 
             var filledActions = actionPolicy.Evaluate(actionContext, parent, mp, pos);
-            var subtreeCounts = await placeQueries.GetPlaceSubtreeCountsAsync(
-                request.MarketingAddr,
-                request.StructureNumber,
-                row.Mp,
-                structure.Height,
-                ct);
+            if (!treeCounts.TryGetValue(row.Mp, out var counts))
+                throw new InvalidOperationException("Tree counts were not found for a filled place.");
+
             return new TreeFilledNodeResponse
             {
                 Locked = filledActions.IsLocked,
@@ -249,8 +252,11 @@ internal sealed class GetTreeQueryHandler(
                     structureRanks,
                     row.ProfileAddr,
                     row.PersonalVolume),
-                MatrixPlacesCount = subtreeCounts.MatrixPlacesCount,
-                Descendants = subtreeCounts.DescendantsCount,
+                MatrixPlacesCount = MatrixSizeCalculator.ResolveFilling(
+                    structure.Width,
+                    structure.Height,
+                    counts.MatrixFilling),
+                Descendants = counts.DescendantsCount,
                 Level = row.Deep,
                 IsActive = row.IsActive,
                 CreatedAt = row.CreatedAt,

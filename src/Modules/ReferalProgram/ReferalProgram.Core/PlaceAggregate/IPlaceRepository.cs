@@ -35,5 +35,9 @@ public interface IPlaceRepository : IRepository<Place>
         int parentId,
         CancellationToken cancellationToken);
 
+    Task IncrementMatrixFillingForAncestorsAsync(
+        int parentId,
+        CancellationToken cancellationToken);
+
     void Add(Place place);
 }

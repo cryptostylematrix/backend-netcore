@@ -10,11 +10,16 @@ independent steps.
 - Scope `invite` imports only structure `0`.
 - Scope `structures` imports only structures `1+` and their locks.
 - Each applied scope is written in its own PostgreSQL transaction.
+- Each imported structure gets its persisted `matrix_filling` recalculated from
+  its parent hierarchy and configured height.
 
 The migrator is a dry run unless `--apply` is supplied. During an applied migration,
 every destination structure in the selected scope must contain only its initial
 top place. Imported structures must exactly match the configured structures in
 that scope.
+
+Apply database script `020_add_matrix_filling_to_places.sql` before running a
+current migrator build.
 
 ## Local configuration
 

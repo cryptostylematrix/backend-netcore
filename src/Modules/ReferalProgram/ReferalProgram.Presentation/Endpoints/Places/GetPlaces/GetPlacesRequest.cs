@@ -16,4 +16,7 @@ public sealed class GetPlacesRequest
 
     [BindFrom("page_size")]
     public int PageSize { get; init; } = 20;
+
+    [BindFrom("only_not_closed")]
+    public bool OnlyNotClosed { get; init; }
 }

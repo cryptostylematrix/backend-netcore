@@ -55,6 +55,7 @@ public sealed class Place : Entity, IAggregateRoot
         ActivatedAt = activatedAt;
         PersonalVolume = personalVolume;
         GroupVolume = groupVolume;
+        MatrixFilling = 1;
         TaskKey = taskKey;
         TaskQueryId = taskQueryId;
         TaskSourceAddr = taskSourceAddr;
@@ -82,6 +83,7 @@ public sealed class Place : Entity, IAggregateRoot
     public uint Deep { get; private set; }
     public uint PersonalVolume { get; private set; }
     public uint GroupVolume { get; private set; }
+    public long MatrixFilling { get; private set; } = 1;
     public int TaskKey { get; private set; }
     public long TaskQueryId { get; private set; }
     public string? TaskSourceAddr { get; private set; }

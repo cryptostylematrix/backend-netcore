@@ -14,10 +14,13 @@ public interface IPlaceQueries
         string? profileAddr,
         CancellationToken cancellationToken);
 
-    Task<Paginated<PlaceResponse>> GetPlacesAsync(
+    Task<Paginated<PlaceWithMatrixResponse>> GetPlacesAsync(
         string marketingAddr,
         byte structureNumber,
         string profileAddr,
+        long matrixSize,
+        bool isMatrixStructure,
+        bool onlyNotClosed,
         int page,
         int pageSize,
         CancellationToken cancellationToken);
@@ -34,11 +37,10 @@ public interface IPlaceQueries
         IReadOnlyCollection<byte> structureNumbers,
         CancellationToken cancellationToken);
 
-    Task<PlaceSubtreeCounts> GetPlaceSubtreeCountsAsync(
+    Task<IReadOnlyDictionary<string, PlaceTreeCounts>> GetTreeCountsByMpAsync(
         string marketingAddr,
         byte structureNumber,
-        string mpPrefix,
-        byte height,
+        IReadOnlyCollection<string> mpPrefixes,
         CancellationToken cancellationToken);
 
     Task<IReadOnlyDictionary<byte, long>> GetPlaceCountsByPosGroupAsync(
@@ -132,6 +134,6 @@ public interface IPlaceQueries
         CancellationToken cancellationToken);
 }
 
-public sealed record PlaceSubtreeCounts(
-    long MatrixPlacesCount,
+public sealed record PlaceTreeCounts(
+    long MatrixFilling,
     long DescendantsCount);

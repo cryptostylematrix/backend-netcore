@@ -1,6 +1,6 @@
 namespace ReferalProgram.Dto;
 
-public sealed class PlaceResponse
+public class PlaceResponse
 {
     // ---------- internal-only (never serialized) ----------
 

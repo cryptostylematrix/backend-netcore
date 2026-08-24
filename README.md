@@ -18,6 +18,7 @@ Entity Framework Core, MediatR, and the included TON SDK projects.
 | `src/Modules/ReferalProgram` | Current referral-program domain, placement policies, APIs, persistence, and database scripts. |
 | `src/Modules/UI` | Wallet profile-display intents, cached profile data, ownership checks, and history. |
 | `src/ProgramMigrator` | Console application for importing legacy Multi and Neo data. |
+| `src/ProgramMatrixFillingRecalculator` | Dry-run-first maintenance tool for recalculating persisted matrix filling in existing programs. |
 | `src/ProgramInviterChanger` | Administrative console application for moving a referral subtree. |
 | `src/BuildingBlocks` | Shared domain, integration-event, and messaging infrastructure. |
 | `src/Libs/TonSdk.*` | TON client and core libraries used by the Contracts module. |
@@ -38,6 +39,8 @@ name is intentionally preserved in paths and namespaces.
   ownership synchronization, endpoints, errors, and database setup.
 - [Program Migrator](src/ProgramMigrator/README.md) describes dry runs,
   structure-specific imports, Multi and Neo configuration, and applying data.
+- [Program Matrix Filling Recalculator](src/ProgramMatrixFillingRecalculator/README.md)
+  describes checking and backfilling matrix counts for existing programs.
 - [Program Inviter Changer](src/ProgramInviterChanger/README.md) describes its
   safety checks, required permissions, and invocation.
 - [Referral Program database scripts](src/Modules/ReferalProgram/Database/Scripts)

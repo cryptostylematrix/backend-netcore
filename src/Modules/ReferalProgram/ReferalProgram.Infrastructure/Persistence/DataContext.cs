@@ -4,6 +4,7 @@ using ReferalProgram.Core.LockAggregate;
 using ReferalProgram.Core.MarketingTaskAggregate;
 using ReferalProgram.Core.PlaceAggregate;
 using ReferalProgram.Application.Abstractions;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace ReferalProgram.Infrastructure.Persistence;
 
@@ -32,27 +33,49 @@ public sealed class DataContext : DbContext, IProgramUnitOfWork
     public override async Task<int> SaveChangesAsync(
         CancellationToken cancellationToken = default)
     {
-        if (_domainEventDispatcher is not null)
+        IDbContextTransaction? ownedTransaction = null;
+        try
         {
-            while (true)
+            if (Database.CurrentTransaction is null)
+                ownedTransaction = await Database.BeginTransactionAsync(cancellationToken);
+
+            if (_domainEventDispatcher is not null)
             {
-                var entitiesWithEvents = ChangeTracker
-                    .Entries()
-                    .Select(entry => entry.Entity)
-                    .OfType<IEntity>()
-                    .Where(entity => entity.DomainEvents.Count > 0)
-                    .ToArray();
+                while (true)
+                {
+                    var entitiesWithEvents = ChangeTracker
+                        .Entries()
+                        .Select(entry => entry.Entity)
+                        .OfType<IEntity>()
+                        .Where(entity => entity.DomainEvents.Count > 0)
+                        .ToArray();
 
-                if (entitiesWithEvents.Length == 0)
-                    break;
+                    if (entitiesWithEvents.Length == 0)
+                        break;
 
-                await _domainEventDispatcher.DispatchAndClearEventsAsync(
-                    entitiesWithEvents,
-                    cancellationToken);
+                    await _domainEventDispatcher.DispatchAndClearEventsAsync(
+                        entitiesWithEvents,
+                        cancellationToken);
+                }
             }
-        }
 
-        return await base.SaveChangesAsync(cancellationToken);
+            var result = await base.SaveChangesAsync(cancellationToken);
+            if (ownedTransaction is not null)
+                await ownedTransaction.CommitAsync(cancellationToken);
+
+            return result;
+        }
+        catch
+        {
+            if (ownedTransaction is not null)
+                await ownedTransaction.RollbackAsync(CancellationToken.None);
+            throw;
+        }
+        finally
+        {
+            if (ownedTransaction is not null)
+                await ownedTransaction.DisposeAsync();
+        }
     }
 
     public override int SaveChanges() =>

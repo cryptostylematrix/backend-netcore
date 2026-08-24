@@ -18,5 +18,9 @@ internal sealed class PlaceCreatedDomainEventHandler(IPlaceRepository placeRepos
             throw new InvalidOperationException("The parent place was not found.");
 
         parent.RegisterChild(notification.ExpectedParentFilling);
+
+        await placeRepository.IncrementMatrixFillingForAncestorsAsync(
+            parent.Id,
+            cancellationToken);
     }
 }

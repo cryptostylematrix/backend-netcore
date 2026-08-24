@@ -9,10 +9,10 @@ internal abstract class PlaceQueriesStub : IPlaceQueries
 {
     public virtual Task<PlaceResponse?> GetFirstPlaceAsync(string marketingAddr, byte structureNumber, string? profileAddr, CancellationToken cancellationToken) => throw new NotSupportedException();
     public virtual Task<PlaceResponse?> GetLastPlaceAsync(string marketingAddr, byte structureNumber, string? profileAddr, CancellationToken cancellationToken) => throw new NotSupportedException();
-    public virtual Task<Paginated<PlaceResponse>> GetPlacesAsync(string marketingAddr, byte structureNumber, string profileAddr, int page, int pageSize, CancellationToken cancellationToken) => throw new NotSupportedException();
+    public virtual Task<Paginated<PlaceWithMatrixResponse>> GetPlacesAsync(string marketingAddr, byte structureNumber, string profileAddr, long matrixSize, bool isMatrixStructure, bool onlyNotClosed, int page, int pageSize, CancellationToken cancellationToken) => throw new NotSupportedException();
     public virtual Task<long> GetPlacesCountAsync(string marketingAddr, byte structureNumber, string? profileAddr, CancellationToken cancellationToken) => throw new NotSupportedException();
     public virtual Task<bool> HasProfilePlacesInStructuresAsync(string marketingAddr, string profileAddr, IReadOnlyCollection<byte> structureNumbers, CancellationToken cancellationToken) => throw new NotSupportedException();
-    public virtual Task<PlaceSubtreeCounts> GetPlaceSubtreeCountsAsync(string marketingAddr, byte structureNumber, string mpPrefix, byte height, CancellationToken cancellationToken) => throw new NotSupportedException();
+    public virtual Task<IReadOnlyDictionary<string, PlaceTreeCounts>> GetTreeCountsByMpAsync(string marketingAddr, byte structureNumber, IReadOnlyCollection<string> mpPrefixes, CancellationToken cancellationToken) => throw new NotSupportedException();
     public virtual Task<IReadOnlyDictionary<byte, long>> GetPlaceCountsByPosGroupAsync(string marketingAddr, byte structureNumber, CancellationToken cancellationToken) => throw new NotSupportedException();
     public virtual Task<IReadOnlyList<PlaceResponse>> GetUnfilledPlacesInDepthWindowAsync(string marketingAddr, byte structureNumber, string rootMp, byte width, byte depthSpread, IReadOnlyCollection<string> lockMps, CancellationToken cancellationToken) => throw new NotSupportedException();
     public virtual Task<PlaceResponse?> GetFirstActiveUnfilledPlaceAsync(string marketingAddr, byte structureNumber, string rootMp, byte width, bool profiledPlacesPrioritized, byte depthSpread, IReadOnlyCollection<string> lockMps, CancellationToken cancellationToken) => throw new NotSupportedException();
@@ -35,5 +35,6 @@ internal abstract class PlaceRepositoryStub : IPlaceRepository
     public virtual Task<uint> GetNextPlaceNumberAsync(string marketingAddr, byte structureNumber, string? profileAddr, CancellationToken cancellationToken) => throw new NotSupportedException();
     public virtual Task<long> CountAtDepthAsync(string marketingAddr, byte structureNumber, string mpPrefix, uint depth, CancellationToken cancellationToken) => throw new NotSupportedException();
     public virtual Task<long> CountCloneChildrenAsync(int parentId, CancellationToken cancellationToken) => throw new NotSupportedException();
+    public virtual Task IncrementMatrixFillingForAncestorsAsync(int parentId, CancellationToken cancellationToken) => throw new NotSupportedException();
     public virtual void Add(Place place) => throw new NotSupportedException();
 }

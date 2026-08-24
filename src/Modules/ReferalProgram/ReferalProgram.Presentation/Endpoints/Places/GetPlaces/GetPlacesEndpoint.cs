@@ -3,7 +3,7 @@ using ReferalProgram.Application.Features.Places;
 namespace ReferalProgram.Presentation.Endpoints.Places.GetPlaces;
 
 public sealed class GetPlacesEndpoint(ISender sender)
-    : Endpoint<GetPlacesRequest, Paginated<PlaceResponse>>
+    : Endpoint<GetPlacesRequest, Paginated<PlaceWithMatrixResponse>>
 {
     public override void Configure()
     {
@@ -13,7 +13,7 @@ public sealed class GetPlacesEndpoint(ISender sender)
         Summary(summary =>
         {
             summary.Summary = "Get profile places";
-            summary.Description = "Gets paginated places for a profile in a referral-program structure.";
+            summary.Description = "Gets paginated profile places with matrix size and filling. Set only_not_closed=true to exclude full matrices.";
         });
     }
 
@@ -24,7 +24,8 @@ public sealed class GetPlacesEndpoint(ISender sender)
             request.StructureNumber,
             request.ProfileAddr,
             request.Page,
-            request.PageSize), ct);
+            request.PageSize,
+            request.OnlyNotClosed), ct);
 
         if (!result.IsSuccess)
         {

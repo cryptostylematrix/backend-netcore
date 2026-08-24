@@ -277,6 +277,13 @@ internal sealed class ProgramDataWriter(
 
         if (placeIds.Count != nodes.Count)
             throw new InvalidOperationException($"Not all places in structure {structureNumber} were imported.");
+
+        await RecalculateMatrixFillingAsync(
+            connection,
+            transaction,
+            marketingAddr,
+            structureNumber,
+            cancellationToken);
     }
 
     private static async Task UpdateRootAsync(
@@ -307,6 +314,7 @@ internal sealed class ProgramDataWriter(
                 parent_place_number = NULL,
                 personal_volume = 0,
                 group_volume = 0,
+                matrix_filling = 1,
                 task_key = 0,
                 task_query_id = 0,
                 task_source_addr = NULL
@@ -337,7 +345,8 @@ internal sealed class ProgramDataWriter(
                 profile_addr, place_number, profile_login, "index",
                 parent_profile_addr, parent_profile_login, parent_place_number,
                 created_at, activated_at, is_active, kind, pos, filling, deep,
-                personal_volume, group_volume, task_key, task_query_id, task_source_addr
+                personal_volume, group_volume, matrix_filling,
+                task_key, task_query_id, task_source_addr
             )
             VALUES
             (
@@ -345,7 +354,7 @@ internal sealed class ProgramDataWriter(
                 @profileAddr, @placeNumber, @profileLogin, @index,
                 @parentProfileAddr, @parentProfileLogin, @parentPlaceNumber,
                 @createdAt, @createdAt, true, @kind, @pos, @filling, @deep,
-                0, 0, 0, 0, NULL
+                0, 0, 1, 0, 0, NULL
             )
             RETURNING id;
             """;
@@ -409,6 +418,73 @@ internal sealed class ProgramDataWriter(
         command.Parameters.AddWithValue("lockedPos", checked((long)positionLock.LockedPos));
         command.Parameters.AddWithValue("mp", positionLock.Mp);
         command.Parameters.AddWithValue("createdAt", positionLock.CreatedAt);
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    private static async Task RecalculateMatrixFillingAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        string marketingAddr,
+        byte structureNumber,
+        CancellationToken cancellationToken)
+    {
+        const string sql = """
+            WITH RECURSIVE structure_config AS
+            (
+                SELECT width, height
+                FROM public.structures
+                WHERE marketing_addr = @marketingAddr
+                  AND structure_number = @structureNumber
+            ),
+            ancestors AS
+            (
+                SELECT place.id AS descendant_id,
+                       place.id AS ancestor_id,
+                       place.parent_id,
+                       0 AS distance
+                FROM public.places place
+                WHERE place.marketing_addr = @marketingAddr
+                  AND place.structure_number = @structureNumber
+
+                UNION ALL
+
+                SELECT ancestors.descendant_id,
+                       parent.id,
+                       parent.parent_id,
+                       ancestors.distance + 1
+                FROM ancestors
+                CROSS JOIN structure_config
+                JOIN public.places parent
+                  ON parent.id = ancestors.parent_id
+                 AND parent.marketing_addr = @marketingAddr
+                 AND parent.structure_number = @structureNumber
+                WHERE ancestors.distance < structure_config.height
+            ),
+            calculated AS
+            (
+                SELECT place.id,
+                       CASE
+                           WHEN structure_config.width > 0
+                            AND structure_config.height > 0
+                               THEN COUNT(ancestors.descendant_id)::bigint
+                           ELSE 1::bigint
+                       END AS expected
+                FROM public.places place
+                CROSS JOIN structure_config
+                LEFT JOIN ancestors ON ancestors.ancestor_id = place.id
+                WHERE place.marketing_addr = @marketingAddr
+                  AND place.structure_number = @structureNumber
+                GROUP BY place.id, structure_config.width, structure_config.height
+            )
+            UPDATE public.places place
+            SET matrix_filling = calculated.expected
+            FROM calculated
+            WHERE place.id = calculated.id;
+            """;
+
+        await using var command = new NpgsqlCommand(sql, connection, transaction);
+        command.Parameters.AddWithValue("marketingAddr", marketingAddr);
+        command.Parameters.AddWithValue("structureNumber", (short)structureNumber);
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 

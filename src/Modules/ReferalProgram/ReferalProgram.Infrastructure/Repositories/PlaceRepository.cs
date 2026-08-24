@@ -70,5 +70,45 @@ internal sealed class PlaceRepository(DataContext dataContext) : IPlaceRepositor
                     || place.Kind == PlaceKinds.TerminalClone),
             cancellationToken);
 
+    public Task IncrementMatrixFillingForAncestorsAsync(
+        int parentId,
+        CancellationToken cancellationToken)
+    {
+        return dataContext.Database.ExecuteSqlInterpolatedAsync($$"""
+            WITH structure_config AS MATERIALIZED
+            (
+                SELECT place.marketing_addr,
+                       place.structure_number,
+                       structure.width,
+                       structure.height,
+                       place.mp,
+                       place.deep
+                FROM public.places place
+                JOIN public.structures structure
+                  ON structure.marketing_addr = place.marketing_addr
+                 AND structure.structure_number = place.structure_number
+                WHERE place.id = {{parentId}}
+                FOR SHARE OF structure
+            )
+            UPDATE public.places ancestor
+            SET matrix_filling = ancestor.matrix_filling + 1
+            FROM structure_config
+            CROSS JOIN LATERAL generate_series(
+                GREATEST(
+                    structure_config.deep - structure_config.height + 1,
+                    1),
+                structure_config.deep
+            ) AS ancestor_level(deep)
+            WHERE structure_config.width > 0
+              AND structure_config.height > 0
+              AND ancestor.marketing_addr = structure_config.marketing_addr
+              AND ancestor.structure_number = structure_config.structure_number
+              AND ancestor.deep = ancestor_level.deep
+              AND ancestor.mp = left(
+                  structure_config.mp,
+                  (ancestor_level.deep * 8)::integer);
+            """, cancellationToken);
+    }
+
     public void Add(Place place) => dataContext.Places.Add(place);
 }

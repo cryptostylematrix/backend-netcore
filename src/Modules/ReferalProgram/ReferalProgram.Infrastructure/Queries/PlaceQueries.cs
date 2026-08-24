@@ -98,10 +98,13 @@ public sealed class PlaceQueries(
                 cancellationToken: cancellationToken));
     }
 
-    public async Task<Paginated<PlaceResponse>> GetPlacesAsync(
+    public async Task<Paginated<PlaceWithMatrixResponse>> GetPlacesAsync(
         string marketingAddr,
         byte structureNumber,
         string profileAddr,
+        long matrixSize,
+        bool isMatrixStructure,
+        bool onlyNotClosed,
         int page,
         int pageSize,
         CancellationToken cancellationToken)
@@ -114,6 +117,9 @@ public sealed class PlaceQueries(
             marketingAddr,
             structureNumber = (short)structureNumber,
             profileAddr,
+            matrixSize,
+            isMatrixStructure,
+            onlyNotClosed,
             limit = safePageSize,
             offset
         };
@@ -125,7 +131,13 @@ public sealed class PlaceQueries(
             FROM public.places
             WHERE marketing_addr = @marketingAddr
               AND structure_number = @structureNumber
-              AND profile_addr = @profileAddr;
+              AND profile_addr = @profileAddr
+              AND
+              (
+                  NOT @onlyNotClosed
+                  OR NOT @isMatrixStructure
+                  OR matrix_filling < @matrixSize
+              );
             """;
 
         var total = await connection.ExecuteScalarAsync<long>(
@@ -136,30 +148,65 @@ public sealed class PlaceQueries(
 
         if (total == 0)
         {
-            return new Paginated<PlaceResponse>
+            return new Paginated<PlaceWithMatrixResponse>
             {
-                Items = Array.Empty<PlaceResponse>(),
+                Items = Array.Empty<PlaceWithMatrixResponse>(),
                 Page = safePage,
                 TotalPages = 1
             };
         }
 
-        const string dataSql = PlaceSelectSql + "\n" + """
+        const string dataSql = """
+            SELECT
+                id                    AS "Id",
+                parent_id             AS "ParentId",
+                mp                    AS "Mp",
+                pos_group             AS "PosGroup",
+                marketing_addr        AS "MarketingAddr",
+                structure_number      AS "StructNumber",
+                profile_addr          AS "ProfileAddr",
+                place_number          AS "PlaceNumber",
+                profile_login         AS "ProfileLogin",
+                "index"               AS "Index",
+                parent_profile_addr   AS "ParentProfileAddr",
+                parent_profile_login  AS "ParentProfileLogin",
+                parent_place_number   AS "ParentPlaceNumber",
+                created_at            AS "CreatedAt",
+                activated_at          AS "ActivatedAt",
+                is_active             AS "IsActive",
+                kind                  AS "Kind",
+                pos                   AS "Pos",
+                filling               AS "Filling",
+                deep                  AS "Deep",
+                personal_volume       AS "PersonalVolume",
+                group_volume          AS "GroupVolume",
+                @matrixSize            AS "MatrixSize",
+                CASE
+                    WHEN @isMatrixStructure THEN matrix_filling
+                    ELSE 1
+                END                    AS "MatrixFilling"
+            FROM public.places
             WHERE marketing_addr = @marketingAddr
               AND structure_number = @structureNumber
               AND profile_addr = @profileAddr
+              AND
+              (
+                  NOT @onlyNotClosed
+                  OR NOT @isMatrixStructure
+                  OR matrix_filling < @matrixSize
+              )
             ORDER BY place_number ASC, id ASC
             LIMIT @limit OFFSET @offset;
             """;
 
-        var items = (await connection.QueryAsync<PlaceResponse>(
+        var items = (await connection.QueryAsync<PlaceWithMatrixResponse>(
             new CommandDefinition(
                 dataSql,
                 parameters,
                 cancellationToken: cancellationToken)))
             .AsList();
 
-        return new Paginated<PlaceResponse>
+        return new Paginated<PlaceWithMatrixResponse>
         {
             Items = items,
             Page = safePage,
@@ -227,43 +274,76 @@ public sealed class PlaceQueries(
                 cancellationToken: cancellationToken));
     }
 
-    public async Task<PlaceSubtreeCounts> GetPlaceSubtreeCountsAsync(
+    public async Task<IReadOnlyDictionary<string, PlaceTreeCounts>> GetTreeCountsByMpAsync(
         string marketingAddr,
         byte structureNumber,
-        string mpPrefix,
-        byte height,
+        IReadOnlyCollection<string> mpPrefixes,
         CancellationToken cancellationToken)
     {
+        if (mpPrefixes.Count == 0)
+            return new Dictionary<string, PlaceTreeCounts>(StringComparer.Ordinal);
+
         const string sql = """
+            WITH RECURSIVE roots AS
+            (
+                SELECT place.id,
+                       place.mp,
+                       place.matrix_filling
+                FROM unnest(@mpPrefixes::text[]) AS requested(mp)
+                JOIN public.places place
+                  ON place.marketing_addr = @marketingAddr
+                 AND place.structure_number = @structureNumber
+                 AND place.mp = requested.mp
+            ),
+            descendants AS
+            (
+                SELECT roots.id AS root_id,
+                       roots.id AS descendant_id
+                FROM roots
+
+                UNION ALL
+
+                SELECT descendants.root_id,
+                       child.id
+                FROM descendants
+                JOIN public.places child
+                  ON child.parent_id = descendants.descendant_id
+                 AND child.marketing_addr = @marketingAddr
+                 AND child.structure_number = @structureNumber
+            )
             SELECT
-                GREATEST(
-                    COUNT(*) FILTER (
-                        WHERE length(mp) <= length(@mpPrefix) + @height * 8
-                    ) - 1,
-                    0
-                )::bigint AS "MatrixPlacesCount",
-                GREATEST(COUNT(*) - 1, 0)::bigint AS "DescendantsCount"
-            FROM public.places
-            WHERE marketing_addr = @marketingAddr
-              AND structure_number = @structureNumber
-              AND mp LIKE @prefix;
+                roots.mp AS "Mp",
+                roots.matrix_filling AS "MatrixFilling",
+                GREATEST(COUNT(descendants.descendant_id) - 1, 0)::bigint
+                    AS "DescendantsCount"
+            FROM roots
+            LEFT JOIN descendants ON descendants.root_id = roots.id
+            GROUP BY roots.id, roots.mp, roots.matrix_filling;
             """;
 
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
 
-        return await connection.QuerySingleAsync<PlaceSubtreeCounts>(
+        var rows = await connection.QueryAsync<TreeCountRow>(
             new CommandDefinition(
                 sql,
                 new
                 {
                     marketingAddr,
                     structureNumber = (short)structureNumber,
-                    mpPrefix,
-                    prefix = mpPrefix + "%",
-                    height = (int)height
+                    mpPrefixes = mpPrefixes.Distinct(StringComparer.Ordinal).ToArray()
                 },
                 cancellationToken: cancellationToken));
+
+        return rows.ToDictionary(
+            row => row.Mp,
+            row => new PlaceTreeCounts(row.MatrixFilling, row.DescendantsCount),
+            StringComparer.Ordinal);
     }
+
+    private sealed record TreeCountRow(
+        string Mp,
+        long MatrixFilling,
+        long DescendantsCount);
 
     public async Task<IReadOnlyDictionary<byte, long>> GetPlaceCountsByPosGroupAsync(
         string marketingAddr,
