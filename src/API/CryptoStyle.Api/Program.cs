@@ -9,7 +9,6 @@ using Serilog;
 using Serilog.Debugging;
 using Serilog.Events;
 using ContractsPresentation = Contracts.Presentation.PresentationReference;
-using MarketingPresentation = Marketing.Presentation.PresentationReference;
 using ReferalProgramPresentation = ReferalProgram.Presentation.PresentationReference;
 using UIPresentation = UI.Presentation.PresentationReference;
 
@@ -67,13 +66,15 @@ builder.Host.UseSerilog((_, _, loggerConfiguration) =>
 
 builder.Services.AddFastEndpoints(options =>
 {
+    options.DisableAutoDiscovery = true;
     options.Assemblies =
     [
         ContractsPresentation.Assembly,
-        MarketingPresentation.Assembly,
         ReferalProgramPresentation.Assembly,
         UIPresentation.Assembly
     ];
+
+    options.Filter = type => !IsLegacyContractsEndpoint(type);
 });
 
 builder.Services.AddEndpointsApiExplorer();
@@ -168,3 +169,29 @@ app.UseCors("OpenCors");
 app.UseFastEndpoints();
 
 app.Run();
+
+static bool IsLegacyContractsEndpoint(Type type)
+{
+    var endpointNamespace = type.Namespace;
+    if (endpointNamespace is null)
+        return false;
+
+    return endpointNamespace.StartsWith(
+            "Contracts.Presentation.Endpoints.Invite.",
+            StringComparison.Ordinal)
+        || endpointNamespace.StartsWith(
+            "Contracts.Presentation.Endpoints.Marketing.",
+            StringComparison.Ordinal)
+        || endpointNamespace.StartsWith(
+            "Contracts.Presentation.Endpoints.Multi.",
+            StringComparison.Ordinal)
+        || endpointNamespace.StartsWith(
+            "Contracts.Presentation.Endpoints.Place.",
+            StringComparison.Ordinal)
+        || endpointNamespace.StartsWith(
+            "Contracts.Presentation.Endpoints.ProfileItem.BuildChooseInviterBody.",
+            StringComparison.Ordinal)
+        || endpointNamespace.StartsWith(
+            "Contracts.Presentation.Endpoints.ProfileItem.GetPrograms.",
+            StringComparison.Ordinal);
+}
