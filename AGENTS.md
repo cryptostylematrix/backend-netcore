@@ -331,10 +331,11 @@ do not weaken other identity or topology validation merely to make an import
 finish. It recalculates matrix filling for each imported structure. Consult its
 README before changing legacy-field mappings.
 
-`ProgramMatrixFillingRecalculator` checks one existing program in dry-run mode
-by default and writes only with `--apply`. Apply mode locks `places`, updates all
-structures in one transaction, and verifies the result before commit. Stop the
-task processor and other Programs-database writers while it runs.
+`ProgramMatrixFillingRecalculator` checks all existing programs in dry-run mode
+by default; `--marketing-addr` restricts it to one program, and `--apply` enables
+writes. Apply mode processes and verifies each program in its own transaction,
+locking `places` while that program is updated. Stop the task processor and
+other Programs-database writers while it runs.
 
 `ProgramInviterChanger` moves only a structure-0 referral subtree. It resolves
 logins through the contracts API, recalculates descendant MP and depth values,
