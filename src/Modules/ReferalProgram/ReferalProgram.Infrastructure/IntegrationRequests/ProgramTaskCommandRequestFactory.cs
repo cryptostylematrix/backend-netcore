@@ -43,7 +43,7 @@ internal sealed class ProgramTaskCommandRequestFactory : ITaskCommandRequestFact
 
         return command.Type switch
         {
-            "program.structure.update-activity" => new UpdateStructureActivityRequest(
+            "program.structure.update-activity" => new ResetStructureActivationDatesRequest(
                 marketingAddress,
                 structureNumber,
                 correlationId,

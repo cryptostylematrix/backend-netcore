@@ -1,6 +1,6 @@
 namespace IntegrationRequests;
 
-public sealed record UpdateStructureActivityRequest(
+public sealed record ResetStructureActivationDatesRequest(
     string MarketingAddress,
     int StructureNumber,
     Guid CorrelationId,

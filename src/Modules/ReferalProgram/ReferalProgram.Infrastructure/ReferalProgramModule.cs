@@ -26,7 +26,7 @@ public static class ReferalProgramModule
 {
     public static void ConfigureConsumers(IRegistrationConfigurator registration)
     {
-        registration.AddConsumer<UpdateStructureActivityRequestConsumer>();
+        registration.AddConsumer<ResetStructureActivationDatesRequestConsumer>();
         registration.AddConsumer<CompressStructureRequestConsumer>();
         registration.AddConsumer<ResetStructurePersonalVolumeRequestConsumer>();
     }
