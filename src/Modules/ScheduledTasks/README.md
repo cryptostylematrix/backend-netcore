@@ -1,5 +1,8 @@
 # Scheduled Tasks
 
+See [BENEFITS.md](BENEFITS.md) for a concise English and Russian overview of
+the system-wide benefits provided by this module.
+
 The Scheduled Tasks module executes system-wide declarative commands in UTC.
 It owns one table, `public.tasks`, in a dedicated PostgreSQL database configured
 through `ConnectionStrings__Tasks`. Tasks are inserted and administered directly
