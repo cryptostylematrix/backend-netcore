@@ -37,22 +37,4 @@ public sealed class TaskCommandDocumentParserTests
     {
         Assert.Throws<FormatException>(() => _parser.Parse(json));
     }
-
-    [Fact]
-    public void Extracts_known_marketing_even_when_another_command_is_malformed()
-    {
-        var addresses = _parser.GetProgramMarketingAddresses(
-            """
-            [
-              {
-                "module":"program",
-                "type":"program.structure.compress",
-                "target":{"marketingAddress":"EQ_BLOCKED"}
-              },
-              {}
-            ]
-            """);
-
-        Assert.Equal(["EQ_BLOCKED"], addresses);
-    }
 }

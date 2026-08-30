@@ -17,11 +17,16 @@ and protects manual database edits.
 
 ## Lifecycle
 
-- `execute_at_utc IS NULL` disables a task and prevents it from blocking a marketing.
+- `execute_at_utc IS NULL` disables a scheduled task.
 - A due `active` task executes synchronously in JSON array order. Parallel workers
   may execute the same occurrence, so every target handler must be idempotent.
 - The first failed command stops execution. The task becomes `error`, retains its
   execution time and execution number, and does not recur.
+- Program task processing is not disabled automatically. Add explicit disable
+  and enable commands only to workflows that require normal Program processing
+  to be paused. If an intermediate command fails after an explicit disable,
+  processing remains disabled until the task succeeds on retry or an operator
+  enables it manually.
 - Set an errored task back to `active` to retry it with the same correlation IDs.
 - A successful one-time task becomes `completed` and clears `execute_at_utc`.
 - A successful recurring task stays `active`, increments `execution_number`, and
@@ -53,8 +58,15 @@ Commands are a JSON array. The array position is the command sequence number.
 ]
 ```
 
+The presence of Program commands does not imply that Program task processing
+must be paused. When a particular workflow requires a pause, place an explicit
+`program.task-processing.disable` command before the affected commands and an
+explicit `program.task-processing.enable` command after them.
+
 Supported Program command types are:
 
+- `program.task-processing.disable`
+- `program.task-processing.enable`
 - `program.structure.update-activity`
 - `program.structure.compress`
 - `program.structure.reset-personal-volume`
@@ -73,9 +85,13 @@ sequence)`. Retries of one occurrence therefore keep their IDs, while the next
 recurrence receives different IDs. Do not reorder or replace commands in an
 active or errored occurrence.
 
-When their business logic is implemented, Program consumers must write the
-correlation ID to `processed_program_commands` in the Programs database. The
-structure mutation must use the same connection and transaction as that insert.
+The processing enable/disable commands are naturally idempotent because they set
+an explicit boolean value. Each Program consumer decides whether it requires a
+processed-command record. Consumers that require one must write the correlation
+ID to `processed_program_commands` in the Programs database. The business
+mutation must use the same connection and transaction as that insert. The
+correlation ID uniquely identifies the command, so the processed-command record
+does not depend on a structure number.
 
 ## Schedules
 
@@ -122,4 +138,6 @@ After creating the database, run the remaining scripts manually in order:
 
 1. `ScheduledTasks/Database/Scripts/001_create_tasks.sql` in the Tasks database.
 2. `ReferalProgram/Database/Scripts/021_create_processed_program_commands.sql`
+   in the Programs database.
+3. `ReferalProgram/Database/Scripts/022_add_task_processing_enabled_to_referal_program.sql`
    in the Programs database.

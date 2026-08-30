@@ -31,12 +31,10 @@ public static class ScheduledTasksModule
             services.AddScoped<IScheduledTaskRepository, ScheduledTaskRepository>();
             services.AddScoped<IScheduledTasksUnitOfWork>(provider =>
                 provider.GetRequiredService<ScheduledTasksDataContext>());
-            services.AddScoped<IScheduledTaskQueries, ScheduledTaskQueries>();
             services.AddScoped<IIntegrationRequestDispatcher,
                 MassTransitIntegrationRequestDispatcher>();
             services.AddScoped<ScheduledTaskCommandExecutor>();
             services.AddScoped<IScheduledTaskRunner, ScheduledTaskRunner>();
-            services.AddScoped<IMarketingTaskBlocker, MarketingTaskBlocker>();
             services.AddSingleton<TaskCommandDocumentParser>();
             services.AddSingleton<TaskScheduleCalculator>();
 

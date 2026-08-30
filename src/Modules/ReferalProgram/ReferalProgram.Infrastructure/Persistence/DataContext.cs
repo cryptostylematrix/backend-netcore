@@ -3,8 +3,10 @@ using Microsoft.EntityFrameworkCore;
 using ReferalProgram.Core.LockAggregate;
 using ReferalProgram.Core.MarketingTaskAggregate;
 using ReferalProgram.Core.PlaceAggregate;
+using ReferalProgram.Core.ProgramAggregate;
 using ReferalProgram.Application.Abstractions;
 using Microsoft.EntityFrameworkCore.Storage;
+using ReferalProgramAggregate = ReferalProgram.Core.ProgramAggregate.ReferalProgram;
 
 namespace ReferalProgram.Infrastructure.Persistence;
 
@@ -23,6 +25,8 @@ public sealed class DataContext : DbContext, IProgramUnitOfWork
     public DbSet<Place> Places => Set<Place>();
     public DbSet<PositionLock> PositionLocks => Set<PositionLock>();
     public DbSet<MarketingTask> MarketingTasks => Set<MarketingTask>();
+    public DbSet<ReferalProgramAggregate> ReferalPrograms =>
+        Set<ReferalProgramAggregate>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

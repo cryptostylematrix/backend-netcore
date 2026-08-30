@@ -13,7 +13,9 @@ public sealed class ReferalProgramQueries(
         CancellationToken cancellationToken)
     {
         const string sql = """
-            SELECT marketing_addr AS "MarketingAddr"
+            SELECT
+                marketing_addr AS "MarketingAddr",
+                is_task_processing_enabled AS "IsTaskProcessingEnabled"
             FROM public.referal_program
             ORDER BY marketing_addr;
             """;

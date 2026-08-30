@@ -1,5 +1,6 @@
--- Records idempotent Program integration commands. A future structural mutation
--- and this record must be committed in the same Programs-database transaction.
+-- Records Program integration commands whose consumers require idempotency.
+-- The business mutation and this record must be committed in the same
+-- Programs-database transaction.
 
 BEGIN;
 
@@ -8,16 +9,12 @@ CREATE TABLE IF NOT EXISTS public.processed_program_commands
     correlation_id uuid PRIMARY KEY,
     command_type varchar(100) NOT NULL,
     marketing_address text NOT NULL,
-    structure_number integer NOT NULL,
-    completed_at_utc timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT processed_program_commands_structure_number_check
-        CHECK (structure_number >= 0)
+    completed_at_utc timestamp with time zone NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_processed_program_commands_target
     ON public.processed_program_commands
-        (marketing_address, structure_number, command_type);
+        (marketing_address, command_type);
 
 DO $$
 DECLARE

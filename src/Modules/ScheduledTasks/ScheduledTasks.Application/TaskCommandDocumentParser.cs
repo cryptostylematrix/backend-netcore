@@ -4,30 +4,6 @@ namespace ScheduledTasks.Application;
 
 public sealed class TaskCommandDocumentParser
 {
-    public IReadOnlyCollection<string> GetProgramMarketingAddresses(string commands)
-    {
-        using var document = JsonDocument.Parse(commands);
-        if (document.RootElement.ValueKind != JsonValueKind.Array)
-            return [];
-
-        return document.RootElement
-            .EnumerateArray()
-            .Where(command => command.ValueKind == JsonValueKind.Object)
-            .Where(command => command.TryGetProperty("module", out var module)
-                && module.ValueKind == JsonValueKind.String
-                && string.Equals(module.GetString(), "program", StringComparison.Ordinal))
-            .Select(command => command.TryGetProperty("target", out var target)
-                && target.ValueKind == JsonValueKind.Object
-                && target.TryGetProperty("marketingAddress", out var address)
-                && address.ValueKind == JsonValueKind.String
-                    ? address.GetString()
-                    : null)
-            .Where(address => !string.IsNullOrWhiteSpace(address))
-            .Select(address => address!)
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
-    }
-
     public IReadOnlyList<TaskCommandEnvelope> Parse(string commands)
     {
         using var document = JsonDocument.Parse(commands);

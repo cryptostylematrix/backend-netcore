@@ -9,6 +9,8 @@ internal sealed class ProgramTaskCommandRequestFactory : ITaskCommandRequestFact
 {
     private static readonly HashSet<string> SupportedTypes =
     [
+        "program.task-processing.disable",
+        "program.task-processing.enable",
         "program.structure.update-activity",
         "program.structure.compress",
         "program.structure.reset-personal-volume"
@@ -33,6 +35,22 @@ internal sealed class ProgramTaskCommandRequestFactory : ITaskCommandRequestFact
         }
         var marketingAddress = marketingElement.GetString()!;
 
+        if (command.Type == "program.task-processing.disable")
+        {
+            return new DisableProgramTaskProcessingRequest(
+                marketingAddress,
+                correlationId,
+                occurredOnUtc);
+        }
+
+        if (command.Type == "program.task-processing.enable")
+        {
+            return new EnableProgramTaskProcessingRequest(
+                marketingAddress,
+                correlationId,
+                occurredOnUtc);
+        }
+
         if (!command.Arguments.TryGetProperty("structureNumber", out var structureElement)
             || !structureElement.TryGetInt32(out var structureNumber)
             || structureNumber < 0)
@@ -43,7 +61,7 @@ internal sealed class ProgramTaskCommandRequestFactory : ITaskCommandRequestFact
 
         return command.Type switch
         {
-            "program.structure.update-activity" => new ResetStructureActivationDatesRequest(
+            "program.structure.update-activity" => new ResetStructureActivaityRequest(
                 marketingAddress,
                 structureNumber,
                 correlationId,

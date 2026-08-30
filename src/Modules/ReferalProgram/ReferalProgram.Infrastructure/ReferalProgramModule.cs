@@ -13,6 +13,7 @@ using ReferalProgram.Application.IntegrationRequests;
 using ReferalProgram.Core.LockAggregate;
 using ReferalProgram.Core.MarketingTaskAggregate;
 using ReferalProgram.Core.PlaceAggregate;
+using ReferalProgram.Core.ProgramAggregate;
 using ReferalProgram.Infrastructure.Persistence;
 using ReferalProgram.Infrastructure.Queries;
 using ReferalProgram.Infrastructure.Repositories;
@@ -26,7 +27,9 @@ public static class ReferalProgramModule
 {
     public static void ConfigureConsumers(IRegistrationConfigurator registration)
     {
-        registration.AddConsumer<ResetStructureActivationDatesRequestConsumer>();
+        registration.AddConsumer<DisableProgramTaskProcessingRequestConsumer>();
+        registration.AddConsumer<EnableProgramTaskProcessingRequestConsumer>();
+        registration.AddConsumer<ResetStructureActivaityRequestConsumer>();
         registration.AddConsumer<CompressStructureRequestConsumer>();
         registration.AddConsumer<ResetStructurePersonalVolumeRequestConsumer>();
     }
@@ -60,6 +63,7 @@ public static class ReferalProgramModule
             services.AddScoped<IPlaceRepository, PlaceRepository>();
             services.AddScoped<IPositionLockRepository, PositionLockRepository>();
             services.AddScoped<IMarketingTaskRepository, MarketingTaskRepository>();
+            services.AddScoped<IReferalProgramRepository, ReferalProgramRepository>();
 
             services.AddScoped<IPlaceQueries, PlaceQueries>();
             services.AddScoped<ILockQueries, LockQueries>();

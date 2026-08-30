@@ -11,7 +11,6 @@ using ReferalProgram.Application.Features.MarketingTasks;
 using ReferalProgram.Application.Features.Places;
 using ReferalProgram.Dto;
 using TonSdk.Core.Boc;
-using ScheduledTasks.Application;
 
 namespace CryptoStyle.Api.BackgroundServices;
 
@@ -70,9 +69,6 @@ public sealed class TaskProcessor(
         var referalProgramQueries = scope.ServiceProvider.GetRequiredService<IReferalProgramQueries>();
         var transactionSender = scope.ServiceProvider.GetRequiredService<IMarketingTransactionSender>();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var marketingTaskBlocker = scope.ServiceProvider
-            .GetRequiredService<IMarketingTaskBlocker>();
-
         LogAction("Loading referral programs");
         var programs = await referalProgramQueries.GetAllAsync(cancellationToken);
         logger.LogInformation(
@@ -83,12 +79,10 @@ public sealed class TaskProcessor(
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            if (await marketingTaskBlocker.IsBlockedAsync(
-                    program.MarketingAddr,
-                    cancellationToken))
+            if (!program.IsTaskProcessingEnabled)
             {
                 logger.LogWarning(
-                    "[API TaskProcessor] Marketing {MarketingAddr} is blocked by a due or errored scheduled task",
+                    "[API TaskProcessor] Task processing is disabled for marketing {MarketingAddr}",
                     program.MarketingAddr);
                 continue;
             }

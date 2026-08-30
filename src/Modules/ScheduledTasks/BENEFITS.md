@@ -26,8 +26,11 @@ and recurring operations across the entire system.
   that only one worker advances a task row.
 - **Operational control:** Clearing `execute_at_utc` stops a task without
   deleting it. An errored task can be returned to `active` for retry.
-- **Marketing coordination:** Due or unresolved errored Program commands can
-  pause normal processing only for the affected marketing.
+- **Selective Program coordination:** Program processing continues normally by
+  default. A workflow explicitly adds disable and enable commands only when it
+  needs exclusive maintenance for the affected Program. If such a workflow
+  fails after disabling processing, the Program remains safely paused until
+  recovery.
 - **Dedicated storage:** Tasks are stored in a separate PostgreSQL database and
   are not coupled to the persistence lifecycle of a business module.
 - **Failure diagnostics:** The command document, execution number, scheduled
@@ -65,9 +68,11 @@ and recurring operations across the entire system.
   обработчик.
 - **Операционное управление:** Очистка `execute_at_utc` останавливает задачу без
   удаления. Задачу со статусом `error` можно вернуть в `active` для повтора.
-- **Координация маркетингов:** Готовые к выполнению или нерешённые ошибочные
-  Program-команды могут приостановить обычную обработку только затронутого
-  маркетинга.
+- **Избирательная координация программ:** По умолчанию обработка программы
+  продолжается в обычном режиме. Команды выключения и включения добавляются явно
+  только в те процессы, которым требуется эксклюзивное обслуживание затронутой
+  программы. Если такой процесс завершается ошибкой после выключения, программа
+  остаётся безопасно приостановленной до восстановления.
 - **Отдельное хранилище:** Задачи находятся в собственной PostgreSQL базе и не
   связаны с жизненным циклом хранилища конкретного бизнес-модуля.
 - **Диагностика ошибок:** Команды, номер выполнения, запланированное время,
