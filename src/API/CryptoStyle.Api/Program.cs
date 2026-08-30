@@ -5,6 +5,8 @@ using FastEndpoints;
 using Matrix.Infrastructure;
 using ReferalProgram.Infrastructure;
 using UI.Infrastructure;
+using ScheduledTasks.Infrastructure;
+using MessageBroker;
 using Serilog;
 using Serilog.Debugging;
 using Serilog.Events;
@@ -90,7 +92,9 @@ builder.Services.AddContractsModule(builder.Configuration);
 builder.Services.AddMatrixModule(builder.Configuration);
 builder.Services.AddMarketingModule(builder.Configuration);
 builder.Services.AddReferalProgramModule(builder.Configuration);
+builder.Services.AddScheduledTasksModule(builder.Configuration);
 builder.Services.AddUIModule(builder.Configuration);
+builder.Services.AddMessageBroker(ReferalProgramModule.ConfigureConsumers);
 
 builder.Services.AddOptions<TaskProcessorOptions>()
     .Bind(builder.Configuration.GetSection(TaskProcessorOptions.SectionName))
@@ -99,7 +103,10 @@ builder.Services.AddOptions<TaskProcessorOptions>()
     .ValidateOnStart();
 
 if (!builder.Environment.IsDevelopment())
+{
     builder.Services.AddHostedService<TaskProcessor>();
+    builder.Services.AddHostedService<ScheduledTaskProcessor>();
+}
 
 // Distributed cache (choose ONE):
 // 1) In-memory distributed cache (dev / single instance)

@@ -9,6 +9,7 @@ using ReferalProgram.Application.Services;
 using ReferalProgram.Application.Policies;
 using ReferalProgram.Application.Services.PositionStrategies;
 using ReferalProgram.Application.Services.RootStrategies;
+using ReferalProgram.Application.IntegrationRequests;
 using ReferalProgram.Core.LockAggregate;
 using ReferalProgram.Core.MarketingTaskAggregate;
 using ReferalProgram.Core.PlaceAggregate;
@@ -16,11 +17,20 @@ using ReferalProgram.Infrastructure.Persistence;
 using ReferalProgram.Infrastructure.Queries;
 using ReferalProgram.Infrastructure.Repositories;
 using ReferalProgram.Infrastructure.Services;
+using ReferalProgram.Infrastructure.IntegrationRequests;
+using MassTransit;
 
 namespace ReferalProgram.Infrastructure;
 
 public static class ReferalProgramModule
 {
+    public static void ConfigureConsumers(IRegistrationConfigurator registration)
+    {
+        registration.AddConsumer<UpdateStructureActivityRequestConsumer>();
+        registration.AddConsumer<CompressStructureRequestConsumer>();
+        registration.AddConsumer<ResetStructurePersonalVolumeRequestConsumer>();
+    }
+
     extension(IServiceCollection services)
     {
         public IServiceCollection AddReferalProgramModule(IConfiguration configuration)
@@ -84,6 +94,8 @@ public static class ReferalProgramModule
                 TrimmedClassicPositionAlgorithmStrategy>();
             services.AddScoped<INextPosService, NextPosService>();
             services.AddScoped<IReferalProgramQueries, ReferalProgramQueries>();
+            services.AddScoped<ScheduledTasks.Application.ITaskCommandRequestFactory,
+                ProgramTaskCommandRequestFactory>();
 
             return services;
         }

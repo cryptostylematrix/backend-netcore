@@ -7,7 +7,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="MassTransit.Abstractions" Version="8.5.7" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\..\BuildingBlocks\Common\Common.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\IntegrationRequests\IntegrationRequests.csproj" />
     <ProjectReference Include="..\..\Contracts\Contracts.Application\Contracts.Application.csproj" />
     <ProjectReference Include="..\ReferalProgram.Core\ReferalProgram.Core.csproj" />
     <ProjectReference Include="..\ReferalProgram.Dto\ReferalProgram.Dto.csproj" />

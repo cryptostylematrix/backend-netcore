@@ -17,6 +17,7 @@ Entity Framework Core, MediatR, and the included TON SDK projects.
 | `src/Modules/Marketing` | Legacy Neo marketing code retained for internal compatibility; its presentation assembly is not registered publicly. |
 | `src/Modules/ReferalProgram` | Current referral-program domain, placement policies, APIs, persistence, and database scripts. |
 | `src/Modules/UI` | Wallet profile-display intents, cached profile data, ownership checks, and history. |
+| `src/Modules/ScheduledTasks` | System-wide UTC task scheduling, sequential in-process command execution, and marketing coordination. |
 | `src/ProgramMigrator` | Console application for importing legacy Multi and Neo data. |
 | `src/ProgramMatrixFillingRecalculator` | Dry-run-first maintenance tool for recalculating persisted matrix filling in all existing programs or one selected program. |
 | `src/ProgramInviterChanger` | Administrative console application for moving a referral subtree. |
@@ -37,6 +38,8 @@ name is intentionally preserved in paths and namespaces.
   radar, and trimmed-classic placement.
 - [UI module](src/Modules/UI/README.md) covers its intent-based data model,
   ownership synchronization, endpoints, errors, and database setup.
+- [Scheduled Tasks module](src/Modules/ScheduledTasks/README.md) covers task JSON,
+  recurrence, deterministic correlation IDs, retries, and database setup.
 - [Program Migrator](src/ProgramMigrator/README.md) describes dry runs,
   structure-specific imports, Multi and Neo configuration, and applying data.
 - [Program Matrix Filling Recalculator](src/ProgramMatrixFillingRecalculator/README.md)
@@ -75,7 +78,8 @@ cp src/API/CryptoStyle.Api/.env.example \
 
 Fill the copied file with local values. Matrix and Marketing share
 `ConnectionStrings__Matrix`; Referral Program uses
-`ConnectionStrings__Programs`. UI uses `ConnectionStrings__UI` when supplied
+`ConnectionStrings__Programs`. Scheduled Tasks uses its dedicated
+`ConnectionStrings__Tasks` connection. UI uses `ConnectionStrings__UI` when supplied
 and otherwise falls back to Programs.
 
 Run the API from the repository root:

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\BuildingBlocks\Common\Common.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\IntegrationRequests\IntegrationRequests.csproj" />
+    <ProjectReference Include="..\ScheduledTasks.Core\ScheduledTasks.Core.csproj" />
+  </ItemGroup>
+
+</Project>
