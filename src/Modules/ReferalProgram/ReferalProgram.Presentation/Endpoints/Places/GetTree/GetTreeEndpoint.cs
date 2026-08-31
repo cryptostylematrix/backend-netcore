@@ -15,7 +15,9 @@ public sealed class GetTreeEndpoint(ISender sender)
             summary.Summary = "Get place tree";
             summary.Description =
                 "Gets a place tree using the structure's configured width and height. "
-                + "Purchase and lock actions are calculated for viewer_profile_addr; "
+                + "Purchase, activation, and lock capabilities are returned on their applicable nodes; "
+                + "purchase and lock actions are calculated for viewer_profile_addr, while the client "
+                + "must restrict activation to a matching place profile; "
                 + "viewer_wallet_addr is required for wallet-owned lock actions.";
         });
     }

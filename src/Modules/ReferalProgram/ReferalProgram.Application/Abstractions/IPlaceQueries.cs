@@ -37,6 +37,11 @@ public interface IPlaceQueries
         IReadOnlyCollection<byte> structureNumbers,
         CancellationToken cancellationToken);
 
+    Task<bool> HasProfilePlacesOutsideInviteStructureAsync(
+        string marketingAddr,
+        string profileAddr,
+        CancellationToken cancellationToken);
+
     Task<IReadOnlyDictionary<string, PlaceTreeCounts>> GetTreeCountsByMpAsync(
         string marketingAddr,
         byte structureNumber,

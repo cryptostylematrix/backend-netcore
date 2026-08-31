@@ -89,6 +89,12 @@ public sealed class TreeFilledNodeResponse : TreeNodeResponse
     [JsonPropertyName("activated_at")]
     public long? ActivatedAt { get; init; }
 
+    [JsonPropertyName("can_activate")]
+    public bool CanActivate { get; init; }
+
+    [JsonPropertyName("activate_command_tag")]
+    public uint? ActivateCommandTag { get; init; }
+
     [JsonPropertyName("is_root")]
     public bool IsRoot { get; init; }
 }

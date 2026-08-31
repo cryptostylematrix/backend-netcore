@@ -24,6 +24,7 @@ internal sealed class GetTreeQueryHandler(
     INextPosService nextPosService,
     IBuyPlacePolicy buyPlacePolicy,
     IProgramCommandQueries commandQueries,
+    IActivatePlacePolicy activatePlacePolicy,
     IPositionNodeActionPolicy actionPolicy,
     ITonAddressComparer addressComparer,
     ISender sender)
@@ -228,6 +229,10 @@ internal sealed class GetTreeQueryHandler(
             }
 
             var filledActions = actionPolicy.Evaluate(actionContext, parent, mp, pos);
+            var activation = activatePlacePolicy.Evaluate(
+                structure,
+                availableCommandTags,
+                row);
             if (!treeCounts.TryGetValue(row.Mp, out var counts))
                 throw new InvalidOperationException("Tree counts were not found for a filled place.");
 
@@ -261,6 +266,8 @@ internal sealed class GetTreeQueryHandler(
                 IsActive = row.IsActive,
                 CreatedAt = row.CreatedAt,
                 ActivatedAt = row.ActivatedAt,
+                CanActivate = activation.CanActivate,
+                ActivateCommandTag = activation.CommandTag,
                 IsRoot = string.Equals(
                     row.Mp,
                     viewerRoot.Mp,

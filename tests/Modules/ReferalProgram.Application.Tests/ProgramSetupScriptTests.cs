@@ -89,6 +89,7 @@ public sealed class ProgramSetupScriptTests
         Assert.Equal(4, Count(sql, "\"algo\": \"chess\""));
         Assert.Equal(4, Count(sql, "\"algo\": \"radar\""));
         Assert.Equal(4, Count(sql, "\"depth_spread\": 3"));
+        Assert.Equal(4, Count(sql, "\"set_active_on_activation\": true"));
     }
 
     [Fact]

@@ -6,7 +6,7 @@ namespace ReferalProgram.Application.Tests;
 public sealed class PlaceBoughtDomainEventHandlerTests
 {
     [Fact]
-    public async Task Activates_referral_invite_and_increments_inviter_personal_volume()
+    public async Task Increments_inviter_personal_volume_without_reactivating_invite()
     {
         var repository = new Repository();
         var handler = new PlaceBoughtDomainEventHandler(repository);
@@ -18,8 +18,8 @@ public sealed class PlaceBoughtDomainEventHandlerTests
             placeNumber: 1,
             boughtAt: 10), default);
 
-        Assert.True(repository.ReferralInvite.IsActive);
-        Assert.Equal(10, repository.ReferralInvite.ActivatedAt);
+        Assert.False(repository.ReferralInvite.IsActive);
+        Assert.Null(repository.ReferralInvite.ActivatedAt);
         Assert.Equal<uint>(1, repository.InviterFirstPlace.PersonalVolume);
     }
 

@@ -95,7 +95,7 @@ used. The default HTTP address is `http://localhost:5004`, with Swagger at
 
 The Referral Program task processor is disabled in Development. In other
 environments it runs at the configured `TaskProcessor__IntervalSeconds`
-interval. `activate_place` handling is intentionally deferred; see the
+interval. `activate_place` is processed for configured profiled places; see the
 [processing invariants](src/Modules/ReferalProgram/PROGRAM_PROCESSING.md#activation).
 
 ## Tests

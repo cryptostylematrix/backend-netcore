@@ -83,6 +83,7 @@ public static class ReferalProgramModule
             services.AddScoped<IPositionAlgorithmResolver, PositionAlgorithmResolver>();
             services.AddScoped<IProgramCommandQueries, ProgramCommandQueries>();
             services.AddScoped<IBuyPlacePolicy, BuyPlacePolicy>();
+            services.AddScoped<IActivatePlacePolicy, ActivatePlacePolicy>();
             services.AddScoped<IClonePlaceKindPolicy, ClonePlaceKindPolicy>();
             services.AddScoped<ISourcePlaceResolver, SourcePlaceResolver>();
             services.AddScoped<IRequestedPositionResolver, RequestedPositionResolver>();

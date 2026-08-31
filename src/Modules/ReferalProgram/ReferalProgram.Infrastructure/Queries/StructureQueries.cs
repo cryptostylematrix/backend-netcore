@@ -24,7 +24,8 @@ public sealed class StructureQueries(
                 height                  AS "Height",
                 display_height          AS "DisplayHeight",
                 prev_required           AS "PrevRequired",
-                pos_algo::text          AS "PosAlgoJson"
+                pos_algo::text          AS "PosAlgoJson",
+                activity::text          AS "ActivityJson"
             FROM public.structures
             WHERE marketing_addr = @marketingAddr
               AND structure_number = @structureNumber;
@@ -52,7 +53,10 @@ public sealed class StructureQueries(
                 Height = checked((byte)row.Height),
                 DisplayHeight = checked((byte)row.DisplayHeight),
                 PrevRequired = row.PrevRequired,
-                PosAlgo = JsonSerializer.Deserialize<JsonElement>(row.PosAlgoJson)
+                PosAlgo = JsonSerializer.Deserialize<JsonElement>(row.PosAlgoJson),
+                Activity = row.ActivityJson is null
+                    ? null
+                    : JsonSerializer.Deserialize<JsonElement>(row.ActivityJson)
             };
     }
 
@@ -66,5 +70,6 @@ public sealed class StructureQueries(
         public short DisplayHeight { get; init; }
         public bool PrevRequired { get; init; }
         public string PosAlgoJson { get; init; } = null!;
+        public string? ActivityJson { get; init; }
     }
 }

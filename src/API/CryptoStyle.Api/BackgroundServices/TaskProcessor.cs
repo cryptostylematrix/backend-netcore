@@ -362,9 +362,89 @@ public sealed class TaskProcessor(
         switch (command.CommandTag)
         {
             case ActivatePlaceCommandTag:
-                logger.LogWarning("[API TaskProcessor] Activate-place command is not implemented");
-                // TODO: Process activate-place command.
-                return false;
+            {
+                LogAction("Validating activate-place command");
+                if (command.Struct is null)
+                {
+                    await CancelTaskAsync(
+                        marketingAddr,
+                        sender,
+                        transactionSender,
+                        task.QueryId,
+                        taskKey,
+                        "Activate-place command is missing its structure number.",
+                        cancellationToken);
+                    break;
+                }
+
+                if (string.IsNullOrWhiteSpace(command.ProfileAddr))
+                {
+                    await CancelTaskAsync(
+                        marketingAddr,
+                        sender,
+                        transactionSender,
+                        task.QueryId,
+                        taskKey,
+                        "Activate-place command has no profile address.",
+                        cancellationToken);
+                    break;
+                }
+
+                uint placeNumber;
+                try
+                {
+                    placeNumber = DeserializeActivatePlaceNumber(task.PayloadBocHex);
+                }
+                catch (Exception exception)
+                {
+                    await CancelTaskAsync(
+                        marketingAddr,
+                        sender,
+                        transactionSender,
+                        task.QueryId,
+                        taskKey,
+                        $"Activate-place payload is invalid: {exception.Message}",
+                        cancellationToken);
+                    break;
+                }
+
+                LogAction("Executing activate-place application command");
+                var result = await sender.Send(
+                    new ActivatePlaceCommand(
+                        marketingAddr,
+                        command.Struct.Value,
+                        command.ProfileAddr,
+                        placeNumber,
+                        checked((int)taskKey),
+                        checked((long)task.QueryId),
+                        command.SourceAddr),
+                    cancellationToken);
+
+                if (!result.IsSuccess)
+                {
+                    await CancelTaskAsync(
+                        marketingAddr,
+                        sender,
+                        transactionSender,
+                        task.QueryId,
+                        taskKey,
+                        ErrorComment(result.Errors, "Could not activate place."),
+                        cancellationToken);
+                    break;
+                }
+
+                LogAction("Sending activate-place command response");
+                await SendCommandResponseAsync(
+                    marketingAddr,
+                    task.QueryId,
+                    taskKey,
+                    result.Value,
+                    sender,
+                    transactionSender,
+                    cancellationToken);
+                LogAction("Activate-place command response transaction sent");
+                break;
+            }
 
             case BuyFirstPlaceCommandTag:
             case BuyPlaceCommandTag:
@@ -1099,6 +1179,20 @@ public sealed class TaskProcessor(
             throw new InvalidOperationException("Buy-place payload contains trailing data.");
 
         return new ChildPosition(parent, position);
+    }
+
+    private static uint DeserializeActivatePlaceNumber(string? payloadBocHex)
+    {
+        if (string.IsNullOrWhiteSpace(payloadBocHex))
+            throw new InvalidOperationException("Payload is missing.");
+
+        var payload = Cell.From(new Bits(Convert.FromHexString(payloadBocHex)));
+        var slice = payload.Parse();
+        var placeNumber = checked((uint)slice.LoadUInt(32));
+        if (slice.RemainderBits != 0 || slice.RemainderRefs != 0)
+            throw new InvalidOperationException("Payload contains trailing data.");
+
+        return placeNumber;
     }
 
     private static bool TryDeserializeRequiredPosition(

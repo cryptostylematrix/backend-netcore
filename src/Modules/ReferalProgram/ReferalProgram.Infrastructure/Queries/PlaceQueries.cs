@@ -274,6 +274,29 @@ public sealed class PlaceQueries(
                 cancellationToken: cancellationToken));
     }
 
+    public async Task<bool> HasProfilePlacesOutsideInviteStructureAsync(
+        string marketingAddr,
+        string profileAddr,
+        CancellationToken cancellationToken)
+    {
+        const string sql = """
+            SELECT EXISTS (
+                SELECT 1
+                FROM public.places
+                WHERE marketing_addr = @marketingAddr
+                  AND profile_addr = @profileAddr
+                  AND structure_number > 0
+            );
+            """;
+
+        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        return await connection.ExecuteScalarAsync<bool>(
+            new CommandDefinition(
+                sql,
+                new { marketingAddr, profileAddr },
+                cancellationToken: cancellationToken));
+    }
+
     public async Task<IReadOnlyDictionary<string, PlaceTreeCounts>> GetTreeCountsByMpAsync(
         string marketingAddr,
         byte structureNumber,

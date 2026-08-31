@@ -188,6 +188,7 @@ public sealed class Place : Entity, IAggregateRoot
             groupVolume: 0);
 
         place.EnsureBoughtEffects();
+        place.EnsurePaidPlaceEffects();
 
         return place;
     }
@@ -255,6 +256,17 @@ public sealed class Place : Entity, IAggregateRoot
             ActivatedAt ?? CreatedAt));
     }
 
+    public void EnsurePaidPlaceEffects()
+    {
+        if (StructureNumber == 0 || string.IsNullOrWhiteSpace(ProfileAddr))
+            return;
+
+        AddDomainEvent(new PaidPlaceCreatedDomainEvent(
+            MarketingAddr,
+            ProfileAddr,
+            CreatedAt));
+    }
+
     public void RecordProcessedMarketingCommand(
         int taskKey,
         long taskQueryId,
@@ -293,9 +305,31 @@ public sealed class Place : Entity, IAggregateRoot
         PersonalVolume = checked(PersonalVolume + 1);
     }
 
-    public void Activate(long activatedAt)
+    public void Activate(long activatedAt, bool setActiveOnActivation)
+    {
+        if (string.IsNullOrWhiteSpace(ProfileAddr))
+            throw new InvalidOperationException("A system place cannot be activated.");
+        if (ActivatedAt is not null)
+            throw new InvalidOperationException("The place is already activated.");
+
+        ApplyActivity(activatedAt, setActiveOnActivation);
+        AddDomainEvent(new PlaceActivatedDomainEvent(
+            MarketingAddr,
+            StructureNumber,
+            ProfileAddr,
+            PlaceNumber,
+            activatedAt));
+    }
+
+    public void InitializeActivityFromFirstPaidPlace(long activatedAt)
+    {
+        ApplyActivity(activatedAt, setActiveOnActivation: true);
+    }
+
+    private void ApplyActivity(long activatedAt, bool setActiveOnActivation)
     {
         ActivatedAt ??= activatedAt;
-        IsActive = true;
+        if (setActiveOnActivation)
+            IsActive = true;
     }
 }

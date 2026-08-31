@@ -25,4 +25,7 @@ public sealed class StructureResponse
 
     [JsonPropertyName("pos_algo")]
     public System.Text.Json.JsonElement PosAlgo { get; init; }
+
+    [JsonPropertyName("activity")]
+    public System.Text.Json.JsonElement? Activity { get; init; }
 }

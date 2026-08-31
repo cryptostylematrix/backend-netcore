@@ -3,14 +3,14 @@ using ReferalProgram.Core.PlaceAggregate;
 
 namespace ReferalProgram.Application.Features.Places;
 
-internal sealed class PlaceBoughtDomainEventHandler(IPlaceRepository placeRepository)
-    : IDomainEventHandler<PlaceBoughtDomainEvent>
+internal sealed class PlaceActivatedDomainEventHandler(IPlaceRepository placeRepository)
+    : IDomainEventHandler<PlaceActivatedDomainEvent>
 {
     private const byte InviteStructureNumber = 0;
     private const uint FirstPlaceNumber = 1;
 
     public async Task Handle(
-        PlaceBoughtDomainEvent notification,
+        PlaceActivatedDomainEvent notification,
         CancellationToken cancellationToken)
     {
         var invite = await placeRepository.GetAsync(
@@ -26,13 +26,13 @@ internal sealed class PlaceBoughtDomainEventHandler(IPlaceRepository placeReposi
         if (invite.ParentProfileAddr is null)
             return;
 
-        var inviterFirstPlace = await placeRepository.GetAsync(
+        var curatorFirstPlace = await placeRepository.GetAsync(
             notification.MarketingAddr,
             notification.StructureNumber,
             invite.ParentProfileAddr,
             FirstPlaceNumber,
             cancellationToken);
 
-        inviterFirstPlace?.IncreasePersonalVolume();
+        curatorFirstPlace?.IncreasePersonalVolume();
     }
 }

@@ -21,6 +21,7 @@ DECLARE
             "display_height": null,
             "prev_required": null,
             "pos_algo": null,
+            "activity": null,
             "profile_addr": null,
             "profile_login": null
         }
@@ -56,6 +57,7 @@ BEGIN
             display_height         smallint,
             prev_required          boolean,
             pos_algo               jsonb,
+            activity               jsonb,
             profile_addr           text,
             profile_login          text
         )
@@ -92,7 +94,8 @@ BEGIN
             height,
             display_height,
             prev_required,
-            pos_algo
+            pos_algo,
+            activity
         )
         VALUES
         (
@@ -103,7 +106,8 @@ BEGIN
             v_structure.height,
             v_structure.display_height,
             v_structure.prev_required,
-            v_structure.pos_algo
+            v_structure.pos_algo,
+            v_structure.activity
         );
 
         INSERT INTO public.places

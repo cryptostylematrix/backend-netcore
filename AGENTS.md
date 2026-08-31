@@ -206,18 +206,19 @@ source of truth. Important rules include:
 - Structure rank shown in a filled tree node is calculated dynamically from
   structure ranks and personal volume. System-place rank is null.
 - Choosing an inviter creates the profile's inactive structure-0 first place
-  beneath an active profiled inviter. Buying a profiled place activates that
-  invite and increments the inviter's first-place personal volume in the
-  purchased structure when that inviter place exists. System places and clone
-  creation do not produce this bought-place effect.
+  beneath an active profiled inviter. The profile's first paid place in any
+  structure above zero—purchase, clone, or reinvest—activates that invite;
+  later paid places never reactivate it. A purchase increments the inviter's
+  first-place personal volume in the purchased structure when that place
+  exists. System places do not produce profile paid-place effects.
 - Creating any child updates its tracked parent's filling through
   `PlaceCreatedDomainEvent`; the expected filling must still equal
   `position - 1`, which protects left-to-right insertion from stale writes.
 
-Activation handling is intentionally deferred. Contracts may expose
-`activate_place`, but the backend task processor currently treats it as
-unsupported. Do not infer activation behavior or implement it without a new
-explicit request.
+Activation targets an existing profiled place whose `activated_at` is null.
+The structure must expose `activate_place` and have non-null activity JSON.
+Activation uses purchase-style source resolution and the centralized Marketing
+task receipt for idempotency.
 
 ## Task processor
 
@@ -273,9 +274,8 @@ use application requests and responses.
 Combined command/query tasks are handled as move-or-structure-bonus: the
 create-clone command and structure-bonus query must refer to the same relative
 source. The resolver chooses exactly one response path. Profile-info queries,
-bonus queries, clone, reinvest, lock, unlock, purchases, and inviter selection
-have explicit branches; unknown commands are unsupported and activation is
-still deferred.
+bonus queries, clone, reinvest, lock, unlock, activation, purchases, and inviter
+selection have explicit branches; unknown commands are unsupported.
 
 ## Runtime configuration
 

@@ -136,6 +136,7 @@ internal sealed class CreateSystemCloneCommandHandler(
                 groupVolume: 0);
 
             placeRepository.Add(createdPlace);
+            createdPlace.EnsurePaidPlaceEffects();
 
             var source = await sourcePlaceResolver.ResolveAsync(
                 createdPlace,

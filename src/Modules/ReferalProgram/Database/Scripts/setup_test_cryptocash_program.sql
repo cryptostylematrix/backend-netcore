@@ -44,6 +44,7 @@ DECLARE
             "height": 0,
             "display_height": 2,
             "prev_required": false,
+            "activity": { "set_active_on_activation": true },
             "pos_algo": {
                 "v": 1,
                 "root": "owner",
@@ -73,6 +74,7 @@ DECLARE
             "height": 0,
             "display_height": 2,
             "prev_required": false,
+            "activity": { "set_active_on_activation": true },
             "pos_algo": {
                 "v": 1,
                 "root": "owner",
@@ -102,6 +104,7 @@ DECLARE
             "height": 0,
             "display_height": 2,
             "prev_required": false,
+            "activity": { "set_active_on_activation": true },
             "pos_algo": {
                 "v": 1,
                 "root": "owner",
@@ -131,6 +134,7 @@ DECLARE
             "height": 0,
             "display_height": 2,
             "prev_required": false,
+            "activity": { "set_active_on_activation": true },
             "pos_algo": {
                 "v": 1,
                 "root": "owner",
@@ -242,7 +246,8 @@ BEGIN
             height                 smallint,
             display_height         smallint,
             prev_required          boolean,
-            pos_algo               jsonb
+            pos_algo               jsonb,
+            activity               jsonb
         )
     LOOP
         INSERT INTO public.structures
@@ -254,7 +259,8 @@ BEGIN
             height,
             display_height,
             prev_required,
-            pos_algo
+            pos_algo,
+            activity
         )
         VALUES
         (
@@ -265,7 +271,8 @@ BEGIN
             v_structure.height,
             v_structure.display_height,
             v_structure.prev_required,
-            v_structure.pos_algo
+            v_structure.pos_algo,
+            v_structure.activity
         );
 
         INSERT INTO public.places
