@@ -118,25 +118,20 @@ See `Database/Scripts/002_example_tasks.sql` for manual insertion examples.
 
 ## Database setup
 
-Create and provision the dedicated Tasks database from an administrative
-database using `psql`. The runtime role must already exist:
+Use Query Tool as the `postgres` user while connected to the `postgres` database
+to run `ScheduledTasks/Database/Scripts/000_create_tasks_database.sql`. Execute
+its single `CREATE DATABASE` statement by itself. For development, change the
+database name to `dev_cs_tasks` before execution. The backend PostgreSQL role is
+separate from the `postgres` migration user and does not own database objects.
 
-```bash
-psql --dbname postgres \
-  --set tasks_database=cs_tasks \
-  --set tasks_role=cs_tasks_user \
-  --file src/Modules/ScheduledTasks/Database/Scripts/000_create_tasks_database.sql
-```
+Reconnect Query Tool to the newly created Tasks database and run the remaining
+scripts manually in order:
 
-For development, supply the development database and role instead, for example
-`dev_cs_tasks` and `dev_cs_tasks_user`. The provisioning script is idempotent,
-removes public connection access, grants the runtime role the required database,
-and schema permissions, and establishes the required default table privileges.
-It does not run any other script.
-
-After creating the database, run the remaining scripts manually in order:
-
-1. `ScheduledTasks/Database/Scripts/001_create_tasks.sql` in the Tasks database.
+1. As `postgres`, run `ScheduledTasks/Database/Scripts/001_create_tasks.sql`. It
+   creates the table, removes public database access, and explicitly grants the
+   existing `cs_tasks_user` and/or `dev_cs_tasks_user` roles `CONNECT`, schema
+   `USAGE`, and table `SELECT`/`UPDATE`. Tasks continue to be inserted manually
+   by an administrative user.
 2. `ReferalProgram/Database/Scripts/021_create_processed_program_commands.sql`
    in the Programs database.
 3. `ReferalProgram/Database/Scripts/022_add_task_processing_enabled_to_referal_program.sql`

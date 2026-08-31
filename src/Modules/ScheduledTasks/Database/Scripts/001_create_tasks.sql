@@ -1,5 +1,6 @@
--- Creates the system-wide scheduled-task store.
--- Connect to the dedicated Tasks database as its owner before running this script.
+-- Creates and provisions the system-wide scheduled-task store.
+-- Run as the postgres user after connecting to the dedicated Tasks database.
+-- The runtime roles must already exist; their passwords are managed separately.
 
 BEGIN;
 
@@ -31,12 +32,20 @@ DO $$
 DECLARE
     v_role text;
 BEGIN
+    EXECUTE format(
+        'REVOKE CONNECT ON DATABASE %I FROM PUBLIC',
+        current_database());
+
     FOREACH v_role IN ARRAY ARRAY['cs_tasks_user', 'dev_cs_tasks_user']
     LOOP
         IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = v_role) THEN
+            EXECUTE format(
+                'GRANT CONNECT ON DATABASE %I TO %I',
+                current_database(),
+                v_role);
             EXECUTE format('GRANT USAGE ON SCHEMA public TO %I', v_role);
             EXECUTE format(
-                'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.tasks TO %I',
+                'GRANT SELECT, UPDATE ON TABLE public.tasks TO %I',
                 v_role);
         END IF;
     END LOOP;

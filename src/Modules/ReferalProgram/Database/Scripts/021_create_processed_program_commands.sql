@@ -1,6 +1,7 @@
 -- Records Program integration commands whose consumers require idempotency.
 -- The business mutation and this record must be committed in the same
--- Programs-database transaction.
+-- Programs-database transaction. Run this script as the postgres user; it
+-- explicitly grants the backend roles their runtime rights.
 
 BEGIN;
 
@@ -23,6 +24,10 @@ BEGIN
     FOREACH v_role IN ARRAY ARRAY['cs_programs_user', 'dev_cs_programs_user']
     LOOP
         IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = v_role) THEN
+            EXECUTE format(
+                'GRANT CONNECT ON DATABASE %I TO %I',
+                current_database(),
+                v_role);
             EXECUTE format('GRANT USAGE ON SCHEMA public TO %I', v_role);
             EXECUTE format(
                 'GRANT SELECT, INSERT ON TABLE public.processed_program_commands TO %I',
