@@ -103,6 +103,7 @@ public static class ReferalProgramModule
             services.AddScoped<IPositionAlgorithmStrategy,
                 SystemGapPositionAlgorithmStrategy>();
             services.AddScoped<INextPosService, NextPosService>();
+            services.AddScoped<IStructureCompressionService, StructureCompressionService>();
             services.AddScoped<IReferalProgramQueries, ReferalProgramQueries>();
             services.AddScoped<ScheduledTasks.Application.ITaskCommandRequestFactory,
                 ProgramTaskCommandRequestFactory>();

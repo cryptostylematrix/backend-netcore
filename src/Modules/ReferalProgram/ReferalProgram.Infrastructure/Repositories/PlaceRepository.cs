@@ -6,6 +6,31 @@ namespace ReferalProgram.Infrastructure.Repositories;
 
 internal sealed class PlaceRepository(DataContext dataContext) : IPlaceRepository
 {
+    public async Task<IReadOnlyList<Place>> GetStructurePlacesAsync(
+        string marketingAddr,
+        byte structureNumber,
+        CancellationToken cancellationToken) =>
+        await dataContext.Places
+            .Where(place => place.MarketingAddr == marketingAddr
+                && place.StructureNumber == structureNumber)
+            .OrderBy(place => place.Id)
+            .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyDictionary<string, string?>> GetInvitersAsync(
+        string marketingAddr,
+        CancellationToken cancellationToken) =>
+        await dataContext.Places
+            .AsNoTracking()
+            .Where(place => place.MarketingAddr == marketingAddr
+                && place.StructureNumber == 0
+                && place.PlaceNumber == 1
+                && place.ProfileAddr != null)
+            .ToDictionaryAsync(
+                place => place.ProfileAddr!,
+                place => place.ParentProfileAddr,
+                StringComparer.Ordinal,
+                cancellationToken);
+
     public Task<Place?> GetByIdAsync(int id, CancellationToken cancellationToken) =>
         dataContext.Places.SingleOrDefaultAsync(place => place.Id == id, cancellationToken);
 
@@ -110,4 +135,20 @@ internal sealed class PlaceRepository(DataContext dataContext) : IPlaceRepositor
     }
 
     public void Add(Place place) => dataContext.Places.Add(place);
+
+    public async Task RemoveRangeAsync(
+        IReadOnlyCollection<Place> places,
+        CancellationToken cancellationToken)
+    {
+        if (places.Count == 0)
+            return;
+
+        var ids = places.Select(place => place.Id).ToArray();
+        var receipts = await dataContext.MarketingTasks
+            .Where(task => ids.Contains(task.PlaceId)
+                || ids.Contains(task.ResponseSourcePlaceId))
+            .ToListAsync(cancellationToken);
+        dataContext.MarketingTasks.RemoveRange(receipts);
+        dataContext.Places.RemoveRange(places);
+    }
 }

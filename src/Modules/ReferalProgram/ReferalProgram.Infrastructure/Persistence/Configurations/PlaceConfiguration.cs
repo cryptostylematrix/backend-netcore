@@ -15,6 +15,10 @@ internal sealed class PlaceConfiguration : IEntityTypeConfiguration<Place>
             .HasColumnName("id")
             .ValueGeneratedOnAdd();
         builder.Property(place => place.ParentId).HasColumnName("parent_id");
+        builder.HasOne<Place>()
+            .WithMany()
+            .HasForeignKey(place => place.ParentId)
+            .OnDelete(DeleteBehavior.Restrict);
         builder.Property(place => place.Mp).HasColumnName("mp").IsRequired();
         builder.Property(place => place.PosGroup).HasColumnName("pos_group").HasConversion<short>();
         builder.Property(place => place.MarketingAddr).HasColumnName("marketing_addr").HasMaxLength(600).IsRequired();

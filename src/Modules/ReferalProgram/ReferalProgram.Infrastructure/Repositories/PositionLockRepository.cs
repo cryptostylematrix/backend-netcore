@@ -7,6 +7,16 @@ namespace ReferalProgram.Infrastructure.Repositories;
 internal sealed class PositionLockRepository(DataContext dataContext)
     : IPositionLockRepository
 {
+    public async Task<IReadOnlyList<PositionLock>> GetStructureLocksAsync(
+        string marketingAddr,
+        byte structureNumber,
+        CancellationToken cancellationToken) =>
+        await dataContext.PositionLocks
+            .Where(positionLock => positionLock.MarketingAddr == marketingAddr
+                && positionLock.StructureNumber == structureNumber)
+            .OrderBy(positionLock => positionLock.Id)
+            .ToListAsync(cancellationToken);
+
     public Task<PositionLock?> GetAsync(
         string marketingAddr,
         byte structureNumber,
@@ -45,4 +55,7 @@ internal sealed class PositionLockRepository(DataContext dataContext)
     public void Add(PositionLock positionLock) => dataContext.PositionLocks.Add(positionLock);
 
     public void Remove(PositionLock positionLock) => dataContext.PositionLocks.Remove(positionLock);
+
+    public void RemoveRange(IEnumerable<PositionLock> positionLocks) =>
+        dataContext.PositionLocks.RemoveRange(positionLocks);
 }

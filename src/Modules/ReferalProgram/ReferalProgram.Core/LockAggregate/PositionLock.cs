@@ -90,4 +90,10 @@ public sealed class PositionLock : Entity, IAggregateRoot
             mp,
             createdAt);
     }
+
+    public void RebuildMp(string mp)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(mp);
+        Mp = mp;
+    }
 }

@@ -4,6 +4,17 @@ namespace ReferalProgram.Core.PlaceAggregate;
 
 public interface IPlaceRepository : IRepository<Place>
 {
+    Task<IReadOnlyList<Place>> GetStructurePlacesAsync(
+        string marketingAddr,
+        byte structureNumber,
+        CancellationToken cancellationToken) =>
+        throw new NotSupportedException();
+
+    Task<IReadOnlyDictionary<string, string?>> GetInvitersAsync(
+        string marketingAddr,
+        CancellationToken cancellationToken) =>
+        throw new NotSupportedException();
+
     Task<Place?> GetByIdAsync(int id, CancellationToken cancellationToken);
 
     Task<Place?> GetAsync(
@@ -35,4 +46,9 @@ public interface IPlaceRepository : IRepository<Place>
         CancellationToken cancellationToken);
 
     void Add(Place place);
+
+    Task RemoveRangeAsync(
+        IReadOnlyCollection<Place> places,
+        CancellationToken cancellationToken) =>
+        throw new NotSupportedException();
 }

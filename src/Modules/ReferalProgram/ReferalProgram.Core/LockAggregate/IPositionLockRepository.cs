@@ -4,6 +4,12 @@ namespace ReferalProgram.Core.LockAggregate;
 
 public interface IPositionLockRepository : IRepository<PositionLock>
 {
+    Task<IReadOnlyList<PositionLock>> GetStructureLocksAsync(
+        string marketingAddr,
+        byte structureNumber,
+        CancellationToken cancellationToken) =>
+        throw new NotSupportedException();
+
     Task<PositionLock?> GetAsync(
         string marketingAddr,
         byte structureNumber,
@@ -23,4 +29,7 @@ public interface IPositionLockRepository : IRepository<PositionLock>
 
     void Add(PositionLock positionLock);
     void Remove(PositionLock positionLock);
+
+    void RemoveRange(IEnumerable<PositionLock> positionLocks) =>
+        throw new NotSupportedException();
 }

@@ -332,4 +332,33 @@ public sealed class Place : Entity, IAggregateRoot
         if (setActiveOnActivation)
             IsActive = true;
     }
+
+    public void RebuildPosition(
+        Place? parent,
+        string mp,
+        byte posGroup,
+        uint pos,
+        uint filling,
+        uint deep,
+        long matrixFilling)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(mp);
+        if (parent is null && (pos != 0 || deep != 1))
+            throw new InvalidOperationException("The structure root must be at position zero and depth one.");
+        if (parent is not null && (pos == 0 || deep != checked(parent.Deep + 1)))
+            throw new InvalidOperationException("A child position is inconsistent with its parent.");
+        if (matrixFilling < 1)
+            throw new ArgumentOutOfRangeException(nameof(matrixFilling));
+
+        ParentId = parent?.Id;
+        ParentProfileAddr = parent?.ProfileAddr;
+        ParentProfileLogin = parent?.ProfileLogin;
+        ParentPlaceNumber = parent?.PlaceNumber;
+        Mp = mp;
+        PosGroup = posGroup;
+        Pos = pos;
+        Filling = filling;
+        Deep = deep;
+        MatrixFilling = matrixFilling;
+    }
 }
