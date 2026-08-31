@@ -15,6 +15,23 @@ public interface INextPositionQueries
 
 public interface IPositionCandidateQueries
 {
+    Task<PlaceResponse?> GetProfileFrontierCandidateAsync(
+        string marketingAddr,
+        byte structureNumber,
+        string rootMp,
+        byte width,
+        uint profiledFrontierLimit,
+        IReadOnlyCollection<string> lockMps,
+        CancellationToken cancellationToken);
+
+    Task<PlaceResponse?> GetSystemGapCandidateAsync(
+        string marketingAddr,
+        byte structureNumber,
+        string rootMp,
+        byte width,
+        IReadOnlyCollection<string> lockMps,
+        CancellationToken cancellationToken);
+
     Task<IReadOnlyList<PlaceResponse>> GetUnfilledPlacesInDepthWindowAsync(
         string marketingAddr,
         byte structureNumber,

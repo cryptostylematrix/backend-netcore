@@ -128,3 +128,53 @@ children of the selected parent. Every Nth clone, including a reinvest, is
 created as kind `2` instead of the ordinary clone kind `1`. Kind `2` is a
 terminal clone: it cannot receive children and is excluded from every
 next-position candidate query.
+
+### `profile_frontier` and `system_gap`
+
+These algorithms are intended to be configured together through version 2
+operation overrides. `profile_frontier` limits the number of profiled places
+that do not yet have a profiled child. System children do not remove a place
+from this profiled frontier.
+
+While the frontier is below `profiled_frontier_limit`, profiled places expand
+in breadth-first order. Parents at the same depth receive profiled children
+evenly from left to right. Once the limit is reached, only frontier places can
+receive the next profiled child: the old parent leaves the frontier and the new
+child enters it, so the limit is not increased. Candidate leaves are compared
+by profiled subtree load at every branch from the root; the least-loaded branch
+wins, with depth and left-to-right MP order breaking ties. This keeps profiled
+descendant counts balanced after the frontier reaches its limit. Profiled
+places are never placed beneath system places.
+
+`system_gap` fills the highest open position first and uses MP order from left
+to right at the same depth. It cannot consume the final available child slot
+of a profiled place that has no profiled child, preserving a route for the
+profiled structure to continue. With structure width `1`, this means the end
+of a profiled chain is unavailable to system places.
+
+```json
+{
+  "v": 2,
+  "default": {
+    "root": "owner",
+    "relation": "relative",
+    "groups": [
+      { "id": 0, "algo": "profile_frontier", "weight": 1,
+        "profiled_frontier_limit": 35 }
+    ]
+  },
+  "operations": {
+    "buy_system_place": {
+      "root": "owner",
+      "relation": "relative",
+      "groups": [
+        { "id": 0, "algo": "system_gap", "weight": 1 }
+      ]
+    }
+  }
+}
+```
+
+Use the root strategy appropriate for the program. Both algorithms respect
+the resolved root subtree, terminal clones, structure width, activity, and
+position locks.

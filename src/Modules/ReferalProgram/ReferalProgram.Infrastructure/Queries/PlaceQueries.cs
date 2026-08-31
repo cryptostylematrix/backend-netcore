@@ -399,6 +399,172 @@ public sealed class PlaceQueries(
             row => row.PlaceCount);
     }
 
+    public async Task<PlaceResponse?> GetProfileFrontierCandidateAsync(
+        string marketingAddr,
+        byte structureNumber,
+        string rootMp,
+        byte width,
+        uint profiledFrontierLimit,
+        IReadOnlyCollection<string> lockMps,
+        CancellationToken cancellationToken)
+    {
+        var sql = """
+            WITH scoped AS MATERIALIZED
+            (
+                SELECT
+                    parent.*,
+                    COUNT(child.id) FILTER (
+                        WHERE child.profile_addr IS NOT NULL
+                    )::bigint AS profiled_child_count
+                FROM public.places parent
+                LEFT JOIN public.places child
+                  ON child.parent_id = parent.id
+                 AND child.profile_addr IS NOT NULL
+                WHERE parent.marketing_addr = @marketingAddr
+                  AND parent.structure_number = @structureNumber
+                  AND parent.mp LIKE @mpPrefix
+                GROUP BY parent.id
+            ),
+            frontier AS
+            (
+                SELECT COUNT(*)::bigint AS value
+                FROM scoped
+                WHERE profile_addr IS NOT NULL
+                  AND profiled_child_count = 0
+            ),
+            eligible AS
+            (
+                SELECT
+                    scoped.*,
+                    CASE
+                        WHEN frontier.value >= @profiledFrontierLimit THEN ARRAY(
+                            SELECT
+                            (
+                                SELECT COUNT(*)::bigint
+                                FROM scoped descendant
+                                WHERE descendant.profile_addr IS NOT NULL
+                                  AND descendant.mp LIKE
+                                      left(scoped.mp, path_length) || '%'
+                            )
+                            FROM generate_series(
+                                char_length(@rootMp) + 8,
+                                char_length(scoped.mp),
+                                8
+                            ) AS path(path_length)
+                            ORDER BY path_length
+                        )
+                        ELSE ARRAY[]::bigint[]
+                    END AS branch_load
+                FROM scoped
+                CROSS JOIN frontier
+                WHERE scoped.profile_addr IS NOT NULL
+                  AND scoped.is_active = true
+                  AND scoped.kind <> 2
+                  AND (@width = 0 OR scoped.filling < @width)
+                  AND (
+                      frontier.value < @profiledFrontierLimit
+                      OR scoped.profiled_child_count = 0
+                  )
+                  AND NOT EXISTS
+                  (
+                      SELECT 1
+                      FROM unnest(@lockMps) AS locks(lock_mp)
+                      WHERE lower(scoped.mp || lpad(to_hex(scoped.filling + 1), 8, '0'))
+                          LIKE lower(lock_mp) || '%'
+                  )
+            ),
+            candidates AS
+            (
+                SELECT *
+                FROM eligible
+                ORDER BY
+                    branch_load ASC,
+                    deep ASC,
+                    profiled_child_count ASC,
+                    mp ASC,
+                    id ASC
+                LIMIT 1
+            )
+            """ + PlaceSelectSql.Replace("FROM public.places", "FROM candidates") + ";";
+
+        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        return await connection.QuerySingleOrDefaultAsync<PlaceResponse>(
+            new CommandDefinition(
+                sql,
+                new
+                {
+                    marketingAddr,
+                    structureNumber = (short)structureNumber,
+                    mpPrefix = rootMp + "%",
+                    width = (long)width,
+                    profiledFrontierLimit = (long)profiledFrontierLimit,
+                    lockMps = lockMps.ToArray()
+                },
+                cancellationToken: cancellationToken));
+    }
+
+    public async Task<PlaceResponse?> GetSystemGapCandidateAsync(
+        string marketingAddr,
+        byte structureNumber,
+        string rootMp,
+        byte width,
+        IReadOnlyCollection<string> lockMps,
+        CancellationToken cancellationToken)
+    {
+        var sql = """
+            WITH candidates AS
+            (
+                SELECT
+                    parent.*,
+                    COUNT(child.id) FILTER (
+                        WHERE child.profile_addr IS NOT NULL
+                    )::bigint AS profiled_child_count
+                FROM public.places parent
+                LEFT JOIN public.places child
+                  ON child.parent_id = parent.id
+                 AND child.profile_addr IS NOT NULL
+                WHERE parent.marketing_addr = @marketingAddr
+                  AND parent.structure_number = @structureNumber
+                  AND parent.mp LIKE @mpPrefix
+                  AND parent.is_active = true
+                  AND parent.kind <> 2
+                  AND (@width = 0 OR parent.filling < @width)
+                  AND NOT EXISTS
+                  (
+                      SELECT 1
+                      FROM unnest(@lockMps) AS locks(lock_mp)
+                      WHERE lower(parent.mp || lpad(to_hex(parent.filling + 1), 8, '0'))
+                          LIKE lower(lock_mp) || '%'
+                  )
+                GROUP BY parent.id
+                HAVING NOT (
+                    parent.profile_addr IS NOT NULL
+                    AND COUNT(child.id) FILTER (
+                        WHERE child.profile_addr IS NOT NULL
+                    ) = 0
+                    AND @width > 0
+                    AND parent.filling + 1 >= @width
+                )
+                ORDER BY parent.deep ASC, parent.mp ASC, parent.id ASC
+                LIMIT 1
+            )
+            """ + PlaceSelectSql.Replace("FROM public.places", "FROM candidates") + ";";
+
+        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        return await connection.QuerySingleOrDefaultAsync<PlaceResponse>(
+            new CommandDefinition(
+                sql,
+                new
+                {
+                    marketingAddr,
+                    structureNumber = (short)structureNumber,
+                    mpPrefix = rootMp + "%",
+                    width = (long)width,
+                    lockMps = lockMps.ToArray()
+                },
+                cancellationToken: cancellationToken));
+    }
+
     public async Task<IReadOnlyList<PlaceResponse>> GetUnfilledPlacesInDepthWindowAsync(
         string marketingAddr,
         byte structureNumber,

@@ -95,6 +95,9 @@ public sealed class PositionGroupConfiguration
 
     [JsonPropertyName("cut_factor")]
     public uint? CutFactor { get; init; }
+
+    [JsonPropertyName("profiled_frontier_limit")]
+    public uint? ProfiledFrontierLimit { get; init; }
 }
 
 public interface IPositionAlgorithmConfigurationParser

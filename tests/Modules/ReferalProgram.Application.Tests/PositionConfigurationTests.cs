@@ -179,6 +179,61 @@ public sealed class PositionConfigurationTests
     }
 
     [Fact]
+    public void Parser_reads_profile_frontier_limit()
+    {
+        using var document = JsonDocument.Parse("""
+            {
+              "v": 1,
+              "root": "profile",
+              "relation": "relative",
+              "groups": [
+                {
+                  "id": 0,
+                  "algo": "profile_frontier",
+                  "weight": 1,
+                  "profiled_frontier_limit": 35
+                }
+              ]
+            }
+            """);
+
+        var result = new PositionAlgorithmConfigurationParser().Parse(
+            document.RootElement);
+
+        Assert.Equal((uint)35, Assert.Single(result.Groups).ProfiledFrontierLimit);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData(0)]
+    public void Parser_rejects_missing_or_zero_profile_frontier_limit(int? limit)
+    {
+        var limitProperty = limit is null
+            ? string.Empty
+            : $", \"profiled_frontier_limit\": {limit}";
+        using var document = JsonDocument.Parse($$"""
+            {
+              "v": 1,
+              "root": "profile",
+              "relation": "relative",
+              "groups": [
+                {
+                  "id": 0,
+                  "algo": "profile_frontier",
+                  "weight": 1
+                  {{limitProperty}}
+                }
+              ]
+            }
+            """);
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            new PositionAlgorithmConfigurationParser().Parse(document.RootElement));
+
+        Assert.Contains("positive", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Relative_selector_chooses_most_underrepresented_group()
     {
         var configuration = Configuration("relative", (0, 1), (1, 3));

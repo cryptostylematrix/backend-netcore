@@ -16,7 +16,7 @@ public sealed class InfrastructureQueryInvariantTests
             "PlaceQueries.cs");
         var source = File.ReadAllText(path);
 
-        Assert.Equal(3, Count(source, "AND kind <> 2"));
+        Assert.Equal(5, Count(source, "kind <> 2"));
         AssertMethodContains(source,
             "GetUnfilledPlacesInDepthWindowAsync",
             "AND kind <> 2");
@@ -26,6 +26,37 @@ public sealed class InfrastructureQueryInvariantTests
         AssertMethodContains(source,
             "GetOpenPlacesByMpPrefixAsync",
             "AND kind <> 2");
+        AssertMethodContains(source,
+            "GetProfileFrontierCandidateAsync",
+            "scoped.kind <> 2");
+        AssertMethodContains(source,
+            "GetSystemGapCandidateAsync",
+            "parent.kind <> 2");
+    }
+
+    [Fact]
+    public void Profile_frontier_and_system_gap_queries_preserve_continuation()
+    {
+        var source = ReadPlaceQueries();
+
+        AssertMethodContains(source,
+            "GetProfileFrontierCandidateAsync",
+            "frontier.value < @profiledFrontierLimit");
+        AssertMethodContains(source,
+            "GetProfileFrontierCandidateAsync",
+            "scoped.profiled_child_count = 0");
+        AssertMethodContains(source,
+            "GetProfileFrontierCandidateAsync",
+            "branch_load ASC");
+        AssertMethodContains(source,
+            "GetProfileFrontierCandidateAsync",
+            "FROM scoped descendant");
+        AssertMethodContains(source,
+            "GetSystemGapCandidateAsync",
+            "parent.filling + 1 >= @width");
+        AssertMethodContains(source,
+            "GetSystemGapCandidateAsync",
+            "ORDER BY parent.deep ASC, parent.mp ASC");
     }
 
     [Fact]

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using ReferalProgram.Application.Services.PositionStrategies;
 
 namespace ReferalProgram.Application.Services;
 
@@ -122,6 +123,15 @@ public sealed class PositionAlgorithmConfigurationParser
             {
                 throw new InvalidOperationException(
                     $"{configurationName} group {group.Id} must define a cut_factor of at least 2 for trimmed_classic.");
+            }
+
+            if (group.Algorithm.Equals(
+                    ProfileFrontierPositionAlgorithmStrategy.AlgorithmName,
+                    StringComparison.OrdinalIgnoreCase)
+                && group.ProfiledFrontierLimit is null or 0)
+            {
+                throw new InvalidOperationException(
+                    $"{configurationName} group {group.Id} must define a positive profiled_frontier_limit for {ProfileFrontierPositionAlgorithmStrategy.AlgorithmName}.");
             }
         }
     }

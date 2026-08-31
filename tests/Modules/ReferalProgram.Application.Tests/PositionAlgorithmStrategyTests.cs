@@ -140,11 +140,69 @@ public sealed class PositionAlgorithmStrategyTests
         Assert.Contains("depth", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task Profile_frontier_passes_limit_and_builds_next_position()
+    {
+        var candidates = new CandidateQueries
+        {
+            ProfileFrontierCandidate = Place(
+                "ROOT00000001",
+                "profile",
+                7,
+                filling: 1)
+        };
+        var strategy = new ProfileFrontierPositionAlgorithmStrategy(candidates);
+
+        var result = await strategy.FindNextAsync(
+            Context(profiledFrontierLimit: 35),
+            CancellationToken.None);
+
+        Assert.Equal((uint)35, candidates.LastProfiledFrontierLimit);
+        Assert.Equal("profile", result?.ProfileAddr);
+        Assert.Equal((uint)2, result?.Pos);
+        Assert.Equal("ROOT0000000100000002", result?.Mp);
+    }
+
+    [Fact]
+    public async Task Profile_frontier_requires_a_positive_limit()
+    {
+        var strategy = new ProfileFrontierPositionAlgorithmStrategy(
+            new CandidateQueries());
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            strategy.FindNextAsync(Context(), CancellationToken.None));
+
+        Assert.Contains("limit", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task System_gap_builds_the_selected_top_left_position()
+    {
+        var candidates = new CandidateQueries
+        {
+            SystemGapCandidate = Place(
+                "ROOT00000001",
+                "profile",
+                3,
+                filling: 0)
+        };
+        var strategy = new SystemGapPositionAlgorithmStrategy(candidates);
+
+        var result = await strategy.FindNextAsync(
+            Context(),
+            CancellationToken.None);
+
+        Assert.Equal("profile", result?.ProfileAddr);
+        Assert.Equal((uint)1, result?.Pos);
+        Assert.Equal("ROOT0000000100000001", result?.Mp);
+    }
+
     private static PositionAlgorithmStrategyContext Context(
         bool profiledFirst = true,
         byte depthSpread = 1,
         string[]? lockMps = null,
-        uint? cutFactor = null) => new(
+        uint? cutFactor = null,
+        uint? profiledFrontierLimit = null) => new(
             "marketing",
             4,
             3,
@@ -153,7 +211,8 @@ public sealed class PositionAlgorithmStrategyTests
             profiledFirst,
             depthSpread,
             lockMps ?? [],
-            cutFactor);
+            cutFactor,
+            profiledFrontierLimit);
 
     private static PlaceResponse Place(
         string mp,
@@ -174,7 +233,25 @@ public sealed class PositionAlgorithmStrategyTests
     {
         public IReadOnlyList<PlaceResponse> DepthWindow { get; init; } = [];
         public IReadOnlyList<PlaceResponse> OpenPlaces { get; init; } = [];
+        public PlaceResponse? ProfileFrontierCandidate { get; init; }
+        public PlaceResponse? SystemGapCandidate { get; init; }
         public byte LastDepthSpread { get; private set; }
+        public uint LastProfiledFrontierLimit { get; private set; }
+
+        public Task<PlaceResponse?> GetProfileFrontierCandidateAsync(
+            string marketingAddr, byte structureNumber, string rootMp, byte width,
+            uint profiledFrontierLimit, IReadOnlyCollection<string> lockMps,
+            CancellationToken cancellationToken)
+        {
+            LastProfiledFrontierLimit = profiledFrontierLimit;
+            return Task.FromResult(ProfileFrontierCandidate);
+        }
+
+        public Task<PlaceResponse?> GetSystemGapCandidateAsync(
+            string marketingAddr, byte structureNumber, string rootMp, byte width,
+            IReadOnlyCollection<string> lockMps,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(SystemGapCandidate);
 
         public Task<IReadOnlyList<PlaceResponse>> GetUnfilledPlacesInDepthWindowAsync(
             string marketingAddr, byte structureNumber, string rootMp, byte width,

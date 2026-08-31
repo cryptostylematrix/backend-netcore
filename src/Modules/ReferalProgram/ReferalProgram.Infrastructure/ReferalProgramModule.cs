@@ -98,6 +98,10 @@ public static class ReferalProgramModule
             services.AddScoped<IPositionAlgorithmStrategy, ClassicPositionAlgorithmStrategy>();
             services.AddScoped<IPositionAlgorithmStrategy,
                 TrimmedClassicPositionAlgorithmStrategy>();
+            services.AddScoped<IPositionAlgorithmStrategy,
+                ProfileFrontierPositionAlgorithmStrategy>();
+            services.AddScoped<IPositionAlgorithmStrategy,
+                SystemGapPositionAlgorithmStrategy>();
             services.AddScoped<INextPosService, NextPosService>();
             services.AddScoped<IReferalProgramQueries, ReferalProgramQueries>();
             services.AddScoped<ScheduledTasks.Application.ITaskCommandRequestFactory,
