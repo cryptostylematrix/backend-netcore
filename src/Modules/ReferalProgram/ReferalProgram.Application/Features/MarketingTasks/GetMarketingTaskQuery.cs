@@ -9,7 +9,10 @@ public sealed record GetMarketingTaskQuery(
 
 public sealed record MarketingTaskReceipt(
     long TaskQueryId,
-    CommandResponse CommandResponse);
+    CommandResponse CommandResponse,
+    DateTimeOffset? ResponseAttemptedAt,
+    DateTimeOffset? ErrorAt,
+    string? ErrorReason);
 
 internal sealed class GetMarketingTaskQueryHandler(
     IMarketingTaskRepository repository)
@@ -33,7 +36,10 @@ internal sealed class GetMarketingTaskQueryHandler(
 
         return Result.Success<MarketingTaskReceipt?>(new MarketingTaskReceipt(
             task.TaskQueryId,
-            response));
+            response,
+            task.ResponseAttemptedAt,
+            task.ErrorAt,
+            task.ErrorReason));
     }
 
 }

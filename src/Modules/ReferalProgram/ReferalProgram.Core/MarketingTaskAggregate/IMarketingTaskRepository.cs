@@ -9,5 +9,9 @@ public interface IMarketingTaskRepository : IRepository<MarketingTask>
         int taskKey,
         CancellationToken cancellationToken);
 
+    Task<MarketingTask?> GetFailedAsync(
+        string marketingAddr,
+        CancellationToken cancellationToken);
+
     void Add(MarketingTask task);
 }

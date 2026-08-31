@@ -3,7 +3,9 @@ using ReferalProgram.Application.Abstractions;
 using ReferalProgram.Application.Features.MarketingTasks;
 using ReferalProgram.Core.MarketingTaskAggregate;
 using ReferalProgram.Core.PlaceAggregate;
+using ReferalProgram.Core.ProgramAggregate;
 using ReferalProgram.Dto;
+using ReferalProgramAggregate = ReferalProgram.Core.ProgramAggregate.ReferalProgram;
 
 namespace ReferalProgram.Application.Tests;
 
@@ -114,6 +116,65 @@ public sealed class MarketingTaskTests
         Assert.Equal<uint>(11, taskRepository.Added!.ResponseCode);
     }
 
+    [Fact]
+    public async Task Response_attempt_handler_records_attempt_and_saves()
+    {
+        var task = CreateTask();
+        var unitOfWork = new UnitOfWork();
+        var handler = new RecordMarketingTaskResponseAttemptCommandHandler(
+            new Repository { Existing = task },
+            unitOfWork);
+
+        var result = await handler.Handle(
+            new RecordMarketingTaskResponseAttemptCommand("marketing", 12),
+            default);
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(task.ResponseAttemptedAt);
+        Assert.Equal(1, unitOfWork.SaveCount);
+    }
+
+    [Fact]
+    public async Task Delivery_failure_handler_marks_task_and_disables_program_atomically()
+    {
+        var task = CreateTask();
+        task.RecordResponseAttempt(DateTimeOffset.UtcNow);
+        var program = ReferalProgramAggregate.Create("marketing");
+        var unitOfWork = new UnitOfWork();
+        var handler = new FailMarketingTaskDeliveryCommandHandler(
+            new Repository { Existing = task },
+            new ProgramRepository(program),
+            unitOfWork);
+
+        var result = await handler.Handle(
+            new FailMarketingTaskDeliveryCommand(
+                "marketing",
+                12,
+                "contract_rejected_response"),
+            default);
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(task.ErrorAt);
+        Assert.Equal("contract_rejected_response", task.ErrorReason);
+        Assert.False(program.IsTaskProcessingEnabled);
+        Assert.Equal(1, unitOfWork.SaveCount);
+    }
+
+    [Fact]
+    public void Manual_reset_keeps_receipt_but_clears_delivery_state()
+    {
+        var task = CreateTask();
+        task.RecordResponseAttempt(DateTimeOffset.UtcNow);
+        task.MarkDeliveryError("contract_rejected_response", DateTimeOffset.UtcNow);
+
+        task.ResetDeliveryFailure();
+
+        Assert.Equal(12, task.TaskKey);
+        Assert.Null(task.ResponseAttemptedAt);
+        Assert.Null(task.ErrorAt);
+        Assert.Null(task.ErrorReason);
+    }
+
     private sealed class Repository : IMarketingTaskRepository
     {
         public MarketingTask? Existing { get; init; }
@@ -128,6 +189,11 @@ public sealed class MarketingTaskTests
             LastLookup = (marketingAddr, taskKey);
             return Task.FromResult(Existing);
         }
+
+        public Task<MarketingTask?> GetFailedAsync(
+            string marketingAddr,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(Existing?.ErrorAt is not null ? Existing : null);
 
         public void Add(MarketingTask task) => Added = task;
     }
@@ -154,5 +220,40 @@ public sealed class MarketingTaskTests
         activatedAt: 1,
         personalVolume: 0,
         groupVolume: 0);
+
+    private static MarketingTask CreateTask() => MarketingTask.RecordProcessedCommand(
+        "marketing",
+        12,
+        34,
+        "wallet",
+        CreatePlace("buyer", 2),
+        CreatePlace("source", 1),
+        responseCode: 7,
+        DateTimeOffset.UtcNow);
+
+    private sealed class ProgramRepository(ReferalProgramAggregate program)
+        : IReferalProgramRepository
+    {
+        public Task<ReferalProgramAggregate?> GetAsync(
+            string marketingAddr,
+            CancellationToken cancellationToken) =>
+            Task.FromResult<ReferalProgramAggregate?>(program);
+    }
+
+    private sealed class UnitOfWork : IProgramUnitOfWork
+    {
+        public int SaveCount { get; private set; }
+
+        public Task<int> SaveChangesAsync(
+            CancellationToken cancellationToken = default)
+        {
+            SaveCount++;
+            return Task.FromResult(1);
+        }
+
+        public void Dispose()
+        {
+        }
+    }
 
 }

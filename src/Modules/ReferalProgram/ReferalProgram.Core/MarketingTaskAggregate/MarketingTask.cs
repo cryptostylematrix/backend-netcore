@@ -39,6 +39,9 @@ public sealed class MarketingTask : Entity, IAggregateRoot
     public Place ResponseSourcePlace { get; private set; } = null!;
     public uint ResponseCode { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
+    public DateTimeOffset? ResponseAttemptedAt { get; private set; }
+    public DateTimeOffset? ErrorAt { get; private set; }
+    public string? ErrorReason { get; private set; }
 
     public static MarketingTask RecordProcessedCommand(
         string marketingAddr,
@@ -79,5 +82,31 @@ public sealed class MarketingTask : Entity, IAggregateRoot
             responseSourcePlace,
             responseCode,
             createdAt);
+    }
+
+    public void RecordResponseAttempt(DateTimeOffset attemptedAt)
+    {
+        if (ErrorAt is not null)
+            throw new InvalidOperationException("A failed task must be manually reset before retrying its response.");
+
+        ResponseAttemptedAt ??= attemptedAt;
+    }
+
+    public void MarkDeliveryError(string reason, DateTimeOffset errorAt)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+
+        if (ResponseAttemptedAt is null)
+            throw new InvalidOperationException("A response attempt must be recorded before marking a delivery error.");
+
+        ErrorAt ??= errorAt;
+        ErrorReason ??= reason;
+    }
+
+    public void ResetDeliveryFailure()
+    {
+        ResponseAttemptedAt = null;
+        ErrorAt = null;
+        ErrorReason = null;
     }
 }

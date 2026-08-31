@@ -9,6 +9,25 @@ namespace ScheduledTasks.Application.Tests;
 
 public sealed class MassTransitIntegrationRequestDispatcherTests
 {
+    [Fact]
+    public async Task Message_broker_services_pass_scope_validation()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddMessageBroker();
+
+        await using var provider = services.BuildServiceProvider(
+            new ServiceProviderOptions
+            {
+                ValidateOnBuild = true,
+                ValidateScopes = true
+            });
+        await using var scope = provider.CreateAsyncScope();
+
+        Assert.IsType<EventBus>(
+            scope.ServiceProvider.GetRequiredService<IIntegrationEventPublisher>());
+    }
+
     [Theory]
     [InlineData(false, true)]
     [InlineData(true, false)]

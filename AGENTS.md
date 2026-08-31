@@ -226,8 +226,10 @@ runs according to `TaskProcessor__IntervalSeconds`.
 
 For each configured referral program it gets the first contract task and
 processes at most that program's current task. A processed command is identified
-by `(marketing_addr, task_key)`. If the same command is observed again, resend
-its stored response without executing the command again.
+by `(marketing_addr, task_key)`. If its receipt has no recorded response attempt,
+resend the stored response without executing the command again. If the contract
+returns the same task after an attempt was recorded, mark delivery as failed and
+disable all task processing for that marketing until manual resolution.
 
 `marketing_tasks` is the authoritative idempotency boundary for every marketing
 command, including commands that do not create a place. A successful command
@@ -239,6 +241,13 @@ has no lifecycle status: its existence means that Programs processing committed.
 Places do not store task keys or task query IDs; task-to-place correlation
 belongs in `marketing_tasks`.
 
+Delivery metadata is separate from the immutable response snapshot.
+`response_attempted_at` is written only after the processor wallet accepts the
+send. Seeing the same contract task after that point atomically sets `error_at`
+and `error_reason` and disables the referral program. Manually enabling the
+program clears the latest failed receipt's delivery metadata so only its stored
+response is retried; the Programs command must never run again.
+
 Command handlers resolve their response, raise a
 `MarketingCommandProcessedDomainEvent` on the affected place, and perform one
 unit-of-work save. Its synchronous handler adds the receipt without recursively
@@ -248,9 +257,10 @@ partial command result or receipt. Query and cancelled tasks do not create
 receipts because they do not commit Programs mutations.
 
 `MarketingTransactionSender` serializes wallet sends, retries configured TON
-failures, waits for the processor wallet seqno to advance, and suppresses an
-immediate duplicate `(marketing_addr, task_key)` send within the process. Only
-the stored receipt makes a later send retry safe if the process crashes.
+failures, and waits for the processor wallet seqno to advance. Durable receipt
+delivery metadata controls command-response retries; do not add in-memory task
+suppression that would prevent a manual retry. The stored receipt makes a later
+send retry safe if the process crashes.
 
 Keep task decoding and parameter validation in task processing. Put business
 authorization and state changes in application command handlers/policies.

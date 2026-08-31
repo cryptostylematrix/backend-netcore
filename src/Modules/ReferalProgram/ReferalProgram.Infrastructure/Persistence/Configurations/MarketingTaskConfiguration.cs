@@ -40,6 +40,12 @@ internal sealed class MarketingTaskConfiguration
             .IsRequired();
         builder.Property(task => task.CreatedAt)
             .HasColumnName("created_at");
+        builder.Property(task => task.ResponseAttemptedAt)
+            .HasColumnName("response_attempted_at");
+        builder.Property(task => task.ErrorAt)
+            .HasColumnName("error_at");
+        builder.Property(task => task.ErrorReason)
+            .HasColumnName("error_reason");
         builder.Ignore(task => task.DomainEvents);
     }
 }

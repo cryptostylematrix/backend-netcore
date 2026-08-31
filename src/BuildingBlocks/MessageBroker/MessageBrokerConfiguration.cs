@@ -11,7 +11,7 @@ public static class MessageBrokerConfiguration
         this IServiceCollection services,
         params Action<IRegistrationConfigurator>[] configureConsumers)
     {
-        services.TryAddSingleton<IIntegrationEventPublisher, EventBus>();
+        services.TryAddScoped<IIntegrationEventPublisher, EventBus>();
 
         services.AddMassTransit(configure =>
         {

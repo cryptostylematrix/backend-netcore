@@ -111,6 +111,39 @@ public sealed class TaskProcessor(
 
                 if (receiptResult.Value is { } receipt)
                 {
+                    if (receipt.ErrorAt is not null)
+                    {
+                        logger.LogCritical(
+                            "[API TaskProcessor] Marketing {MarketingAddr} task {TaskKey} has a delivery error and requires manual resolution: {ErrorReason}",
+                            program.MarketingAddr,
+                            taskKey,
+                            receipt.ErrorReason);
+                        continue;
+                    }
+
+                    if (receipt.ResponseAttemptedAt is not null)
+                    {
+                        const string reason =
+                            "marketing_contract_returned_task_after_response_attempt";
+                        var failureResult = await sender.Send(
+                            new FailMarketingTaskDeliveryCommand(
+                                program.MarketingAddr,
+                                taskKey,
+                                reason),
+                            cancellationToken);
+                        if (!failureResult.IsSuccess)
+                        {
+                            throw new InvalidOperationException(
+                                $"Could not stop program after task delivery failure: {string.Join(", ", failureResult.Errors)}");
+                        }
+
+                        logger.LogCritical(
+                            "[API TaskProcessor] Marketing {MarketingAddr} returned task {TaskKey} after its response was attempted; task marked as error and program processing disabled",
+                            program.MarketingAddr,
+                            taskKey);
+                        continue;
+                    }
+
                     logger.LogWarning(
                         "[API TaskProcessor] Resending stored response for marketing {MarketingAddr} task {TaskKey}",
                         program.MarketingAddr,
@@ -123,6 +156,11 @@ public sealed class TaskProcessor(
                         receipt.CommandResponse,
                         sender,
                         transactionSender,
+                        cancellationToken);
+                    await RecordResponseAttemptAsync(
+                        program.MarketingAddr,
+                        taskKey,
+                        sender,
                         cancellationToken);
                     continue;
                 }
@@ -141,6 +179,26 @@ public sealed class TaskProcessor(
 
                 if (processed)
                 {
+                    var processedReceiptResult = await sender.Send(
+                        new GetMarketingTaskQuery(
+                            program.MarketingAddr,
+                            taskKey),
+                        cancellationToken);
+                    if (!processedReceiptResult.IsSuccess)
+                    {
+                        throw new InvalidOperationException(
+                            $"Could not load processed task receipt: {string.Join(", ", processedReceiptResult.Errors)}");
+                    }
+
+                    if (processedReceiptResult.Value is not null)
+                    {
+                        await RecordResponseAttemptAsync(
+                            program.MarketingAddr,
+                            taskKey,
+                            sender,
+                            cancellationToken);
+                    }
+
                     LogAction("Marketing task processing completed");
                 }
             }
@@ -157,6 +215,24 @@ public sealed class TaskProcessor(
                     "[API TaskProcessor] No pending task for marketing {MarketingAddr}",
                     program.MarketingAddr);
             }
+        }
+    }
+
+    private static async Task RecordResponseAttemptAsync(
+        string marketingAddr,
+        int taskKey,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        var result = await sender.Send(
+            new RecordMarketingTaskResponseAttemptCommand(
+                marketingAddr,
+                taskKey),
+            cancellationToken);
+        if (!result.IsSuccess)
+        {
+            throw new InvalidOperationException(
+                $"Could not record task response attempt: {string.Join(", ", result.Errors)}");
         }
     }
 

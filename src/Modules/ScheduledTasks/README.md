@@ -127,12 +127,15 @@ separate from the `postgres` migration user and does not own database objects.
 Reconnect Query Tool to the newly created Tasks database and run the remaining
 scripts manually in order:
 
-1. As `postgres`, run `ScheduledTasks/Database/Scripts/001_create_tasks.sql`. It
-   creates the table, removes public database access, and explicitly grants the
-   existing `cs_tasks_user` and/or `dev_cs_tasks_user` roles `CONNECT`, schema
-   `USAGE`, and table `SELECT`/`UPDATE`. Tasks continue to be inserted manually
-   by an administrative user.
-2. `ReferalProgram/Database/Scripts/021_create_processed_program_commands.sql`
+1. As `postgres`, run `ScheduledTasks/Database/Scripts/001_create_tasks.sql` to
+   create the table. Tasks continue to be inserted manually by an administrative
+   user.
+2. Open `ScheduledTasks/Database/Scripts/003_grant_tasks_permissions.sql`, set
+   its empty `v_database_name` and `v_backend_role` variables, and run it as
+   `postgres` while connected to that Tasks database. It removes public access,
+   resets direct privileges for the selected backend role, and then grants only
+   database `CONNECT`, schema `USAGE`, and table `SELECT`/`UPDATE`.
+3. `ReferalProgram/Database/Scripts/021_create_processed_program_commands.sql`
    in the Programs database.
-3. `ReferalProgram/Database/Scripts/022_add_task_processing_enabled_to_referal_program.sql`
+4. `ReferalProgram/Database/Scripts/022_add_task_processing_enabled_to_referal_program.sql`
    in the Programs database.

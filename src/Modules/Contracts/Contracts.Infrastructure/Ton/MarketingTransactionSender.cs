@@ -16,7 +16,6 @@ public sealed class MarketingTransactionSender : IMarketingTransactionSender
     private readonly KeyPair _keys;
     private readonly WalletV4 _wallet;
     private readonly SemaphoreSlim _sendLock = new(1, 1);
-    private (string MarketingAddr, uint TaskKey)? _lastSentTask;
 
     public MarketingTransactionSender(
         ITonClient tonClient,
@@ -45,9 +44,6 @@ public sealed class MarketingTransactionSender : IMarketingTransactionSender
         await _sendLock.WaitAsync(cancellationToken);
         try
         {
-            if (_lastSentTask == (marketingAddr, taskKey))
-                return;
-
             var isDeployed = await RetryAsync(
                 () => _tonClient.IsContractDeployed(_wallet.Address),
                 cancellationToken);
@@ -79,7 +75,6 @@ public sealed class MarketingTransactionSender : IMarketingTransactionSender
                     ?? throw new InvalidOperationException("TON API did not accept the wallet message."),
                 cancellationToken);
             await WaitForSeqnoAsync(seqno, cancellationToken);
-            _lastSentTask = (marketingAddr, taskKey);
         }
         finally
         {

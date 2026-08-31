@@ -20,4 +20,13 @@ internal sealed class MarketingTaskRepository(DataContext dataContext)
                 cancellationToken);
 
     public void Add(MarketingTask task) => dataContext.MarketingTasks.Add(task);
+
+    public Task<MarketingTask?> GetFailedAsync(
+        string marketingAddr,
+        CancellationToken cancellationToken) =>
+        dataContext.MarketingTasks
+            .Where(task => task.MarketingAddr == marketingAddr
+                && task.ErrorAt != null)
+            .OrderByDescending(task => task.ErrorAt)
+            .FirstOrDefaultAsync(cancellationToken);
 }
