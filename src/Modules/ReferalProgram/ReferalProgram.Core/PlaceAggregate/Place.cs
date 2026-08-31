@@ -326,6 +326,12 @@ public sealed class Place : Entity, IAggregateRoot
         ApplyActivity(activatedAt, setActiveOnActivation: true);
     }
 
+    public void ResetActivity()
+    {
+        IsActive = ActivatedAt is not null;
+        ActivatedAt = null;
+    }
+
     private void ApplyActivity(long activatedAt, bool setActiveOnActivation)
     {
         ActivatedAt ??= activatedAt;

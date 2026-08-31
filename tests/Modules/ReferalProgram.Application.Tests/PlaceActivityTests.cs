@@ -40,4 +40,43 @@ public sealed class PlaceActivityTests
             && activated.ProfileAddr == "profile"
             && activated.PlaceNumber == 1);
     }
+
+    [Theory]
+    [InlineData(true, null, false)]
+    [InlineData(false, null, false)]
+    [InlineData(true, 10, true)]
+    [InlineData(false, 10, true)]
+    public void Reset_activity_sets_status_from_activation_date_before_clearing_it(
+        bool isActive,
+        int? activatedAt,
+        bool expectedIsActive)
+    {
+        var place = Place.Create(
+            parentId: 1,
+            marketingAddr: "marketing",
+            structureNumber: 1,
+            profileAddr: "profile",
+            profileLogin: "profile",
+            index: "profile1",
+            placeNumber: 1,
+            parentProfileAddr: "parent",
+            parentProfileLogin: "parent",
+            parentPlaceNumber: 1,
+            mp: "0000000000000001",
+            posGroup: 0,
+            kind: PlaceKinds.Purchased,
+            pos: 1,
+            filling: 0,
+            deep: 2,
+            isActive,
+            createdAt: 1,
+            activatedAt,
+            personalVolume: 0,
+            groupVolume: 0);
+
+        place.ResetActivity();
+
+        Assert.Equal(expectedIsActive, place.IsActive);
+        Assert.Null(place.ActivatedAt);
+    }
 }
