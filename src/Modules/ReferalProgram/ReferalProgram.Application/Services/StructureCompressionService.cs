@@ -64,6 +64,7 @@ public sealed class StructureCompressionService(
         var ordered = retained
             .Where(place => place.Id != root.Id)
             .OrderByDescending(place => RankThreshold(place, ranks))
+            .ThenByDescending(place => place.PersonalVolume)
             .ThenBy(place => place.ActivatedAt ?? long.MaxValue)
             .ThenBy(place => place.Id);
 

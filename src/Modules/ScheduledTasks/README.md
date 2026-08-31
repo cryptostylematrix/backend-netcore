@@ -117,7 +117,7 @@ Calendar-month schedules use:
 See `Database/Scripts/002_example_tasks.sql` for manual insertion examples.
 Use `Database/Scripts/004_add_cryptocash_program_tasks.sql` to create the five
 recurring maintenance tasks for a CryptoCash Program after setting its marketing
-address and the first UTC execution month for each structure.
+address and the initial UTC execution timestamp for each structure.
 
 ## Database setup
 

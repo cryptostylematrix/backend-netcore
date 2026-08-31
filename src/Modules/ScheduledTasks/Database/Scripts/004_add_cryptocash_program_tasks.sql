@@ -2,18 +2,19 @@
 -- Run as the postgres user in Query Tool while connected to the Tasks database.
 --
 -- Set the marketing address and all four execution variables before execution.
--- Each execution must be the first day of a month at 00:00:00 UTC and anchors
--- that structure's schedule. The structure-1 execution for the 15th is derived
--- automatically from the structure-1 variable.
+-- Each value is that structure's initial execution and may be any UTC timestamp.
+-- Later executions follow the configured calendar schedule. The first
+-- structure-1 execution for the 15th is the first 15th strictly after the
+-- structure-1 initial execution and is derived automatically.
 -- Each execution inserts a new set of tasks; do not rerun it for the same
 -- marketing address unless another set is intentional.
 --
 -- Example:
 --     v_marketing_address text := 'EQ_REPLACE_WITH_MARKETING_ADDRESS';
 --     v_structure_1_first_execution_at_utc timestamp with time zone :=
---         '2026-09-01 00:00:00+00';
+--         '2026-08-31 00:00:00+00';
 --     v_structure_2_first_execution_at_utc timestamp with time zone :=
---         '2026-10-01 00:00:00+00';
+--         '2026-08-31 00:00:00+00';
 --     v_structure_3_first_execution_at_utc timestamp with time zone :=
 --         '2026-12-01 00:00:00+00';
 --     v_structure_4_first_execution_at_utc timestamp with time zone :=
@@ -28,7 +29,8 @@ DECLARE
     v_structure_4_first_execution_at_utc timestamp with time zone := NULL;
     v_structure_number integer;
     v_structure_first_execution_at_utc timestamp with time zone;
-    v_structure_first_execution_utc_without_zone timestamp;
+    v_structure_1_first_execution_utc_without_zone timestamp;
+    v_structure_1_first_fifteenth_at_utc timestamp with time zone;
 BEGIN
     IF btrim(v_marketing_address) = '' THEN
         RAISE EXCEPTION
@@ -51,18 +53,27 @@ BEGIN
                 'Set the first execution date for structure % before running this script.',
                 v_structure_number;
         END IF;
-
-        v_structure_first_execution_utc_without_zone :=
-            v_structure_first_execution_at_utc AT TIME ZONE 'UTC';
-
-        IF extract(day FROM v_structure_first_execution_utc_without_zone) <> 1
-           OR v_structure_first_execution_utc_without_zone::time <> time '00:00:00' THEN
-            RAISE EXCEPTION
-                'The first execution for structure % must be the first day of a month at 00:00:00 UTC. Received: %',
-                v_structure_number,
-                v_structure_first_execution_at_utc;
-        END IF;
     END LOOP;
+
+    v_structure_1_first_execution_utc_without_zone :=
+        v_structure_1_first_execution_at_utc AT TIME ZONE 'UTC';
+
+    v_structure_1_first_fifteenth_at_utc :=
+        CASE
+            WHEN v_structure_1_first_execution_utc_without_zone
+                 < date_trunc(
+                     'month',
+                     v_structure_1_first_execution_utc_without_zone)
+                     + interval '14 days'
+            THEN date_trunc(
+                    'month',
+                    v_structure_1_first_execution_utc_without_zone)
+                    + interval '14 days'
+            ELSE date_trunc(
+                    'month',
+                    v_structure_1_first_execution_utc_without_zone)
+                    + interval '1 month 14 days'
+        END AT TIME ZONE 'UTC';
 
     INSERT INTO public.tasks
     (
@@ -123,10 +134,7 @@ BEGIN
     (
         VALUES
             (1, 1, 1, v_structure_1_first_execution_at_utc),
-            (1, 15, 1,
-                ((v_structure_1_first_execution_at_utc AT TIME ZONE 'UTC')
-                    + interval '14 days')
-                    AT TIME ZONE 'UTC'),
+            (1, 15, 1, v_structure_1_first_fifteenth_at_utc),
             (2, 1, 1, v_structure_2_first_execution_at_utc),
             (3, 1, 3, v_structure_3_first_execution_at_utc),
             (4, 1, 6, v_structure_4_first_execution_at_utc)

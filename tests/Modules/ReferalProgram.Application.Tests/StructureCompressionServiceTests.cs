@@ -11,16 +11,18 @@ namespace ReferalProgram.Application.Tests;
 public sealed class StructureCompressionServiceTests
 {
     [Fact]
-    public async Task Removes_ineligible_places_and_reposts_by_rank_then_activation_date()
+    public async Task Removes_ineligible_places_and_reposts_by_rank_volume_then_activation_date()
     {
         var root = Place(1, "root", active: true, activatedAt: 1, personalVolume: 0);
         SetParentId(root, null);
-        var highLater = Place(2, "high-later", active: true, activatedAt: 30, personalVolume: 10);
-        var highEarlier = Place(3, "high-earlier", active: true, activatedAt: 20, personalVolume: 10);
+        var highVolumeLater = Place(2, "high-volume-later", active: true, activatedAt: 30, personalVolume: 20);
+        var highVolumeEarlier = Place(3, "high-volume-earlier", active: true, activatedAt: 20, personalVolume: 20);
+        var lowerVolumeEarliest = Place(7, "lower-volume-earliest", active: true, activatedAt: 5, personalVolume: 10);
         var lowEarlier = Place(4, "low", active: true, activatedAt: 10, personalVolume: 0);
         var system = Place(5, null, active: true, activatedAt: 5, personalVolume: 100);
         var inactive = Place(6, "inactive", active: false, activatedAt: 2, personalVolume: 100);
-        var repository = new Repository([root, highLater, highEarlier, lowEarlier, system, inactive]);
+        var repository = new Repository(
+            [root, highVolumeLater, highVolumeEarlier, lowerVolumeEarliest, lowEarlier, system, inactive]);
         var unitOfWork = new UnitOfWork();
         var service = new StructureCompressionService(
             repository,
@@ -34,13 +36,15 @@ public sealed class StructureCompressionServiceTests
         var error = await service.CompressAsync("marketing", 1, default);
 
         Assert.Null(error);
-        Assert.Equal("0000000000000001", highEarlier.Mp);
-        Assert.Equal("0000000000000002", highLater.Mp);
-        Assert.Equal(highEarlier.Id, lowEarlier.ParentId);
-        Assert.Equal("000000000000000100000001", lowEarlier.Mp);
+        Assert.Equal("0000000000000001", highVolumeEarlier.Mp);
+        Assert.Equal("0000000000000002", highVolumeLater.Mp);
+        Assert.Equal(highVolumeEarlier.Id, lowerVolumeEarliest.ParentId);
+        Assert.Equal("000000000000000100000001", lowerVolumeEarliest.Mp);
+        Assert.Equal(highVolumeEarlier.Id, lowEarlier.ParentId);
+        Assert.Equal("000000000000000100000002", lowEarlier.Mp);
         Assert.Equal([system.Id, inactive.Id], repository.Removed.Select(place => place.Id));
         Assert.Equal(1, unitOfWork.SaveCount);
-        Assert.Equal(4, root.MatrixFilling);
+        Assert.Equal(5, root.MatrixFilling);
     }
 
     private static Place Place(
