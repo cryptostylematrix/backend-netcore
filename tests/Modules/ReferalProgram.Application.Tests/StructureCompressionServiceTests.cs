@@ -30,7 +30,6 @@ public sealed class StructureCompressionServiceTests
             new StructureQueries(),
             new RankQueries(),
             new PositionAlgorithmConfigurationParser(),
-            new PositionGroupSelector(),
             unitOfWork);
 
         var error = await service.CompressAsync("marketing", 1, default);
@@ -42,9 +41,41 @@ public sealed class StructureCompressionServiceTests
         Assert.Equal("000000000000000100000001", lowerVolumeEarliest.Mp);
         Assert.Equal(highVolumeEarlier.Id, lowEarlier.ParentId);
         Assert.Equal("000000000000000100000002", lowEarlier.Mp);
+        Assert.All(
+            new[] { root, highVolumeLater, highVolumeEarlier, lowerVolumeEarliest, lowEarlier },
+            place => Assert.Equal((byte)0, place.PosGroup));
         Assert.Equal([system.Id, inactive.Id], repository.Removed.Select(place => place.Id));
         Assert.Equal(1, unitOfWork.SaveCount);
         Assert.Equal(5, root.MatrixFilling);
+    }
+
+    [Fact]
+    public async Task Switches_from_classic_to_profile_frontier_for_the_last_partial_level()
+    {
+        var places = Enumerable.Range(1, 10)
+            .Select(id => Place(
+                id,
+                $"profile-{id}",
+                active: true,
+                activatedAt: id,
+                personalVolume: 0))
+            .ToArray();
+        SetParentId(places[0], null);
+        var repository = new Repository(places);
+        var service = new StructureCompressionService(
+            repository,
+            new LockRepository(),
+            new StructureQueries(),
+            new RankQueries(),
+            new PositionAlgorithmConfigurationParser(),
+            new UnitOfWork());
+
+        var error = await service.CompressAsync("marketing", 1, default);
+
+        Assert.Null(error);
+        Assert.Equal(places[3].Id, places[7].ParentId);
+        Assert.Equal(places[4].Id, places[8].ParentId);
+        Assert.Equal(places[5].Id, places[9].ParentId);
     }
 
     private static Place Place(
@@ -89,7 +120,7 @@ public sealed class StructureCompressionServiceTests
     private sealed class StructureQueries : IStructureQueries
     {
         private static readonly JsonElement Algorithm = JsonDocument.Parse("""
-            {"v":1,"root":"owner","groups":[{"id":0,"algo":"classic","weight":1}],"relation":"relative"}
+            {"v":1,"root":"owner","groups":[{"id":7,"algo":"radar","weight":3}],"relation":"absolute"}
             """).RootElement.Clone();
 
         public Task<StructureResponse?> GetStructureAsync(

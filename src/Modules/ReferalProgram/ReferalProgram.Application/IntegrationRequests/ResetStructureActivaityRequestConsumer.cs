@@ -27,7 +27,7 @@ public sealed class ResetStructureActivaityRequestConsumer(
             checked((byte)context.Message.StructureNumber),
             context.CancellationToken);
 
-        foreach (var place in places)
+        foreach (var place in places.Where(place => place.ParentId is not null))
             place.ResetActivity();
 
         await unitOfWork.SaveChangesAsync(context.CancellationToken);

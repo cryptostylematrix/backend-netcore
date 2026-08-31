@@ -15,6 +15,7 @@ public sealed class ResetStructureActivityRequestConsumerTests
     {
         var places = new[]
         {
+            CreateRootPlace(),
             CreatePlace("active-without-date", isActive: true, activatedAt: null),
             CreatePlace("inactive-without-date", isActive: false, activatedAt: null),
             CreatePlace("active-with-date", isActive: true, activatedAt: 10),
@@ -45,8 +46,9 @@ public sealed class ResetStructureActivityRequestConsumerTests
             Assert.Null(response.Message.Errors);
             Assert.Equal("marketing", repository.MarketingAddress);
             Assert.Equal((byte)2, repository.StructureNumber);
-            Assert.Equal([false, false, true, true], places.Select(place => place.IsActive));
-            Assert.All(places, place => Assert.Null(place.ActivatedAt));
+            Assert.Equal([false, false, false, true, true], places.Select(place => place.IsActive));
+            Assert.Equal(10, places[0].ActivatedAt);
+            Assert.All(places.Skip(1), place => Assert.Null(place.ActivatedAt));
             Assert.Equal(1, unitOfWork.SaveCount);
         }
         finally
@@ -116,6 +118,20 @@ public sealed class ResetStructureActivityRequestConsumerTests
             activatedAt,
             personalVolume: 0,
             groupVolume: 0);
+
+    private static Place CreateRootPlace()
+    {
+        var root = CreatePlace("root", isActive: false, activatedAt: 10);
+        root.RebuildPosition(
+            parent: null,
+            mp: "00000000",
+            posGroup: 0,
+            pos: 0,
+            filling: 4,
+            deep: 1,
+            matrixFilling: 5);
+        return root;
+    }
 
     private sealed class StubPlaceRepository(IReadOnlyList<Place> places)
         : PlaceRepositoryStub

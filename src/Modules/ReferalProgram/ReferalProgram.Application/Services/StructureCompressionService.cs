@@ -17,7 +17,6 @@ public sealed class StructureCompressionService(
     IStructureQueries structureQueries,
     IStructureRankQueries rankQueries,
     IPositionAlgorithmConfigurationParser configurationParser,
-    IPositionGroupSelector groupSelector,
     IProgramUnitOfWork unitOfWork) : IStructureCompressionService
 {
     private const string RootMp = "00000000";
@@ -66,17 +65,17 @@ public sealed class StructureCompressionService(
             .OrderByDescending(place => RankThreshold(place, ranks))
             .ThenByDescending(place => place.PersonalVolume)
             .ThenBy(place => place.ActivatedAt ?? long.MaxValue)
-            .ThenBy(place => place.Id);
+            .ThenBy(place => place.Id)
+            .ToArray();
+        var remainingPlaces = ordered.Length;
+        uint? frontierLimit = null;
 
         foreach (var place in ordered)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var algorithmRoot = ResolveRoot(
                 configuration.Root, place, rootNode, firstPostedByProfile, inviters);
-            var counts = posted
-                .GroupBy(node => node.PosGroup)
-                .ToDictionary(group => group.Key, group => (long)group.Count());
-            var group = groupSelector.Select(configuration, counts);
+            var group = CompressionGroup(frontierLimit);
             var lockMps = positionLocks
                 .Where(positionLock => positionLock.ProfileAddr == algorithmRoot.Place.ProfileAddr)
                 .Select(positionLock =>
@@ -105,6 +104,13 @@ public sealed class StructureCompressionService(
             posted.Add(node);
             if (place.PlaceNumber == 1)
                 firstPostedByProfile.TryAdd(place.ProfileAddr!, node);
+
+            remainingPlaces--;
+            frontierLimit ??= ResolveFrontierLimit(
+                posted,
+                node.Deep,
+                structure.Width,
+                remainingPlaces);
         }
 
         foreach (var node in posted)
@@ -141,6 +147,38 @@ public sealed class StructureCompressionService(
             .Select(rank => rank.RequiredActiveReferralPlaces)
             .DefaultIfEmpty(0u)
             .Max();
+
+    private static PositionGroupConfiguration CompressionGroup(
+        uint? frontierLimit) => new()
+    {
+        Id = 0,
+        Algorithm = frontierLimit is null ? "classic" : "profile_frontier",
+        Weight = 1,
+        ProfiledFrontierLimit = frontierLimit
+    };
+
+    private static uint? ResolveFrontierLimit(
+        IReadOnlyCollection<Node> posted,
+        uint filledDepth,
+        byte width,
+        int remainingPlaces)
+    {
+        if (remainingPlaces == 0 || width < 2)
+            return null;
+
+        long levelCapacity = 1;
+        for (var depth = 1u; depth < filledDepth; depth++)
+        {
+            levelCapacity = checked(levelCapacity * width);
+            if (levelCapacity > uint.MaxValue)
+                return null;
+        }
+
+        var levelPlaces = posted.LongCount(node => node.Deep == filledDepth);
+        return levelPlaces == levelCapacity && remainingPlaces < levelCapacity
+            ? checked((uint)levelCapacity)
+            : null;
+    }
 
     private static Node ResolveRoot(
         string rootStrategy,
