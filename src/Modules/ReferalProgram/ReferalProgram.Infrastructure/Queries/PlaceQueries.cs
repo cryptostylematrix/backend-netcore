@@ -496,6 +496,7 @@ public sealed class PlaceQueries(
                     marketingAddr,
                     structureNumber = (short)structureNumber,
                     mpPrefix = rootMp + "%",
+                    rootMp,
                     width = (long)width,
                     profiledFrontierLimit = (long)profiledFrontierLimit,
                     lockMps = lockMps.ToArray()

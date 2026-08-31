@@ -52,6 +52,9 @@ public sealed class InfrastructureQueryInvariantTests
             "GetProfileFrontierCandidateAsync",
             "FROM scoped descendant");
         AssertMethodContains(source,
+            "GetProfileFrontierCandidateAsync",
+            "mpPrefix = rootMp + \"%\",\n                    rootMp,");
+        AssertMethodContains(source,
             "GetSystemGapCandidateAsync",
             "parent.filling + 1 >= @width");
         AssertMethodContains(source,
