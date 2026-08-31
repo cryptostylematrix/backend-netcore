@@ -93,6 +93,43 @@ public sealed class ProgramSetupScriptTests
     }
 
     [Fact]
+    public void CryptoCash_clone_remaps_places_and_excludes_contract_work_state()
+    {
+        var sql = ReadNormalized("clone_cryptocash_to_test_program.sql");
+
+        Assert.Contains("v_enable_task_processing boolean := false", sql,
+            StringComparison.Ordinal);
+        Assert.Contains("INSERT INTO public.structures", sql,
+            StringComparison.Ordinal);
+        Assert.Contains("INSERT INTO public.structure_ranks", sql,
+            StringComparison.Ordinal);
+        Assert.Contains("CREATE TEMP TABLE cryptocash_place_id_map", sql,
+            StringComparison.Ordinal);
+        Assert.Contains("parent_map.target_id", sql, StringComparison.Ordinal);
+        Assert.Contains("INSERT INTO public.places", sql,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("INSERT INTO public.locks", sql,
+            StringComparison.Ordinal);
+        Assert.DoesNotContain("INSERT INTO public.marketing_tasks", sql,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void CryptoCash_enable_processing_resets_only_latest_failed_receipt()
+    {
+        var sql = ReadNormalized("enable_test_cryptocash_task_processing.sql");
+
+        Assert.Contains("ORDER BY error_at DESC LIMIT 1 FOR UPDATE", sql,
+            StringComparison.Ordinal);
+        Assert.Contains("response_attempted_at = NULL", sql,
+            StringComparison.Ordinal);
+        Assert.Contains("error_at = NULL", sql, StringComparison.Ordinal);
+        Assert.Contains("error_reason = NULL", sql, StringComparison.Ordinal);
+        Assert.Contains("SET is_task_processing_enabled = true", sql,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Multi_setup_preserves_seven_profile_root_classic_structures()
     {
         var sql = ReadNormalized("setup_test_multi_program.sql");
