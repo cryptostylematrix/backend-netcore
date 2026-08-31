@@ -225,22 +225,32 @@ The Referral Program task processor is registered only outside Development and
 runs according to `TaskProcessor__IntervalSeconds`.
 
 For each configured referral program it gets the first contract task and
-processes at most that program's current task. A processed task is identified
-by `(marketing_addr, task_key)`. If the same task is observed again, log an
-error, skip it, do not cancel it, and continue with the next marketing.
+processes at most that program's current task. A processed command is identified
+by `(marketing_addr, task_key)`. If the same command is observed again, resend
+its stored response without executing the command again.
 
-Place-producing command handlers are idempotent by marketing and task key.
-They resolve the command response before saving a new place, so a business
-error that leads to cancellation does not persist that place. The database
-save and the later TON response are not one distributed transaction: if the
-TON send fails after the save, a retry must reuse the existing task-key place
-and resend its response rather than create another place.
+`marketing_tasks` is the authoritative idempotency boundary for every marketing
+command, including commands that do not create a place. A successful command
+atomically persists its domain changes plus an immutable processed-task receipt.
+The receipt references both the affected place and the response source place
+and stores the exact response code. A retry must resend that stored response
+without re-running the command or recalculating mutable matrix state. A receipt
+has no lifecycle status: its existence means that Programs processing committed.
+Places do not store task keys or task query IDs; task-to-place correlation
+belongs in `marketing_tasks`.
+
+Command handlers resolve their response, raise a
+`MarketingCommandProcessedDomainEvent` on the affected place, and perform one
+unit-of-work save. Its synchronous handler adds the receipt without recursively
+saving, so all domain events, aggregate changes, and the receipt commit
+atomically. A business error that leads to cancellation must not persist a
+partial command result or receipt. Query and cancelled tasks do not create
+receipts because they do not commit Programs mutations.
 
 `MarketingTransactionSender` serializes wallet sends, retries configured TON
 failures, waits for the processor wallet seqno to advance, and suppresses an
 immediate duplicate `(marketing_addr, task_key)` send within the process. Only
-after that send completes does the task processor record the task as processed
-in PostgreSQL.
+the stored receipt makes a later send retry safe if the process crashes.
 
 Keep task decoding and parameter validation in task processing. Put business
 authorization and state changes in application command handlers/policies.

@@ -29,10 +29,7 @@ public sealed class Place : Entity, IAggregateRoot
         long createdAt,
         long? activatedAt,
         uint personalVolume,
-        uint groupVolume,
-        int taskKey,
-        long taskQueryId,
-        string? taskSourceAddr)
+        uint groupVolume)
     {
         ParentId = parentId;
         MarketingAddr = marketingAddr;
@@ -56,9 +53,6 @@ public sealed class Place : Entity, IAggregateRoot
         PersonalVolume = personalVolume;
         GroupVolume = groupVolume;
         MatrixFilling = 1;
-        TaskKey = taskKey;
-        TaskQueryId = taskQueryId;
-        TaskSourceAddr = taskSourceAddr;
     }
 
     public int Id { get; private set; }
@@ -84,9 +78,6 @@ public sealed class Place : Entity, IAggregateRoot
     public uint PersonalVolume { get; private set; }
     public uint GroupVolume { get; private set; }
     public long MatrixFilling { get; private set; } = 1;
-    public int TaskKey { get; private set; }
-    public long TaskQueryId { get; private set; }
-    public string? TaskSourceAddr { get; private set; }
 
     public static Place Create(
         int parentId,
@@ -109,10 +100,7 @@ public sealed class Place : Entity, IAggregateRoot
         long createdAt,
         long? activatedAt,
         uint personalVolume,
-        uint groupVolume,
-        int taskKey,
-        long taskQueryId,
-        string? taskSourceAddr)
+        uint groupVolume)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(marketingAddr);
         ArgumentException.ThrowIfNullOrWhiteSpace(index);
@@ -151,10 +139,7 @@ public sealed class Place : Entity, IAggregateRoot
             createdAt,
             activatedAt,
             personalVolume,
-            groupVolume,
-            taskKey,
-            taskQueryId,
-            taskSourceAddr);
+            groupVolume);
 
         place.AddPlaceCreatedDomainEvent();
 
@@ -177,10 +162,7 @@ public sealed class Place : Entity, IAggregateRoot
         byte kind,
         uint pos,
         uint deep,
-        long boughtAt,
-        int taskKey,
-        long taskQueryId,
-        string? taskSourceAddr)
+        long boughtAt)
     {
         var place = Create(
             parentId,
@@ -203,10 +185,7 @@ public sealed class Place : Entity, IAggregateRoot
             createdAt: boughtAt,
             activatedAt: boughtAt,
             personalVolume: 0,
-            groupVolume: 0,
-            taskKey,
-            taskQueryId,
-            taskSourceAddr);
+            groupVolume: 0);
 
         place.EnsureBoughtEffects();
 
@@ -227,10 +206,7 @@ public sealed class Place : Entity, IAggregateRoot
         byte kind,
         uint pos,
         uint deep,
-        long boughtAt,
-        int taskKey,
-        long taskQueryId,
-        string? taskSourceAddr)
+        long boughtAt)
     {
         return Create(
             parentId,
@@ -253,10 +229,7 @@ public sealed class Place : Entity, IAggregateRoot
             createdAt: boughtAt,
             activatedAt: boughtAt,
             personalVolume: 0,
-            groupVolume: 0,
-            taskKey,
-            taskQueryId,
-            taskSourceAddr);
+            groupVolume: 0);
     }
 
     private void AddPlaceCreatedDomainEvent()
@@ -280,6 +253,25 @@ public sealed class Place : Entity, IAggregateRoot
             ProfileAddr,
             PlaceNumber,
             ActivatedAt ?? CreatedAt));
+    }
+
+    public void RecordProcessedMarketingCommand(
+        int taskKey,
+        long taskQueryId,
+        string? taskSourceAddr,
+        Place responseSourcePlace,
+        uint responseCode,
+        DateTimeOffset processedAt)
+    {
+        AddDomainEvent(new MarketingCommandProcessedDomainEvent(
+            MarketingAddr,
+            taskKey,
+            taskQueryId,
+            taskSourceAddr,
+            this,
+            responseSourcePlace,
+            responseCode,
+            processedAt));
     }
 
     public void RegisterChild(uint expectedFilling)

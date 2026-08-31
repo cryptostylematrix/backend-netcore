@@ -7,7 +7,7 @@ namespace ReferalProgram.Application.Tests;
 public sealed class BuyPlacePolicyPositionTests
 {
     private readonly BuyPlacePolicy policy = new(
-        null!, null!, null!, null!, null!);
+        null!, null!, null!, null!, null!, null!);
 
     [Fact]
     public void Owner_root_allows_only_the_calculated_next_position()

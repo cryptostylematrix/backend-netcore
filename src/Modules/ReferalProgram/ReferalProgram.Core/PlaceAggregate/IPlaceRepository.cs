@@ -13,11 +13,6 @@ public interface IPlaceRepository : IRepository<Place>
         uint placeNumber,
         CancellationToken cancellationToken);
 
-    Task<Place?> GetByTaskKeyAsync(
-        string marketingAddr,
-        int taskKey,
-        CancellationToken cancellationToken);
-
     Task<uint> GetNextPlaceNumberAsync(
         string marketingAddr,
         byte structureNumber,

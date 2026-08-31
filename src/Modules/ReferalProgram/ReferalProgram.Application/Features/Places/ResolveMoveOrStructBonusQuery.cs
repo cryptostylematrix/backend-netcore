@@ -6,8 +6,7 @@ public sealed record ResolveMoveOrStructBonusQuery(
     byte SourceStructureNumber,
     string? SourceProfileAddr,
     uint SourcePlaceNumber,
-    ushort RelativeLevel,
-    int TaskKey) : IQuery<MoveOrStructBonusDecision>;
+    ushort RelativeLevel) : IQuery<MoveOrStructBonusDecision>;
 
 public sealed record MoveOrStructBonusDecision(bool CreateClone);
 
@@ -20,14 +19,6 @@ internal sealed class ResolveMoveOrStructBonusQueryHandler(
         ResolveMoveOrStructBonusQuery request,
         CancellationToken cancellationToken)
     {
-        var existingTaskPlace = await placeQueries.GetPlaceByTaskKeyAsync(
-            request.MarketingAddr,
-            request.TaskKey,
-            cancellationToken);
-
-        if (existingTaskPlace is not null)
-            return Result.Success(new MoveOrStructBonusDecision(CreateClone: true));
-
         var relative = await relativePlaceResolver.ResolveAsync(
             request.MarketingAddr,
             request.SourceStructureNumber,

@@ -18,7 +18,6 @@ internal abstract class PlaceQueriesStub : IPlaceQueries
     public virtual Task<PlaceResponse?> GetFirstActiveUnfilledPlaceAsync(string marketingAddr, byte structureNumber, string rootMp, byte width, bool profiledPlacesPrioritized, byte depthSpread, IReadOnlyCollection<string> lockMps, CancellationToken cancellationToken) => throw new NotSupportedException();
     public virtual Task<IReadOnlyList<PlaceResponse>> GetOpenPlacesByMpPrefixAsync(string marketingAddr, byte structureNumber, string mpPrefix, byte width, int page, int pageSize, CancellationToken cancellationToken) => throw new NotSupportedException();
     public virtual Task<Paginated<PlaceResponse>> SearchPlacesAsync(string marketingAddr, byte structureNumber, string rootMp, string query, int page, int pageSize, CancellationToken cancellationToken) => throw new NotSupportedException();
-    public virtual Task<PlaceResponse?> GetPlaceByTaskKeyAsync(string marketingAddr, int taskKey, CancellationToken cancellationToken) => throw new NotSupportedException();
     public virtual Task<PlaceResponse?> GetPlaceAsync(string marketingAddr, byte structureNumber, string? profileAddr, uint placeNumber, CancellationToken cancellationToken) => throw new NotSupportedException();
     public virtual Task<IReadOnlyList<PlaceResponse>?> GetPathAsync(string marketingAddr, byte structureNumber, string? fromProfileAddr, uint fromPlaceNumber, string? toProfileAddr, uint toPlaceNumber, CancellationToken cancellationToken) => throw new NotSupportedException();
     public virtual Task<IReadOnlyList<PlaceResponse>> GetPlacesByMpPrefixAsync(string marketingAddr, byte structureNumber, string mpPrefix, byte depthLevels, uint fromPos, uint toPos, CancellationToken cancellationToken) => throw new NotSupportedException();
@@ -31,7 +30,6 @@ internal abstract class PlaceRepositoryStub : IPlaceRepository
 {
     public virtual Task<Place?> GetByIdAsync(int id, CancellationToken cancellationToken) => throw new NotSupportedException();
     public virtual Task<Place?> GetAsync(string marketingAddr, byte structureNumber, string? profileAddr, uint placeNumber, CancellationToken cancellationToken) => throw new NotSupportedException();
-    public virtual Task<Place?> GetByTaskKeyAsync(string marketingAddr, int taskKey, CancellationToken cancellationToken) => throw new NotSupportedException();
     public virtual Task<uint> GetNextPlaceNumberAsync(string marketingAddr, byte structureNumber, string? profileAddr, CancellationToken cancellationToken) => throw new NotSupportedException();
     public virtual Task<long> CountAtDepthAsync(string marketingAddr, byte structureNumber, string mpPrefix, uint depth, CancellationToken cancellationToken) => throw new NotSupportedException();
     public virtual Task<long> CountCloneChildrenAsync(int parentId, CancellationToken cancellationToken) => throw new NotSupportedException();

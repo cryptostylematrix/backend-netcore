@@ -85,11 +85,6 @@ public interface IPlaceQueries
         int pageSize,
         CancellationToken cancellationToken);
 
-    Task<PlaceResponse?> GetPlaceByTaskKeyAsync(
-        string marketingAddr,
-        int taskKey,
-        CancellationToken cancellationToken);
-
     Task<PlaceResponse?> GetPlaceAsync(
         string marketingAddr,
         byte structureNumber,

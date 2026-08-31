@@ -2,83 +2,116 @@ using Common.Domain;
 using ReferalProgram.Application.Abstractions;
 using ReferalProgram.Application.Features.MarketingTasks;
 using ReferalProgram.Core.MarketingTaskAggregate;
+using ReferalProgram.Core.PlaceAggregate;
+using ReferalProgram.Dto;
 
 namespace ReferalProgram.Application.Tests;
 
 public sealed class MarketingTaskTests
 {
     [Fact]
-    public void Complete_creates_completed_task_with_composite_identity()
+    public void Place_records_processed_marketing_command_as_domain_event()
     {
-        var completedAt = DateTimeOffset.Parse("2026-08-14T10:00:00Z");
+        var place = CreatePlace("buyer", 2);
+        var source = CreatePlace("source", 1);
+        var processedAt = DateTimeOffset.Parse("2026-08-14T10:00:00Z");
 
-        var task = MarketingTask.Complete("marketing", 12, 34, completedAt);
+        place.RecordProcessedMarketingCommand(
+            taskKey: 12,
+            taskQueryId: 34,
+            taskSourceAddr: "wallet",
+            responseSourcePlace: source,
+            responseCode: 7,
+            processedAt);
+
+        var domainEvent = Assert.Single(
+            place.DomainEvents.OfType<MarketingCommandProcessedDomainEvent>());
+        Assert.Equal("marketing", domainEvent.MarketingAddr);
+        Assert.Equal(12, domainEvent.TaskKey);
+        Assert.Equal(34, domainEvent.TaskQueryId);
+        Assert.Equal("wallet", domainEvent.TaskSourceAddr);
+        Assert.Same(place, domainEvent.Place);
+        Assert.Same(source, domainEvent.ResponseSourcePlace);
+        Assert.Equal<uint>(7, domainEvent.ResponseCode);
+        Assert.Equal(processedAt, domainEvent.ProcessedAt);
+    }
+
+    [Fact]
+    public void Processed_command_keeps_identity_affected_place_source_and_exact_code()
+    {
+        var place = CreatePlace("buyer", 2);
+        var source = CreatePlace("source", 1);
+
+        var task = MarketingTask.RecordProcessedCommand(
+            "marketing",
+            12,
+            34,
+            "wallet",
+            place,
+            source,
+            responseCode: 7,
+            DateTimeOffset.Parse("2026-08-14T10:00:00Z"));
 
         Assert.Equal("marketing", task.MarketingAddr);
         Assert.Equal(12, task.TaskKey);
         Assert.Equal(34, task.TaskQueryId);
-        Assert.Equal(MarketingTaskStatus.Completed, task.Status);
-        Assert.Equal(completedAt, task.CreatedAt);
-        Assert.Equal(completedAt, task.UpdatedAt);
+        Assert.Same(place, task.Place);
+        Assert.Same(source, task.ResponseSourcePlace);
+        Assert.Equal<uint>(7, task.ResponseCode);
     }
 
     [Fact]
-    public void MarkCompleted_updates_diagnostic_query_id_without_changing_identity()
+    public async Task Receipt_query_returns_stored_command_response_without_recalculation()
     {
-        var createdAt = DateTimeOffset.Parse("2026-08-14T10:00:00Z");
-        var updatedAt = createdAt.AddMinutes(1);
-        var task = MarketingTask.Complete("marketing", 12, 34, createdAt);
-
-        task.MarkCompleted(56, updatedAt);
-
-        Assert.Equal("marketing", task.MarketingAddr);
-        Assert.Equal(12, task.TaskKey);
-        Assert.Equal(56, task.TaskQueryId);
-        Assert.Equal(createdAt, task.CreatedAt);
-        Assert.Equal(updatedAt, task.UpdatedAt);
-    }
-
-    [Fact]
-    public async Task Processed_query_uses_repository_identity()
-    {
+        var source = CreatePlace("source", 1);
         var repository = new Repository
         {
-            Existing = MarketingTask.Complete(
+            Existing = MarketingTask.RecordProcessedCommand(
                 "marketing",
                 12,
                 34,
+                "wallet",
+                CreatePlace("buyer", 2),
+                source,
+                responseCode: 9,
                 DateTimeOffset.UtcNow)
         };
-        var handler = new IsMarketingTaskProcessedQueryHandler(repository);
+        var handler = new GetMarketingTaskQueryHandler(repository);
 
         var result = await handler.Handle(
-            new IsMarketingTaskProcessedQuery("marketing", 12),
+            new GetMarketingTaskQuery("marketing", 12),
             default);
 
         Assert.True(result.IsSuccess);
-        Assert.True(result.Value);
-        Assert.Equal(("marketing", 12), repository.LastLookup);
+        Assert.Equal(34, result.Value?.TaskQueryId);
+        Assert.Equal<uint>(9, result.Value!.CommandResponse.Code);
+        Assert.Equal("source", result.Value.CommandResponse.Source.ProfileAddr);
+        Assert.Equal<uint>(1, result.Value.CommandResponse.Source.PlaceNumber);
     }
 
     [Fact]
-    public async Task Mark_command_adds_and_saves_new_completed_task()
+    public async Task Domain_event_handler_adds_processed_receipt_without_saving()
     {
-        var repository = new Repository();
-        var unitOfWork = new UnitOfWork();
-        var handler = new MarkMarketingTaskProcessedCommandHandler(
-            repository,
-            unitOfWork);
+        var place = CreatePlace("buyer", 2);
+        var source = CreatePlace("source", 1);
+        var taskRepository = new Repository();
+        var handler = new MarketingCommandProcessedDomainEventHandler(taskRepository);
 
-        var result = await handler.Handle(
-            new MarkMarketingTaskProcessedCommand("marketing", 12, 34),
+        await handler.Handle(new MarketingCommandProcessedDomainEvent(
+            "marketing",
+            12,
+            34,
+            "wallet",
+            place,
+            source,
+            11,
+            DateTimeOffset.UtcNow),
             default);
 
-        Assert.True(result.IsSuccess);
-        Assert.NotNull(repository.Added);
-        Assert.Equal("marketing", repository.Added.MarketingAddr);
-        Assert.Equal(12, repository.Added.TaskKey);
-        Assert.Equal(34, repository.Added.TaskQueryId);
-        Assert.Equal(1, unitOfWork.SaveCount);
+        Assert.Equal("wallet", taskRepository.Added?.TaskSourceAddr);
+        Assert.Same(place, taskRepository.Added?.Place);
+        Assert.Same(source, taskRepository.Added?.ResponseSourcePlace);
+        Assert.Equal<uint>(11, taskRepository.Added!.ResponseCode);
     }
 
     private sealed class Repository : IMarketingTaskRepository
@@ -99,19 +132,27 @@ public sealed class MarketingTaskTests
         public void Add(MarketingTask task) => Added = task;
     }
 
-    private sealed class UnitOfWork : IProgramUnitOfWork
-    {
-        public int SaveCount { get; private set; }
+    private static Place CreatePlace(string profileAddr, uint placeNumber) => Place.Create(
+        parentId: 1,
+        marketingAddr: "marketing",
+        structureNumber: 2,
+        profileAddr,
+        profileLogin: profileAddr,
+        index: profileAddr + placeNumber,
+        placeNumber,
+        parentProfileAddr: "parent",
+        parentProfileLogin: "parent",
+        parentPlaceNumber: 1,
+        mp: "0000000000000001",
+        posGroup: 0,
+        kind: PlaceKinds.Purchased,
+        pos: 1,
+        filling: 0,
+        deep: 2,
+        isActive: true,
+        createdAt: 1,
+        activatedAt: 1,
+        personalVolume: 0,
+        groupVolume: 0);
 
-        public Task<int> SaveChangesAsync(
-            CancellationToken cancellationToken = default)
-        {
-            SaveCount++;
-            return Task.FromResult(1);
-        }
-
-        public void Dispose()
-        {
-        }
-    }
 }

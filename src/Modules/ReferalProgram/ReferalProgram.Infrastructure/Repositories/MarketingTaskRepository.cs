@@ -11,10 +11,13 @@ internal sealed class MarketingTaskRepository(DataContext dataContext)
         string marketingAddr,
         int taskKey,
         CancellationToken cancellationToken) =>
-        dataContext.MarketingTasks.SingleOrDefaultAsync(
-            task => task.MarketingAddr == marketingAddr
-                && task.TaskKey == taskKey,
-            cancellationToken);
+        dataContext.MarketingTasks
+            .Include(task => task.Place)
+            .Include(task => task.ResponseSourcePlace)
+            .SingleOrDefaultAsync(
+                task => task.MarketingAddr == marketingAddr
+                    && task.TaskKey == taskKey,
+                cancellationToken);
 
     public void Add(MarketingTask task) => dataContext.MarketingTasks.Add(task);
 }

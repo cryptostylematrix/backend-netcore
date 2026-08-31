@@ -2,6 +2,7 @@ using Common.Domain;
 using Contracts.Application.Features.ProfileItem;
 using MediatR;
 using ReferalProgram.Core.LockAggregate;
+using ReferalProgram.Core.PlaceAggregate;
 
 namespace ReferalProgram.Application.Features.Locks;
 
@@ -13,6 +14,8 @@ public sealed record UnlockPositionCommand(
     string? PlaceProfileAddr,
     uint PlaceNumber,
     uint LockedPos,
+    int TaskKey,
+    long QueryId,
     string? SourceAddr) : ICommand<CommandResponse>;
 
 internal sealed class UnlockPositionCommandHandler(
@@ -24,6 +27,7 @@ internal sealed class UnlockPositionCommandHandler(
     IPositionRootResolver positionRootResolver,
     ILockQueries lockQueries,
     IPositionLockPolicy lockPolicy,
+    IPlaceRepository placeRepository,
     IPositionLockRepository positionLockRepository,
     IProgramUnitOfWork unitOfWork)
     : ICommandHandler<UnlockPositionCommand, CommandResponse>
@@ -75,6 +79,10 @@ internal sealed class UnlockPositionCommandHandler(
         if (place is null)
             return Result<CommandResponse>.Error("Place was not found.");
 
+        var placeAggregate = await placeRepository.GetByIdAsync(place.Id, cancellationToken);
+        if (placeAggregate is null)
+            return Result<CommandResponse>.Error("Place was not found.");
+
         var lockMps = await lockQueries.GetAllLockMpsAsync(
             request.MarketingAddr,
             request.StructureNumber,
@@ -98,7 +106,18 @@ internal sealed class UnlockPositionCommandHandler(
                 $"Unlock position is not allowed: {decision.Reason}.");
 
         if (!decision.IsLock)
-            return Result.Success(new CommandResponse(0, place));
+        {
+            var existingResponse = new CommandResponse(0, place);
+            placeAggregate.RecordProcessedMarketingCommand(
+                request.TaskKey,
+                request.QueryId,
+                request.SourceAddr,
+                placeAggregate,
+                existingResponse.Code,
+                DateTimeOffset.UtcNow);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+            return Result.Success(existingResponse);
+        }
 
         if (!decision.CanUnlock)
             return Result<CommandResponse>.Error(
@@ -114,10 +133,29 @@ internal sealed class UnlockPositionCommandHandler(
             cancellationToken);
 
         if (positionLock is null)
-            return Result.Success(new CommandResponse(0, place));
+        {
+            var missingResponse = new CommandResponse(0, place);
+            placeAggregate.RecordProcessedMarketingCommand(
+                request.TaskKey,
+                request.QueryId,
+                request.SourceAddr,
+                placeAggregate,
+                missingResponse.Code,
+                DateTimeOffset.UtcNow);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+            return Result.Success(missingResponse);
+        }
 
         positionLockRepository.Remove(positionLock);
+        var response = new CommandResponse(0, place);
+        placeAggregate.RecordProcessedMarketingCommand(
+            request.TaskKey,
+            request.QueryId,
+            request.SourceAddr,
+            placeAggregate,
+            response.Code,
+            DateTimeOffset.UtcNow);
         await unitOfWork.SaveChangesAsync(cancellationToken);
-        return Result.Success(new CommandResponse(0, place));
+        return Result.Success(response);
     }
 }

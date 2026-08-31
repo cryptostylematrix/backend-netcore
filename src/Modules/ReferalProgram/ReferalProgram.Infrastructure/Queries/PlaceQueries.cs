@@ -639,26 +639,6 @@ public sealed class PlaceQueries(
         };
     }
 
-    public async Task<PlaceResponse?> GetPlaceByTaskKeyAsync(
-        string marketingAddr,
-        int taskKey,
-        CancellationToken cancellationToken)
-    {
-        const string sql = PlaceSelectSql + "\n" + """
-            WHERE marketing_addr = @marketingAddr
-              AND task_key = @taskKey
-            LIMIT 1;
-            """;
-
-        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
-
-        return await connection.QuerySingleOrDefaultAsync<PlaceResponse>(
-            new CommandDefinition(
-                sql,
-                new { marketingAddr, taskKey },
-                cancellationToken: cancellationToken));
-    }
-
     public async Task<PlaceResponse?> GetPlaceAsync(
         string marketingAddr,
         byte structureNumber,

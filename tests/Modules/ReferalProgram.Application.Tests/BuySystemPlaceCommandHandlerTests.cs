@@ -1,6 +1,7 @@
 using Common.Domain;
 using ReferalProgram.Application.Abstractions;
 using ReferalProgram.Application.Features.Places;
+using ReferalProgram.Application.Services;
 using ReferalProgram.Core.PlaceAggregate;
 using ReferalProgram.Dto;
 
@@ -90,6 +91,7 @@ public sealed class BuySystemPlaceCommandHandlerTests
             repository,
             new Structures(),
             nextPosService,
+            new RequestedPositionResolver(new Queries(repository.Parent)),
             new SourceResolver(),
             new UnitOfWork());
 
@@ -145,19 +147,12 @@ public sealed class BuySystemPlaceCommandHandlerTests
         createdAt: 1,
         activatedAt: 1,
         personalVolume: 0,
-        groupVolume: 0,
-        taskKey: 0,
-        taskQueryId: 0,
-        taskSourceAddr: null);
+        groupVolume: 0);
 
     private sealed class Repository(Place parent) : PlaceRepositoryStub
     {
+        public Place Parent => parent;
         public Place? AddedPlace { get; private set; }
-
-        public override Task<Place?> GetByTaskKeyAsync(
-            string marketingAddr,
-            int taskKey,
-            CancellationToken cancellationToken) => Task.FromResult<Place?>(null);
 
         public override Task<Place?> GetAsync(
             string marketingAddr,
@@ -173,6 +168,27 @@ public sealed class BuySystemPlaceCommandHandlerTests
             CancellationToken cancellationToken) => Task.FromResult<uint>(1);
 
         public override void Add(Place place) => AddedPlace = place;
+    }
+
+    private sealed class Queries(Place parent) : PlaceQueriesStub
+    {
+        public override Task<PlaceResponse?> GetPlaceAsync(
+            string marketingAddr,
+            byte structureNumber,
+            string? profileAddr,
+            uint placeNumber,
+            CancellationToken cancellationToken) =>
+            Task.FromResult<PlaceResponse?>(new PlaceResponse
+            {
+                MarketingAddr = parent.MarketingAddr,
+                StructNumber = parent.StructureNumber,
+                ProfileAddr = parent.ProfileAddr,
+                ProfileLogin = parent.ProfileLogin,
+                PlaceNumber = parent.PlaceNumber,
+                Mp = parent.Mp,
+                Filling = parent.Filling,
+                Kind = parent.Kind
+            });
     }
 
     private sealed class Structures : IStructureQueries
@@ -232,24 +248,14 @@ public sealed class BuySystemPlaceCommandHandlerTests
             CancellationToken cancellationToken) =>
             Task.FromResult<SourcePlaceResolution?>(new SourcePlaceResolution(
                 0,
-                new PlaceResponse
-                {
-                    MarketingAddr = place.MarketingAddr,
-                    StructNumber = place.StructureNumber,
-                    ProfileAddr = place.ProfileAddr,
-                    ProfileLogin = place.ProfileLogin,
-                    PlaceNumber = place.PlaceNumber,
-                    Mp = place.Mp
-                }));
+                place));
     }
 
     private sealed class UnitOfWork : IProgramUnitOfWork
     {
-        public Task<int> SaveChangesAsync(
-            CancellationToken cancellationToken = default) => Task.FromResult(1);
+        public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult(1);
 
-        public void Dispose()
-        {
-        }
+        public void Dispose() { }
     }
 }

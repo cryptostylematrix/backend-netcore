@@ -275,7 +275,8 @@ public sealed class BuyPlacePolicyEvaluationTests
                         : PositionOperation.BuyPlace),
             new Commands(
                 effectiveTags,
-                effectiveBuyFirstPlaceStructureNumbers));
+                effectiveBuyFirstPlaceStructureNumbers),
+            new RequestedPositionResolver(placeQueries));
     }
 
     private static StructureResponse Structure(

@@ -19,17 +19,27 @@ internal sealed class MarketingTaskConfiguration
             .HasColumnName("task_key");
         builder.Property(task => task.TaskQueryId)
             .HasColumnName("task_query_id");
-        builder.Property(task => task.Status)
-            .HasColumnName("status")
-            .HasConversion(
-                status => status.ToString().ToLowerInvariant(),
-                value => Enum.Parse<MarketingTaskStatus>(value, ignoreCase: true))
+        builder.Property(task => task.TaskSourceAddr)
+            .HasColumnName("task_source_addr")
+            .HasMaxLength(600);
+        builder.Property(task => task.PlaceId).HasColumnName("place_id").IsRequired();
+        builder.HasOne(task => task.Place)
+            .WithMany()
+            .HasForeignKey(task => task.PlaceId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.Property(task => task.ResponseSourcePlaceId)
+            .HasColumnName("response_source_place_id")
+            .IsRequired();
+        builder.HasOne(task => task.ResponseSourcePlace)
+            .WithMany()
+            .HasForeignKey(task => task.ResponseSourcePlaceId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.Property(task => task.ResponseCode)
+            .HasColumnName("response_code")
+            .HasConversion<long>()
             .IsRequired();
         builder.Property(task => task.CreatedAt)
             .HasColumnName("created_at");
-        builder.Property(task => task.UpdatedAt)
-            .HasColumnName("updated_at");
-
         builder.Ignore(task => task.DomainEvents);
     }
 }

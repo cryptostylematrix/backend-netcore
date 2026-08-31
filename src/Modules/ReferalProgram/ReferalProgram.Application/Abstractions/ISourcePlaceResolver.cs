@@ -4,7 +4,7 @@ namespace ReferalProgram.Application.Abstractions;
 
 public sealed record SourcePlaceResolution(
     uint Code,
-    PlaceResponse SourcePlace);
+    Place SourcePlace);
 
 public interface ISourcePlaceResolver
 {

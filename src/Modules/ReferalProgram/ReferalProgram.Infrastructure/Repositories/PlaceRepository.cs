@@ -9,27 +9,26 @@ internal sealed class PlaceRepository(DataContext dataContext) : IPlaceRepositor
     public Task<Place?> GetByIdAsync(int id, CancellationToken cancellationToken) =>
         dataContext.Places.SingleOrDefaultAsync(place => place.Id == id, cancellationToken);
 
-    public Task<Place?> GetAsync(
+    public async Task<Place?> GetAsync(
         string marketingAddr,
         byte structureNumber,
         string? profileAddr,
         uint placeNumber,
-        CancellationToken cancellationToken) =>
-        dataContext.Places.SingleOrDefaultAsync(
+        CancellationToken cancellationToken)
+    {
+        var tracked = dataContext.Places.Local.SingleOrDefault(
+            place => place.MarketingAddr == marketingAddr
+                && place.StructureNumber == structureNumber
+                && place.ProfileAddr == profileAddr
+                && place.PlaceNumber == placeNumber);
+
+        return tracked ?? await dataContext.Places.SingleOrDefaultAsync(
             place => place.MarketingAddr == marketingAddr
                 && place.StructureNumber == structureNumber
                 && place.ProfileAddr == profileAddr
                 && place.PlaceNumber == placeNumber,
             cancellationToken);
-
-    public Task<Place?> GetByTaskKeyAsync(
-        string marketingAddr,
-        int taskKey,
-        CancellationToken cancellationToken) =>
-        dataContext.Places.FirstOrDefaultAsync(
-            place => place.MarketingAddr == marketingAddr
-                && place.TaskKey == taskKey,
-            cancellationToken);
+    }
 
     public async Task<uint> GetNextPlaceNumberAsync(
         string marketingAddr,

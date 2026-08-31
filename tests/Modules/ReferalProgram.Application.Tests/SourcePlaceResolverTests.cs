@@ -6,7 +6,7 @@ namespace ReferalProgram.Application.Tests;
 public sealed class SourcePlaceResolverTests
 {
     [Fact]
-    public async Task Resolves_ancestor_counts_its_depth_slice_and_maps_response()
+    public async Task Resolves_ancestor_and_counts_its_depth_slice()
     {
         var created = NewPlace("child", deep: 5, profileAddr: "buyer");
         var firstParent = NewPlace("parent-1", deep: 4, profileAddr: "parent-1", id: 11);
@@ -100,10 +100,7 @@ public sealed class SourcePlaceResolverTests
             createdAt: 100,
             activatedAt: 100,
             personalVolume: 3,
-            groupVolume: 4,
-            taskKey: 5,
-            taskQueryId: 6,
-            taskSourceAddr: "wallet");
+            groupVolume: 4);
 
         if (id != 0)
         {

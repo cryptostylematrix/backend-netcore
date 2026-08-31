@@ -98,26 +98,32 @@ public sealed class TaskProcessor(
             if (taskResult.IsSuccess && taskResult.Value is { Key: not null, Val: not null })
             {
                 var taskKey = checked((int)taskResult.Value.Key.Value);
-                var taskQueryId = checked((long)taskResult.Value.Val.QueryId);
-
-                var processedResult = await sender.Send(
-                    new IsMarketingTaskProcessedQuery(
+                var receiptResult = await sender.Send(
+                    new GetMarketingTaskQuery(
                         program.MarketingAddr,
                         taskKey),
                     cancellationToken);
-                if (!processedResult.IsSuccess)
+                if (!receiptResult.IsSuccess)
                 {
                     throw new InvalidOperationException(
-                        $"Could not check processed task: {string.Join(", ", processedResult.Errors)}");
+                        $"Could not load task receipt: {string.Join(", ", receiptResult.Errors)}");
                 }
 
-                if (processedResult.Value)
+                if (receiptResult.Value is { } receipt)
                 {
-                    logger.LogError(
-                        "[API TaskProcessor] Marketing {MarketingAddr} returned already processed task {TaskKey} with query {QueryId}; skipping without cancellation",
+                    logger.LogWarning(
+                        "[API TaskProcessor] Resending stored response for marketing {MarketingAddr} task {TaskKey}",
                         program.MarketingAddr,
-                        taskKey,
-                        taskQueryId);
+                        taskKey);
+
+                    await SendCommandResponseAsync(
+                        program.MarketingAddr,
+                        checked((ulong)receipt.TaskQueryId),
+                        checked((uint)taskKey),
+                        receipt.CommandResponse,
+                        sender,
+                        transactionSender,
+                        cancellationToken);
                     continue;
                 }
 
@@ -135,19 +141,7 @@ public sealed class TaskProcessor(
 
                 if (processed)
                 {
-                    var markResult = await sender.Send(
-                        new MarkMarketingTaskProcessedCommand(
-                            program.MarketingAddr,
-                            taskKey,
-                            taskQueryId),
-                        cancellationToken);
-                    if (!markResult.IsSuccess)
-                    {
-                        throw new InvalidOperationException(
-                            $"Could not record processed task: {string.Join(", ", markResult.Errors)}");
-                    }
-
-                    LogAction("Marketing task processing completed and recorded");
+                    LogAction("Marketing task processing completed");
                 }
             }
             else if (!taskResult.IsSuccess)
@@ -734,6 +728,8 @@ public sealed class TaskProcessor(
                         PlaceProfileAddr: position.Parent.ProfileAddr,
                         PlaceNumber: position.Parent.PlaceNumber,
                         LockedPos: position.Position,
+                        TaskKey: checked((int)taskKey),
+                        QueryId: checked((long)task.QueryId),
                         SourceAddr: command.SourceAddr),
                     cancellationToken);
 
@@ -1202,8 +1198,7 @@ public sealed class TaskProcessor(
                 SourceStructureNumber: commandSource.Struct,
                 SourceProfileAddr: commandSource.ProfileAddr,
                 SourcePlaceNumber: commandSource.PlaceNumber,
-                RelativeLevel: command.Relative.Level,
-                TaskKey: checked((int)taskKey)),
+                RelativeLevel: command.Relative.Level),
             cancellationToken);
 
         if (!decision.IsSuccess)

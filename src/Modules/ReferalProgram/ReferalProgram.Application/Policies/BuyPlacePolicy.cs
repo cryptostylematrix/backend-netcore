@@ -7,7 +7,8 @@ public sealed class BuyPlacePolicy(
     IPlaceQueries placeQueries,
     ILockQueries lockQueries,
     INextPosService nextPosService,
-    IProgramCommandQueries commandQueries) : IBuyPlacePolicy
+    IProgramCommandQueries commandQueries,
+    IRequestedPositionResolver requestedPositionResolver) : IBuyPlacePolicy
 {
     public BuyPositionDecision EvaluatePosition(
         BuyPlaceDecision decision,
@@ -132,57 +133,28 @@ public sealed class BuyPlacePolicy(
 
         if (requestedPosition is not null && isClassic)
         {
-            if (requestedPosition.StructureNumber != structureNumber)
-                return Denied("position_structure_mismatch");
-
             if (profileRoot is null)
                 return Denied("profile_root_not_found_for_selected_position");
-
-            if (requestedPosition.Position == 0
-                || (structure.Width > 0 && requestedPosition.Position > structure.Width))
-            {
-                return Denied("position_is_outside_structure_width");
-            }
-
-            var requestedParent = await placeQueries.GetPlaceAsync(
-                marketingAddr,
-                structureNumber,
-                requestedPosition.ParentProfileAddr,
-                requestedPosition.ParentPlaceNumber,
-                cancellationToken);
-            if (requestedParent is null)
-                return Denied("parent_place_not_found");
-
-            if (requestedParent.Kind == PlaceKinds.TerminalClone)
-                return Denied("terminal_clone_cannot_have_children");
-
-            if (requestedPosition.Position != checked(requestedParent.Filling + 1))
-                return Denied("position_is_not_parent_next_available");
-
-            var requestedMp = requestedParent.Mp
-                + requestedPosition.Position.ToString("X8");
-            if (!requestedMp.StartsWith(profileRoot.Mp, StringComparison.Ordinal))
-                return Denied("position_is_outside_viewer_root");
 
             var lockMps = await lockQueries.GetAllLockMpsAsync(
                 marketingAddr,
                 structureNumber,
                 profileAddr,
                 cancellationToken);
-            if (lockMps.Any(lockMp =>
-                    requestedMp.StartsWith(lockMp, StringComparison.Ordinal)))
-            {
-                return Denied("position_is_locked");
-            }
+            var resolution = await requestedPositionResolver.ResolveAsync(
+                marketingAddr,
+                structureNumber,
+                structure.Width,
+                selection.Context.PosGroup,
+                requestedPosition,
+                requiredRootMp: profileRoot.Mp,
+                lockMps,
+                cancellationToken);
 
-            selectedPosition = new NextPosResponse
-            {
-                Mp = requestedMp,
-                PosGroup = selection.Context.PosGroup,
-                ProfileAddr = requestedParent.ProfileAddr,
-                PlaceNumber = requestedParent.PlaceNumber,
-                Pos = requestedPosition.Position
-            };
+            if (!resolution.IsSuccess)
+                return Denied(resolution.Reason!);
+
+            selectedPosition = resolution.Position;
         }
         else
         {

@@ -1,4 +1,5 @@
 using Common.Domain;
+using ReferalProgram.Application.Mappings;
 using ReferalProgram.Core.PlaceAggregate;
 
 namespace ReferalProgram.Application.Features.Places;
@@ -28,7 +29,8 @@ internal sealed class BuyPlaceCommandHandler(
     IStructureQueries structureQueries,
     IBuyPlacePolicy buyPlacePolicy,
     ISourcePlaceResolver sourcePlaceResolver,
-    IProgramUnitOfWork unitOfWork) : ICommandHandler<BuyPlaceCommand, CommandResponse>
+    IProgramUnitOfWork unitOfWork)
+    : ICommandHandler<BuyPlaceCommand, CommandResponse>
 {
     public async Task<Result<CommandResponse>> Handle(
         BuyPlaceCommand request,
@@ -44,89 +46,77 @@ internal sealed class BuyPlaceCommandHandler(
             if (structure is null)
                 return Result<CommandResponse>.Error("Structure was not found.");
 
-            var placeWithTaskKey = await placeRepository.GetByTaskKeyAsync(
+            var requestedPosition = request.ChildPosition is null
+                ? null
+                : new RequestedPosition(
+                    request.ChildPosition.Parent.StructureNumber,
+                    request.ChildPosition.Parent.ProfileAddr,
+                    request.ChildPosition.Parent.PlaceNumber,
+                    request.ChildPosition.Position);
+
+            var decision = await buyPlacePolicy.EvaluateAsync(
                 request.MarketingAddr,
-                request.TaskKey,
+                request.StructureNumber,
+                request.ProfileAddr,
+                requestedPosition,
                 cancellationToken);
 
-            if (placeWithTaskKey is null)
-            {
-                var requestedPosition = request.ChildPosition is null
-                    ? null
-                    : new RequestedPosition(
-                        request.ChildPosition.Parent.StructureNumber,
-                        request.ChildPosition.Parent.ProfileAddr,
-                        request.ChildPosition.Parent.PlaceNumber,
-                        request.ChildPosition.Position);
+            if (!decision.CanBuy || decision.Position is null)
+                return Result<CommandResponse>.Error(
+                    $"Place purchase is not allowed: {decision.Reason ?? "unknown_reason"}.");
 
-                var decision = await buyPlacePolicy.EvaluateAsync(
-                    request.MarketingAddr,
-                    request.StructureNumber,
-                    request.ProfileAddr,
-                    requestedPosition,
-                    cancellationToken);
+            if (decision.IncludePosition && requestedPosition is null)
+                return Result<CommandResponse>.Error(
+                    "Place purchase is not allowed: position_is_required.");
 
-                if (!decision.CanBuy || decision.Position is null)
-                    return Result<CommandResponse>.Error(
-                        $"Place purchase is not allowed: {decision.Reason ?? "unknown_reason"}.");
+            if (decision.Kind != request.Kind)
+                return Result<CommandResponse>.Error(
+                    "Place purchase is not allowed: buy_command_kind_mismatch.");
 
-                if (decision.IncludePosition && requestedPosition is null)
-                    return Result<CommandResponse>.Error(
-                        "Place purchase is not allowed: position_is_required.");
+            var nextPosition = decision.Position;
 
-                if (decision.Kind != request.Kind)
-                    return Result<CommandResponse>.Error(
-                        "Place purchase is not allowed: buy_command_kind_mismatch.");
+            var parent = await placeRepository.GetAsync(
+                request.MarketingAddr,
+                request.StructureNumber,
+                nextPosition.ProfileAddr,
+                nextPosition.PlaceNumber,
+                cancellationToken);
 
-                var nextPosition = decision.Position;
+            if (parent is null)
+                return Result<CommandResponse>.Error(
+                    "Authorized parent place disappeared before execution.");
 
-                var parent = await placeRepository.GetAsync(
-                    request.MarketingAddr,
-                    request.StructureNumber,
-                    nextPosition.ProfileAddr,
-                    nextPosition.PlaceNumber,
-                    cancellationToken);
+            var placeNumber = await placeRepository.GetNextPlaceNumberAsync(
+                request.MarketingAddr,
+                request.StructureNumber,
+                request.ProfileAddr,
+                cancellationToken);
 
-                if (parent is null)
-                    return Result<CommandResponse>.Error(
-                        "Authorized parent place disappeared before execution.");
+            var boughtAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
-                var placeNumber = await placeRepository.GetNextPlaceNumberAsync(
-                    request.MarketingAddr,
-                    request.StructureNumber,
-                    request.ProfileAddr,
-                    cancellationToken);
+            var boughtPlace = Place.Buy(
+                parentId: parent.Id,
+                marketingAddr: request.MarketingAddr,
+                structureNumber: request.StructureNumber,
+                profileAddr: request.ProfileAddr,
+                profileLogin: request.ProfileLogin,
+                index: request.ProfileLogin
+                    + placeNumber.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                placeNumber,
+                parentProfileAddr: parent.ProfileAddr,
+                parentProfileLogin: parent.ProfileLogin,
+                parentPlaceNumber: parent.PlaceNumber,
+                mp: nextPosition.Mp,
+                posGroup: nextPosition.PosGroup,
+                kind: 0,
+                pos: nextPosition.Pos,
+                deep: checked(parent.Deep + 1),
+                boughtAt);
 
-                var boughtAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            placeRepository.Add(boughtPlace);
 
-                var boughtPlace = Place.Buy(
-                    parentId: parent.Id,
-                    marketingAddr: request.MarketingAddr,
-                    structureNumber: request.StructureNumber,
-                    profileAddr: request.ProfileAddr,
-                    profileLogin: request.ProfileLogin,
-                    index: request.ProfileLogin
-                        + placeNumber.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                    placeNumber,
-                    parentProfileAddr: parent.ProfileAddr,
-                    parentProfileLogin: parent.ProfileLogin,
-                    parentPlaceNumber: parent.PlaceNumber,
-                    mp: nextPosition.Mp,
-                    posGroup: nextPosition.PosGroup,
-                    kind: 0,
-                    pos: nextPosition.Pos,
-                    deep: checked(parent.Deep + 1),
-                    boughtAt,
-                    taskKey: request.TaskKey,
-                    taskQueryId: request.QueryId,
-                    taskSourceAddr: request.SourceAddr);
-
-                placeRepository.Add(boughtPlace);
-                placeWithTaskKey = boughtPlace;
-            }
-            
             var source = await sourcePlaceResolver.ResolveAsync(
-                placeWithTaskKey,
+                boughtPlace,
                 structure.Height,
                 cancellationToken);
 
@@ -134,12 +124,20 @@ internal sealed class BuyPlaceCommandHandler(
                 return Result<CommandResponse>.Error(
                     $"Could not find a parent at height {structure.Height}.");
 
-            if (placeWithTaskKey.Id == 0)
-                await unitOfWork.SaveChangesAsync(cancellationToken);
-
-            return Result.Success(new CommandResponse(
+            var response = new CommandResponse(
                 source.Code,
-                source.SourcePlace));
+                PlaceResponseMapper.Map(source.SourcePlace));
+
+            boughtPlace.RecordProcessedMarketingCommand(
+                request.TaskKey,
+                request.QueryId,
+                request.SourceAddr,
+                source.SourcePlace,
+                response.Code,
+                DateTimeOffset.UtcNow);
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+
+            return Result.Success(response);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

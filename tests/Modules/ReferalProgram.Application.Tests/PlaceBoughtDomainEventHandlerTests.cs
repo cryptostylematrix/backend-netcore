@@ -89,8 +89,5 @@ public sealed class PlaceBoughtDomainEventHandlerTests
             createdAt: 1,
             activatedAt,
             personalVolume: 0,
-            groupVolume: 0,
-            taskKey: 0,
-            taskQueryId: 0,
-            taskSourceAddr: null);
+            groupVolume: 0);
 }

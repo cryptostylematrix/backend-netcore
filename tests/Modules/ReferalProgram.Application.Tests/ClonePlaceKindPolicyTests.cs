@@ -70,10 +70,7 @@ public sealed class ClonePlaceKindPolicyTests
             createdAt: 1,
             activatedAt: 1,
             personalVolume: 0,
-            groupVolume: 0,
-            taskKey: 1,
-            taskQueryId: 1,
-            taskSourceAddr: null);
+            groupVolume: 0);
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
             terminalClone.RegisterChild(expectedFilling: 0));

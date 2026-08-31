@@ -39,10 +39,6 @@ internal sealed class PlaceConfiguration : IEntityTypeConfiguration<Place>
         builder.Property(place => place.PersonalVolume).HasColumnName("personal_volume").HasConversion<long>();
         builder.Property(place => place.GroupVolume).HasColumnName("group_volume").HasConversion<long>();
         builder.Property(place => place.MatrixFilling).HasColumnName("matrix_filling");
-        builder.Property(place => place.TaskKey).HasColumnName("task_key");
-        builder.Property(place => place.TaskQueryId).HasColumnName("task_query_id");
-        builder.Property(place => place.TaskSourceAddr).HasColumnName("task_source_addr").HasMaxLength(600);
-
         builder.Ignore(place => place.DomainEvents);
     }
 }

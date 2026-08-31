@@ -31,7 +31,7 @@ public sealed class SourcePlaceResolver(IPlaceRepository placeRepository)
         {
             return new SourcePlaceResolution(
                 Code: 0,
-                SourcePlace: ToResponse(sourcePlace));
+                SourcePlace: sourcePlace);
         }
 
         var placesCount = await placeRepository.CountAtDepthAsync(
@@ -49,32 +49,6 @@ public sealed class SourcePlaceResolver(IPlaceRepository placeRepository)
 
         return new SourcePlaceResolution(
             Code: checked((uint)placesCount),
-            SourcePlace: ToResponse(sourcePlace));
+            SourcePlace: sourcePlace);
     }
-
-    private static PlaceResponse ToResponse(Place place) => new()
-    {
-        Id = place.Id,
-        ParentId = place.ParentId,
-        Mp = place.Mp,
-        PosGroup = place.PosGroup,
-        MarketingAddr = place.MarketingAddr,
-        StructNumber = place.StructureNumber,
-        ProfileAddr = place.ProfileAddr,
-        PlaceNumber = place.PlaceNumber,
-        ProfileLogin = place.ProfileLogin,
-        Index = place.Index,
-        ParentProfileAddr = place.ParentProfileAddr,
-        ParentProfileLogin = place.ParentProfileLogin,
-        ParentPlaceNumber = place.ParentPlaceNumber,
-        CreatedAt = place.CreatedAt,
-        ActivatedAt = place.ActivatedAt,
-        IsActive = place.IsActive,
-        Kind = place.Kind,
-        Pos = place.Pos,
-        Filling = place.Filling,
-        Deep = place.Deep,
-        PersonalVolume = place.PersonalVolume,
-        GroupVolume = place.GroupVolume
-    };
 }

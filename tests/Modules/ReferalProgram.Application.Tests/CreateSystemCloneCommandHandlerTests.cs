@@ -70,10 +70,7 @@ public sealed class CreateSystemCloneCommandHandlerTests
         createdAt: 1,
         activatedAt: 1,
         personalVolume: 0,
-        groupVolume: 0,
-        taskKey: 0,
-        taskQueryId: 0,
-        taskSourceAddr: null);
+        groupVolume: 0);
 
     private sealed class Repository(Place parent) : PlaceRepositoryStub
     {
@@ -81,11 +78,6 @@ public sealed class CreateSystemCloneCommandHandlerTests
         public long ExistingCloneChildren { get; init; }
         public int? CountedParentId { get; private set; }
         public Place? AddedPlace { get; private set; }
-
-        public override Task<Place?> GetByTaskKeyAsync(
-            string marketingAddr,
-            int taskKey,
-            CancellationToken cancellationToken) => Task.FromResult<Place?>(null);
 
         public override Task<Place?> GetAsync(
             string marketingAddr,
@@ -208,15 +200,7 @@ public sealed class CreateSystemCloneCommandHandlerTests
             CancellationToken cancellationToken) =>
             Task.FromResult<SourcePlaceResolution?>(new SourcePlaceResolution(
                 Code: 1,
-                SourcePlace: new PlaceResponse
-                {
-                    MarketingAddr = place.MarketingAddr,
-                    StructNumber = place.StructureNumber,
-                    ProfileAddr = place.ProfileAddr,
-                    ProfileLogin = place.ProfileLogin,
-                    PlaceNumber = place.PlaceNumber,
-                    Mp = place.Mp
-                }));
+                SourcePlace: place));
     }
 
     private sealed class UnitOfWork : IProgramUnitOfWork
@@ -229,8 +213,6 @@ public sealed class CreateSystemCloneCommandHandlerTests
             return Task.FromResult(1);
         }
 
-        public void Dispose()
-        {
-        }
+        public void Dispose() { }
     }
 }

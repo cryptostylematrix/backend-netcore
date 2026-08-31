@@ -32,20 +32,12 @@ public sealed class BuyPlaceCommandHandlerTests
     {
         var repository = new Repository();
         var unitOfWork = new UnitOfWork();
-        var source = new PlaceResponse
-        {
-            MarketingAddr = "marketing",
-            StructNumber = 2,
-            ProfileAddr = "parent-profile",
-            ProfileLogin = "parent-login",
-            PlaceNumber = 1,
-            Mp = "00000000"
-        };
+        var sourceAggregate = CreateSourcePlace();
         var handler = new BuyPlaceCommandHandler(
             repository,
             new Structures(),
             new BuyPolicy(),
-            new SourceResolver(new SourcePlaceResolution(1, source)),
+            new SourceResolver(new SourcePlaceResolution(1, sourceAggregate)),
             unitOfWork);
 
         var result = await handler.Handle(Command(), default);
@@ -89,17 +81,9 @@ public sealed class BuyPlaceCommandHandlerTests
             createdAt: 1,
             activatedAt: 1,
             personalVolume: 0,
-            groupVolume: 0,
-            taskKey: 0,
-            taskQueryId: 0,
-            taskSourceAddr: null);
+            groupVolume: 0);
 
         public Place? AddedPlace { get; private set; }
-
-        public override Task<Place?> GetByTaskKeyAsync(
-            string marketingAddr,
-            int taskKey,
-            CancellationToken cancellationToken) => Task.FromResult<Place?>(null);
 
         public override Task<Place?> GetAsync(
             string marketingAddr,
@@ -171,19 +155,21 @@ public sealed class BuyPlaceCommandHandlerTests
             CancellationToken cancellationToken) => Task.FromResult(result);
     }
 
+    private static Place CreateSourcePlace() => Place.Create(
+        1, "marketing", 2, "parent-profile", "parent-login", "parent1", 1,
+        "root-profile", "root", 1, "00000000", 0, 0, 1, 0, 1,
+        true, 1, 1, 0, 0);
+
     private sealed class UnitOfWork : IProgramUnitOfWork
     {
         public int SaveCount { get; private set; }
 
-        public Task<int> SaveChangesAsync(
-            CancellationToken cancellationToken = default)
+        public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             SaveCount++;
             return Task.FromResult(1);
         }
 
-        public void Dispose()
-        {
-        }
+        public void Dispose() { }
     }
 }

@@ -85,6 +85,7 @@ public static class ReferalProgramModule
             services.AddScoped<IBuyPlacePolicy, BuyPlacePolicy>();
             services.AddScoped<IClonePlaceKindPolicy, ClonePlaceKindPolicy>();
             services.AddScoped<ISourcePlaceResolver, SourcePlaceResolver>();
+            services.AddScoped<IRequestedPositionResolver, RequestedPositionResolver>();
             services.AddScoped<IRelativePlaceResolver, RelativePlaceResolver>();
             services.AddSingleton<ITonAddressComparer, TonAddressComparer>();
             services.AddSingleton<IPositionLockPolicy, PositionLockPolicy>();

@@ -43,10 +43,7 @@ public sealed class PlaceCreatedDomainEventHandlerTests
             createdAt: 1,
             activatedAt: 1,
             personalVolume: 0,
-            groupVolume: 0,
-            taskKey: 0,
-            taskQueryId: 0,
-            taskSourceAddr: null);
+            groupVolume: 0);
 
         public int? IncrementParentId { get; private set; }
 

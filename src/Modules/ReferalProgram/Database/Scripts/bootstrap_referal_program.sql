@@ -128,10 +128,7 @@ BEGIN
             filling,
             deep,
             personal_volume,
-            group_volume,
-            task_key,
-            task_query_id,
-            task_source_addr
+            group_volume
         )
         VALUES
         (
@@ -155,10 +152,7 @@ BEGIN
             0,                       -- filling
             1,                       -- deep
             0,                       -- personal_volume
-            0,                       -- group_volume
-            0,                       -- task_key
-            0,                       -- task_query_id
-            NULL                     -- task_source_addr
+            0                       -- group_volume
         );
     END LOOP;
 END;
