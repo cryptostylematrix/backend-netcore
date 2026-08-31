@@ -130,6 +130,30 @@ public sealed class ProgramSetupScriptTests
     }
 
     [Fact]
+    public void Profile_frontier_update_fully_replaces_one_structure_configuration()
+    {
+        var sql = ReadNormalized("set_structure_profile_frontier_algorithm.sql");
+
+        Assert.Contains("v_marketing_addr text := ''", sql, StringComparison.Ordinal);
+        Assert.Contains("v_structure_number integer := 0", sql, StringComparison.Ordinal);
+        Assert.Contains("v_profiled_width_limit integer := 35", sql,
+            StringComparison.Ordinal);
+        Assert.Contains("FOR UPDATE", sql, StringComparison.Ordinal);
+        Assert.Contains("'default', jsonb_build_object", sql, StringComparison.Ordinal);
+        Assert.Contains("'root', 'owner'", sql, StringComparison.Ordinal);
+        Assert.Contains("'algo', 'profile_frontier'", sql, StringComparison.Ordinal);
+        Assert.Contains("'buy_system_place', jsonb_build_object", sql,
+            StringComparison.Ordinal);
+        Assert.Contains("'profiled_frontier_limit', v_profiled_width_limit", sql,
+            StringComparison.Ordinal);
+        Assert.Contains("'algo', 'system_gap'", sql, StringComparison.Ordinal);
+        Assert.DoesNotContain("v_existing_pos_algo", sql, StringComparison.Ordinal);
+        Assert.DoesNotContain("v_operations ||", sql, StringComparison.Ordinal);
+        Assert.Contains("WHERE marketing_addr = v_marketing_addr AND structure_number = v_structure_number",
+            sql, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Multi_setup_preserves_seven_profile_root_classic_structures()
     {
         var sql = ReadNormalized("setup_test_multi_program.sql");

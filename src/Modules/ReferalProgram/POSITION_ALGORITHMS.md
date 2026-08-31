@@ -178,3 +178,8 @@ of a profiled chain is unavailable to system places.
 Use the root strategy appropriate for the program. Both algorithms respect
 the resolved root subtree, terminal clones, structure width, activity, and
 position locks.
+
+For an existing structure, the pgAdmin-compatible
+`Database/Scripts/set_structure_profile_frontier_algorithm.sql` script sets
+the profile-frontier and system-gap configuration by completely replacing the
+structure's existing `pos_algo` value.
