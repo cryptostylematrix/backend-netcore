@@ -13,6 +13,7 @@ internal sealed class ProgramTaskCommandRequestFactory : ITaskCommandRequestFact
         "program.task-processing.enable",
         "program.structure.update-activity",
         "program.structure.compress",
+        "program.structure.calculate-personal-volume",
         "program.structure.reset-personal-volume"
     ];
 
@@ -71,6 +72,12 @@ internal sealed class ProgramTaskCommandRequestFactory : ITaskCommandRequestFact
                 structureNumber,
                 correlationId,
                 occurredOnUtc),
+            "program.structure.calculate-personal-volume" =>
+                new CalculateStructurePersonalVolumeRequest(
+                    marketingAddress,
+                    structureNumber,
+                    correlationId,
+                    occurredOnUtc),
             "program.structure.reset-personal-volume" =>
                 new ResetStructurePersonalVolumeRequest(
                     marketingAddress,

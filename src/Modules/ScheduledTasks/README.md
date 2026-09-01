@@ -69,6 +69,7 @@ Supported Program command types are:
 - `program.task-processing.enable`
 - `program.structure.update-activity`
 - `program.structure.compress`
+- `program.structure.calculate-personal-volume`
 - `program.structure.reset-personal-volume`
 
 Each target module registers a command factory and owns its concrete MassTransit

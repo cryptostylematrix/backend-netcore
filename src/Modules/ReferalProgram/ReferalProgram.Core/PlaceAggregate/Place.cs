@@ -310,6 +310,11 @@ public sealed class Place : Entity, IAggregateRoot
         PersonalVolume = 0;
     }
 
+    public void SetPersonalVolume(uint personalVolume)
+    {
+        PersonalVolume = personalVolume;
+    }
+
     public void Activate(long activatedAt, bool setActiveOnActivation)
     {
         if (string.IsNullOrWhiteSpace(ProfileAddr))

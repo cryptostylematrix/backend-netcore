@@ -31,6 +31,7 @@ public static class ReferalProgramModule
         registration.AddConsumer<EnableProgramTaskProcessingRequestConsumer>();
         registration.AddConsumer<ResetStructureActivaityRequestConsumer>();
         registration.AddConsumer<CompressStructureRequestConsumer>();
+        registration.AddConsumer<CalculateStructurePersonalVolumeRequestConsumer>();
         registration.AddConsumer<ResetStructurePersonalVolumeRequestConsumer>();
     }
 

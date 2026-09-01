@@ -101,6 +101,14 @@ BEGIN
                 'arguments', '{}'::jsonb),
             jsonb_build_object(
                 'module', 'program',
+                'type', 'program.structure.calculate-personal-volume',
+                'version', 1,
+                'target', jsonb_build_object(
+                    'marketingAddress', v_marketing_address),
+                'arguments', jsonb_build_object(
+                    'structureNumber', task_configuration.structure_number)),
+            jsonb_build_object(
+                'module', 'program',
                 'type', 'program.structure.update-activity',
                 'version', 1,
                 'target', jsonb_build_object(
