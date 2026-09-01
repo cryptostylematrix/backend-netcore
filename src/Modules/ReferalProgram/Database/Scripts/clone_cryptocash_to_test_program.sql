@@ -24,9 +24,11 @@ DECLARE
     v_source_structure_count integer;
     v_source_place_count integer;
     v_source_rank_count integer;
+    v_source_volume_count integer;
     v_target_structure_count integer;
     v_target_place_count integer;
     v_target_rank_count integer;
+    v_target_volume_count integer;
 BEGIN
     IF NULLIF(BTRIM(v_source_marketing_addr), '') IS NULL
         OR NULLIF(BTRIM(v_target_marketing_addr), '') IS NULL
@@ -72,6 +74,7 @@ BEGIN
     LOCK TABLE public.referal_program IN SHARE MODE;
     LOCK TABLE public.structures IN SHARE MODE;
     LOCK TABLE public.structure_ranks IN SHARE MODE;
+    LOCK TABLE public.profile_volumes IN SHARE MODE;
     LOCK TABLE public.places IN SHARE MODE;
 
     SELECT COUNT(*)
@@ -87,6 +90,11 @@ BEGIN
     SELECT COUNT(*)
     INTO v_source_rank_count
     FROM public.structure_ranks
+    WHERE marketing_addr = v_source_marketing_addr;
+
+    SELECT COUNT(*)
+    INTO v_source_volume_count
+    FROM public.profile_volumes
     WHERE marketing_addr = v_source_marketing_addr;
 
     IF v_source_structure_count = 0 OR v_source_place_count = 0 THEN
@@ -130,6 +138,25 @@ BEGIN
         pos_algo,
         activity
     FROM public.structures
+    WHERE marketing_addr = v_source_marketing_addr;
+
+    INSERT INTO public.profile_volumes
+    (
+        marketing_addr,
+        structure_number,
+        profile_addr,
+        personal_volume,
+        referral_volume,
+        group_volume
+    )
+    SELECT
+        v_target_marketing_addr,
+        structure_number,
+        profile_addr,
+        personal_volume,
+        referral_volume,
+        group_volume
+    FROM public.profile_volumes
     WHERE marketing_addr = v_source_marketing_addr;
 
     INSERT INTO public.structure_ranks
@@ -245,25 +272,34 @@ BEGIN
     FROM public.structure_ranks
     WHERE marketing_addr = v_target_marketing_addr;
 
+    SELECT COUNT(*)
+    INTO v_target_volume_count
+    FROM public.profile_volumes
+    WHERE marketing_addr = v_target_marketing_addr;
+
     IF v_target_structure_count <> v_source_structure_count
         OR v_target_place_count <> v_source_place_count
         OR v_target_rank_count <> v_source_rank_count
+        OR v_target_volume_count <> v_source_volume_count
     THEN
         RAISE EXCEPTION
-            'Clone verification failed. Source/target counts: structures %/%, places %/%, ranks %/%.',
+            'Clone verification failed. Source/target counts: structures %/%, places %/%, ranks %/%, volumes %/%.',
             v_source_structure_count,
             v_target_structure_count,
             v_source_place_count,
             v_target_place_count,
             v_source_rank_count,
-            v_target_rank_count;
+            v_target_rank_count,
+            v_source_volume_count,
+            v_target_volume_count;
     END IF;
 
     RAISE NOTICE
-        'CryptoCash clone complete: % structures, % places, % ranks. Task processing enabled: %.',
+        'CryptoCash clone complete: % structures, % places, % ranks, % profile volumes. Task processing enabled: %.',
         v_target_structure_count,
         v_target_place_count,
         v_target_rank_count,
+        v_target_volume_count,
         v_enable_task_processing;
 END;
 $$;
@@ -280,6 +316,8 @@ SELECT
         WHERE p.marketing_addr = rp.marketing_addr) AS places,
     (SELECT COUNT(*) FROM public.structure_ranks sr
         WHERE sr.marketing_addr = rp.marketing_addr) AS ranks,
+    (SELECT COUNT(*) FROM public.profile_volumes pv
+        WHERE pv.marketing_addr = rp.marketing_addr) AS profile_volumes,
     (SELECT COUNT(*) FROM public.locks l
         WHERE l.marketing_addr = rp.marketing_addr) AS locks,
     (SELECT COUNT(*) FROM public.marketing_tasks mt
