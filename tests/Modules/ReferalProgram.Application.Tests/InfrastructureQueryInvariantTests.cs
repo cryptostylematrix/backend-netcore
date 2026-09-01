@@ -59,7 +59,31 @@ public sealed class InfrastructureQueryInvariantTests
             "parent.filling + 1 >= @width");
         AssertMethodContains(source,
             "GetSystemGapCandidateAsync",
-            "ORDER BY parent.deep ASC, parent.mp ASC");
+            "WHEN parent.profile_addr IS NOT NULL THEN 0");
+        AssertMethodContains(source,
+            "GetSystemGapCandidateAsync",
+            "parent_kind_priority ASC,");
+        AssertMethodContains(source,
+            "GetSystemGapCandidateAsync",
+            "filling ASC,");
+        AssertMethodContains(source,
+            "GetSystemGapCandidateAsync",
+            "deep DESC,");
+        AssertMethodContains(source,
+            "GetSystemGapCandidateAsync",
+            "ROW_NUMBER() OVER (");
+        AssertMethodContains(source,
+            "GetSystemGapCandidateAsync",
+            "PARTITION BY parent_kind_priority, filling, deep");
+        AssertMethodContains(source,
+            "GetSystemGapCandidateAsync",
+            "ORDER BY mp ASC, id ASC");
+        AssertMethodContains(source,
+            "GetSystemGapCandidateAsync",
+            "horizontal_index * 2 - 1");
+        AssertMethodContains(source,
+            "GetSystemGapCandidateAsync",
+            "(horizontal_count - horizontal_index + 1) * 2");
     }
 
     [Fact]

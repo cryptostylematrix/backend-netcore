@@ -509,10 +509,14 @@ public sealed class PlaceQueries(
         CancellationToken cancellationToken)
     {
         var sql = """
-            WITH candidates AS
+            WITH eligible AS
             (
                 SELECT
                     parent.*,
+                    CASE
+                        WHEN parent.profile_addr IS NOT NULL THEN 0
+                        ELSE 1
+                    END AS parent_kind_priority,
                     COUNT(child.id) FILTER (
                         WHERE child.profile_addr IS NOT NULL
                     )::bigint AS profiled_child_count
@@ -542,7 +546,33 @@ public sealed class PlaceQueries(
                     AND @width > 0
                     AND parent.filling + 1 >= @width
                 )
-                ORDER BY parent.deep ASC, parent.mp ASC, parent.id ASC
+            ),
+            ranked AS
+            (
+                SELECT
+                    eligible.*,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY parent_kind_priority, filling, deep
+                        ORDER BY mp ASC, id ASC
+                    ) AS horizontal_index,
+                    COUNT(*) OVER (
+                        PARTITION BY parent_kind_priority, filling, deep
+                    ) AS horizontal_count
+                FROM eligible
+            ),
+            candidates AS
+            (
+                SELECT *
+                FROM ranked
+                ORDER BY
+                    parent_kind_priority ASC,
+                    filling ASC,
+                    deep DESC,
+                    CASE
+                        WHEN horizontal_index <= (horizontal_count + 1) / 2
+                            THEN horizontal_index * 2 - 1
+                        ELSE (horizontal_count - horizontal_index + 1) * 2
+                    END ASC
                 LIMIT 1
             )
             """ + PlaceSelectSql.Replace("FROM public.places", "FROM candidates") + ";";

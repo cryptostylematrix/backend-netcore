@@ -153,11 +153,16 @@ wins, with depth and left-to-right MP order breaking ties. This keeps profiled
 descendant counts balanced after the frontier reaches its limit. Profiled
 places are never placed beneath system places.
 
-`system_gap` fills the highest open position first and uses MP order from left
-to right at the same depth. It cannot consume the final available child slot
-of a profiled place that has no profiled child, preserving a route for the
-profiled structure to continue. With structure width `1`, this means the end
-of a profiled chain is unavailable to system places.
+`system_gap` prioritizes profiled parents. It first selects profiled parents
+with no direct children, then parents with one child, and so on. If no eligible
+profiled parent remains, system parents are used as a fallback with the same
+ordering. Within each parent kind and filling group it proceeds from the
+deepest level upward and uses chess order at the same depth: leftmost,
+rightmost, second from the left, second from the right, and so on. It cannot
+consume the final available child slot of a profiled place that has no profiled
+child, preserving a route for the profiled structure to continue. With
+structure width `1`, this means the end of a profiled chain is unavailable to
+system places, while an open system parent can still receive the place.
 
 ```json
 {
