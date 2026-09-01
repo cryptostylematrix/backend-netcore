@@ -1,5 +1,6 @@
 using ReferalProgram.Core.PlaceAggregate;
 using ReferalProgram.Core.LockAggregate;
+using ReferalProgram.Application.Services.PositionStrategies;
 
 namespace ReferalProgram.Application.Services;
 
@@ -55,6 +56,11 @@ public sealed class StructureCompressionService(
         var rootNode = nodes[root.Id];
         rootNode.PlaceAt(parent: null, RootMp, posGroup: 0, pos: 0);
         var posted = new List<Node> { rootNode };
+        var memoryQueries = new InMemoryCompressionPositionCandidateQueries(posted);
+        IPositionAlgorithmStrategy classicStrategy =
+            new ClassicPositionAlgorithmStrategy(memoryQueries);
+        IPositionAlgorithmStrategy emptyParentStrategy =
+            new EmptyParentPositionAlgorithmStrategy(memoryQueries);
         var firstPostedByProfile = new Dictionary<string, Node>(StringComparer.Ordinal)
         {
             [root.ProfileAddr!] = rootNode
@@ -68,14 +74,16 @@ public sealed class StructureCompressionService(
             .ThenBy(place => place.Id)
             .ToArray();
         var remainingPlaces = ordered.Length;
-        uint? frontierLimit = null;
+        var useEmptyParentPositioning = false;
 
         foreach (var place in ordered)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var algorithmRoot = ResolveRoot(
                 configuration.Root, place, rootNode, firstPostedByProfile, inviters);
-            var group = CompressionGroup(frontierLimit);
+            var strategy = useEmptyParentPositioning
+                ? emptyParentStrategy
+                : classicStrategy;
             var lockMps = positionLocks
                 .Where(positionLock => positionLock.ProfileAddr == algorithmRoot.Place.ProfileAddr)
                 .Select(positionLock =>
@@ -90,23 +98,36 @@ public sealed class StructureCompressionService(
                 .Where(mp => mp is not null)
                 .Cast<string>()
                 .ToArray();
-            var parent = FindParent(group, algorithmRoot, posted, structure.Width, lockMps);
-            if (parent is null)
-                return $"The '{group.Algorithm}' position algorithm found no position for place {place.Id}.";
+            var nextPosition = await strategy.FindNextAsync(
+                new PositionAlgorithmStrategyContext(
+                    marketingAddr,
+                    number,
+                    structure.Width,
+                    algorithmRoot.ToResponse(),
+                    PosGroup: 0,
+                    ProfiledPlacesPrioritized: true,
+                    DepthSpread: 1,
+                    RootProfileLockMps: lockMps),
+                cancellationToken);
+            if (nextPosition is null)
+                return $"The '{strategy.Name}' position algorithm found no position for place {place.Id}.";
 
-            var pos = checked(parent.Filling + 1);
+            var parent = posted.Single(node =>
+                node.Place.ProfileAddr == nextPosition.ProfileAddr
+                && node.Place.PlaceNumber == nextPosition.PlaceNumber);
+
             var node = nodes[place.Id];
             node.PlaceAt(
                 parent,
-                parent.Mp + pos.ToString("X8"),
-                checked((byte)group.Id),
-                pos);
+                nextPosition.Mp,
+                nextPosition.PosGroup,
+                nextPosition.Pos);
             posted.Add(node);
             if (place.PlaceNumber == 1)
                 firstPostedByProfile.TryAdd(place.ProfileAddr!, node);
 
             remainingPlaces--;
-            frontierLimit ??= ResolveFrontierLimit(
+            useEmptyParentPositioning |= ShouldUseEmptyParentPositioning(
                 posted,
                 node.Deep,
                 structure.Width,
@@ -148,36 +169,25 @@ public sealed class StructureCompressionService(
             .DefaultIfEmpty(0u)
             .Max();
 
-    private static PositionGroupConfiguration CompressionGroup(
-        uint? frontierLimit) => new()
-    {
-        Id = 0,
-        Algorithm = frontierLimit is null ? "classic" : "profile_frontier",
-        Weight = 1,
-        ProfiledFrontierLimit = frontierLimit
-    };
-
-    private static uint? ResolveFrontierLimit(
+    private static bool ShouldUseEmptyParentPositioning(
         IReadOnlyCollection<Node> posted,
         uint filledDepth,
         byte width,
         int remainingPlaces)
     {
         if (remainingPlaces == 0 || width < 2)
-            return null;
+            return false;
 
         long levelCapacity = 1;
         for (var depth = 1u; depth < filledDepth; depth++)
         {
             levelCapacity = checked(levelCapacity * width);
             if (levelCapacity > uint.MaxValue)
-                return null;
+                return false;
         }
 
         var levelPlaces = posted.LongCount(node => node.Deep == filledDepth);
-        return levelPlaces == levelCapacity && remainingPlaces < levelCapacity
-            ? checked((uint)levelCapacity)
-            : null;
+        return levelPlaces == levelCapacity && remainingPlaces < levelCapacity;
     }
 
     private static Node ResolveRoot(
@@ -203,92 +213,6 @@ public sealed class StructureCompressionService(
         return ownerRoot;
     }
 
-    private static Node? FindParent(
-        PositionGroupConfiguration group,
-        Node root,
-        IReadOnlyList<Node> posted,
-        byte width,
-        IReadOnlyCollection<string> lockMps)
-    {
-        var candidates = posted.Where(node =>
-                node.Mp.StartsWith(root.Mp, StringComparison.Ordinal)
-                && node.Place.Kind != PlaceKinds.TerminalClone
-                && (width == 0 || node.Filling < width)
-                && !lockMps.Any(lockMp =>
-                    (node.Mp + checked(node.Filling + 1).ToString("X8"))
-                        .StartsWith(lockMp, StringComparison.OrdinalIgnoreCase)))
-            .ToArray();
-        if (candidates.Length == 0)
-            return null;
-
-        return group.Algorithm.ToLowerInvariant() switch
-        {
-            "classic" or "trimmed_classic" => candidates
-                .OrderBy(node => node.Mp.Length).ThenBy(node => node.Mp).ThenBy(node => node.Place.Id)
-                .First(),
-            "radar" => Radar(candidates, group),
-            "chess" => Chess(candidates, group, width),
-            "system_gap" => candidates
-                .Where(node => !(node.ProfiledChildren == 0 && width > 0 && node.Filling + 1 >= width))
-                .OrderBy(node => node.Deep).ThenBy(node => node.Mp).ThenBy(node => node.Place.Id)
-                .FirstOrDefault(),
-            "profile_frontier" => ProfileFrontier(candidates, root, posted, group),
-            _ => throw new InvalidOperationException(
-                $"Unknown position algorithm '{group.Algorithm}'.")
-        };
-    }
-
-    private static Node? Radar(Node[] candidates, PositionGroupConfiguration group)
-    {
-        var minDepth = candidates.Min(node => node.Deep);
-        return candidates
-            .Where(node => node.Deep < minDepth + group.DepthSpread)
-            .OrderBy(node => node.Filling)
-            .ThenBy(node => node.Place.ActivatedAt ?? long.MaxValue)
-            .ThenBy(node => node.Deep).ThenBy(node => node.Mp).ThenBy(node => node.Place.Id)
-            .FirstOrDefault();
-    }
-
-    private static Node? Chess(Node[] candidates, PositionGroupConfiguration group, byte width)
-    {
-        var minDepth = candidates.Min(node => node.Deep);
-        var window = candidates.Where(node => node.Deep < minDepth + group.DepthSpread)
-            .OrderBy(node => node.Deep).ThenBy(node => node.Mp).ThenBy(node => node.Place.Id)
-            .ToArray();
-        var chess = new List<Node>(window.Length);
-        for (var left = 0; left < window.Length; left++)
-        {
-            var right = window.Length - 1 - left;
-            if (left > right) break;
-            chess.Add(window[left]);
-            if (left != right) chess.Add(window[right]);
-        }
-        for (uint filling = 0; filling < width; filling++)
-        {
-            var candidate = chess.FirstOrDefault(node => node.Filling == filling);
-            if (candidate is not null) return candidate;
-        }
-        return null;
-    }
-
-    private static Node? ProfileFrontier(
-        Node[] candidates,
-        Node root,
-        IReadOnlyList<Node> posted,
-        PositionGroupConfiguration group)
-    {
-        if (group.ProfiledFrontierLimit is null or 0)
-            throw new InvalidOperationException("profile_frontier requires a positive profiled_frontier_limit.");
-        var frontier = posted.Count(node =>
-            node.Mp.StartsWith(root.Mp, StringComparison.Ordinal) && node.ProfiledChildren == 0);
-        var eligible = frontier < group.ProfiledFrontierLimit
-            ? candidates
-            : candidates.Where(node => node.ProfiledChildren == 0).ToArray();
-        return eligible.OrderBy(node => node.Deep)
-            .ThenBy(node => node.ProfiledChildren).ThenBy(node => node.Mp).ThenBy(node => node.Place.Id)
-            .FirstOrDefault();
-    }
-
     private sealed class Node(Place place)
     {
         public Place Place { get; } = place;
@@ -298,7 +222,6 @@ public sealed class StructureCompressionService(
         public uint Pos { get; private set; }
         public uint Filling { get; private set; }
         public uint Deep { get; private set; }
-        public uint ProfiledChildren { get; private set; }
 
         public void PlaceAt(Node? parent, string mp, byte posGroup, uint pos)
         {
@@ -310,11 +233,82 @@ public sealed class StructureCompressionService(
             if (parent is not null)
             {
                 parent.Filling = checked(parent.Filling + 1);
-                parent.ProfiledChildren = checked(parent.ProfiledChildren + 1);
             }
         }
 
         public void Apply(long matrixFilling) =>
             Place.RebuildPosition(Parent?.Place, Mp, PosGroup, Pos, Filling, Deep, matrixFilling);
+
+        public PlaceResponse ToResponse() => new()
+        {
+            Id = Place.Id,
+            ParentId = Parent?.Place.Id,
+            Mp = Mp,
+            PosGroup = PosGroup,
+            MarketingAddr = Place.MarketingAddr,
+            StructNumber = Place.StructureNumber,
+            ProfileAddr = Place.ProfileAddr,
+            PlaceNumber = Place.PlaceNumber,
+            ProfileLogin = Place.ProfileLogin,
+            Kind = Place.Kind,
+            Filling = Filling,
+            Deep = Deep,
+            IsActive = Place.IsActive,
+            ActivatedAt = Place.ActivatedAt
+        };
+    }
+
+    private sealed class InMemoryCompressionPositionCandidateQueries(
+        IReadOnlyList<Node> posted) : IPositionCandidateQueries
+    {
+        public Task<IReadOnlyList<PlaceResponse>> GetOpenPlacesByMpPrefixAsync(
+            string marketingAddr,
+            byte structureNumber,
+            string mpPrefix,
+            byte width,
+            int page,
+            int pageSize,
+            CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var safePage = page > 0 ? page : 1;
+            var safePageSize = pageSize > 0 ? pageSize : 50;
+            IReadOnlyList<PlaceResponse> candidates = posted
+                .Where(node => node.Place.MarketingAddr == marketingAddr
+                    && node.Place.StructureNumber == structureNumber
+                    && node.Mp.StartsWith(mpPrefix, StringComparison.Ordinal)
+                    && node.Place.IsActive
+                    && node.Place.Kind != PlaceKinds.TerminalClone
+                    && (width == 0 || node.Filling < width))
+                .OrderBy(node => node.Mp.Length)
+                .ThenBy(node => node.Mp, StringComparer.Ordinal)
+                .ThenBy(node => node.Place.Id)
+                .Skip((safePage - 1) * safePageSize)
+                .Take(safePageSize)
+                .Select(node => node.ToResponse())
+                .ToArray();
+            return Task.FromResult(candidates);
+        }
+
+        public Task<PlaceResponse?> GetProfileFrontierCandidateAsync(
+            string marketingAddr, byte structureNumber, string rootMp, byte width,
+            uint profiledFrontierLimit, IReadOnlyCollection<string> lockMps,
+            CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        public Task<PlaceResponse?> GetSystemGapCandidateAsync(
+            string marketingAddr, byte structureNumber, string rootMp, byte width,
+            IReadOnlyCollection<string> lockMps,
+            CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        public Task<IReadOnlyList<PlaceResponse>> GetUnfilledPlacesInDepthWindowAsync(
+            string marketingAddr, byte structureNumber, string rootMp, byte width,
+            byte depthSpread, IReadOnlyCollection<string> lockMps,
+            CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        public Task<PlaceResponse?> GetFirstActiveUnfilledPlaceAsync(
+            string marketingAddr, byte structureNumber, string rootMp, byte width,
+            bool profiledPlacesPrioritized, byte depthSpread,
+            IReadOnlyCollection<string> lockMps,
+            CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 }

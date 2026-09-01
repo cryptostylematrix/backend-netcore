@@ -91,6 +91,13 @@ Locks belong to the resolved root profile. With a profile root, resolution may
 fall back through active inviters until it finds the first inviter that has a
 place in the structure; that inviter's locks are then used.
 
+### `empty_parent`
+
+`empty_parent` selects a parent that has no children (`filling = 0`). It uses
+the topmost eligible level first and selects the leftmost MP on that level.
+Position locks, the resolved root subtree, structure activity, width, and
+terminal-clone exclusions are respected.
+
 ### `trimmed_classic`
 
 `trimmed_classic` uses classic positioning and accepts `cut_factor`. It is

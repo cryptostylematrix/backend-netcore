@@ -102,6 +102,8 @@ public static class ReferalProgramModule
                 ProfileFrontierPositionAlgorithmStrategy>();
             services.AddScoped<IPositionAlgorithmStrategy,
                 SystemGapPositionAlgorithmStrategy>();
+            services.AddScoped<IPositionAlgorithmStrategy,
+                EmptyParentPositionAlgorithmStrategy>();
             services.AddScoped<INextPosService, NextPosService>();
             services.AddScoped<IStructureCompressionService, StructureCompressionService>();
             services.AddScoped<IReferalProgramQueries, ReferalProgramQueries>();

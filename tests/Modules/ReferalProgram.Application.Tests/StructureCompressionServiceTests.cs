@@ -50,7 +50,7 @@ public sealed class StructureCompressionServiceTests
     }
 
     [Fact]
-    public async Task Switches_from_classic_to_profile_frontier_for_the_last_partial_level()
+    public async Task Switches_from_classic_to_topmost_leftmost_empty_parent_positioning()
     {
         var places = Enumerable.Range(1, 10)
             .Select(id => Place(

@@ -3,7 +3,9 @@ namespace ReferalProgram.Application.Services.PositionStrategies;
 public sealed class ClassicPositionAlgorithmStrategy(
     IPositionCandidateQueries placeQueries) : IPositionAlgorithmStrategy
 {
-    public string Name => "classic";
+    public const string AlgorithmName = "classic";
+
+    public string Name => AlgorithmName;
 
     public async Task<NextPosResponse?> FindNextAsync(
         PositionAlgorithmStrategyContext context,
