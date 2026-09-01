@@ -3,6 +3,7 @@ using ReferalProgram.Application.Abstractions;
 using ReferalProgram.Application.Features.Places;
 using ReferalProgram.Application.Policies;
 using ReferalProgram.Core.PlaceAggregate;
+using ReferalProgram.Core.ProfileVolumeAggregate;
 using ReferalProgram.Dto;
 
 namespace ReferalProgram.Application.Tests;
@@ -45,6 +46,11 @@ public sealed class CreateSystemCloneCommandHandlerTests
         Assert.True(result.IsSuccess);
         Assert.NotNull(repository.AddedPlace);
         Assert.Equal(PlaceKinds.TerminalClone, repository.AddedPlace.Kind);
+        Assert.Contains(repository.AddedPlace.DomainEvents, domainEvent =>
+            domainEvent is ProfileVolumeOperationDomainEvent volume
+            && volume.Operation == (operation == PositionOperation.CreateClone
+                ? ProfileVolumeOperation.CreateClone
+                : ProfileVolumeOperation.CreateReinvest));
         Assert.Equal(repository.Parent.Id, repository.CountedParentId);
         Assert.Equal(1, unitOfWork.SaveCalls);
     }
@@ -68,9 +74,7 @@ public sealed class CreateSystemCloneCommandHandlerTests
         deep: 1,
         isActive: true,
         createdAt: 1,
-        activatedAt: 1,
-        personalVolume: 0,
-        groupVolume: 0);
+        activatedAt: 1);
 
     private sealed class Repository(Place parent) : PlaceRepositoryStub
     {

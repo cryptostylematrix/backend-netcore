@@ -13,14 +13,14 @@ public sealed class StructureCompressionServiceTests
     [Fact]
     public async Task Removes_ineligible_places_and_reposts_by_rank_volume_then_activation_date()
     {
-        var root = Place(1, "root", active: true, activatedAt: 1, personalVolume: 0);
+        var root = Place(1, "root", active: true, activatedAt: 1);
         SetParentId(root, null);
-        var highVolumeLater = Place(2, "high-volume-later", active: true, activatedAt: 30, personalVolume: 20);
-        var highVolumeEarlier = Place(3, "high-volume-earlier", active: true, activatedAt: 20, personalVolume: 20);
-        var lowerVolumeEarliest = Place(7, "lower-volume-earliest", active: true, activatedAt: 5, personalVolume: 10);
-        var lowEarlier = Place(4, "low", active: true, activatedAt: 10, personalVolume: 0);
-        var system = Place(5, null, active: true, activatedAt: 5, personalVolume: 100);
-        var inactive = Place(6, "inactive", active: false, activatedAt: 2, personalVolume: 100);
+        var highVolumeLater = Place(2, "high-volume-later", active: true, activatedAt: 30);
+        var highVolumeEarlier = Place(3, "high-volume-earlier", active: true, activatedAt: 20);
+        var lowerVolumeEarliest = Place(7, "lower-volume-earliest", active: true, activatedAt: 5);
+        var lowEarlier = Place(4, "low", active: true, activatedAt: 10);
+        var system = Place(5, null, active: true, activatedAt: 5);
+        var inactive = Place(6, "inactive", active: false, activatedAt: 2);
         var repository = new Repository(
             [root, highVolumeLater, highVolumeEarlier, lowerVolumeEarliest, lowEarlier, system, inactive]);
         var unitOfWork = new UnitOfWork();
@@ -29,6 +29,13 @@ public sealed class StructureCompressionServiceTests
             new LockRepository(),
             new StructureQueries(),
             new RankQueries(),
+            new VolumeQueries(new Dictionary<string, uint>
+            {
+                ["high-volume-later"] = 20,
+                ["high-volume-earlier"] = 20,
+                ["lower-volume-earliest"] = 10,
+                ["inactive"] = 100
+            }),
             new PositionAlgorithmConfigurationParser(),
             unitOfWork);
 
@@ -57,8 +64,7 @@ public sealed class StructureCompressionServiceTests
                 id,
                 $"profile-{id}",
                 active: true,
-                activatedAt: id,
-                personalVolume: 0))
+                activatedAt: id))
             .ToArray();
         SetParentId(places[0], null);
         var repository = new Repository(places);
@@ -67,6 +73,7 @@ public sealed class StructureCompressionServiceTests
             new LockRepository(),
             new StructureQueries(),
             new RankQueries(),
+            new VolumeQueries(new Dictionary<string, uint>()),
             new PositionAlgorithmConfigurationParser(),
             new UnitOfWork());
 
@@ -82,8 +89,7 @@ public sealed class StructureCompressionServiceTests
         int id,
         string? profile,
         bool active,
-        long? activatedAt,
-        uint personalVolume)
+        long? activatedAt)
     {
         var place = ReferalProgram.Core.PlaceAggregate.Place.Create(
             parentId: 1,
@@ -104,9 +110,7 @@ public sealed class StructureCompressionServiceTests
             deep: 2,
             isActive: active,
             createdAt: activatedAt ?? 1,
-            activatedAt,
-            personalVolume,
-            groupVolume: 0);
+            activatedAt);
         typeof(ReferalProgram.Core.PlaceAggregate.Place).GetProperty(nameof(place.Id))!
             .SetValue(place, id);
         return place;
@@ -153,6 +157,23 @@ public sealed class StructureCompressionServiceTests
                     RequiredActiveReferralPlaces = 5
                 }
             ]);
+    }
+
+    private sealed class VolumeQueries(IReadOnlyDictionary<string, uint> volumes)
+        : IProfileVolumeQueries
+    {
+        public Task<ProfileVolumeResponse> GetAsync(
+            string marketingAddr,
+            byte structureNumber,
+            string profileAddr,
+            CancellationToken cancellationToken) => throw new NotSupportedException();
+
+        public Task<IReadOnlyDictionary<string, uint>> GetReferralVolumesAsync(
+            string marketingAddr,
+            byte structureNumber,
+            IReadOnlyCollection<string> profileAddresses,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(volumes);
     }
 
     private sealed class UnitOfWork : IProgramUnitOfWork

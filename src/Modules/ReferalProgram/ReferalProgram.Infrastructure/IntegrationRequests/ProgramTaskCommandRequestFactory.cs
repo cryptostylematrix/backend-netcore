@@ -13,8 +13,8 @@ internal sealed class ProgramTaskCommandRequestFactory : ITaskCommandRequestFact
         "program.task-processing.enable",
         "program.structure.update-activity",
         "program.structure.compress",
-        "program.structure.calculate-personal-volume",
-        "program.structure.reset-personal-volume"
+        "program.structure.calculate-referral-volume",
+        "program.structure.reset-referral-volume"
     ];
 
     public bool CanCreate(TaskCommandEnvelope command) =>
@@ -72,14 +72,14 @@ internal sealed class ProgramTaskCommandRequestFactory : ITaskCommandRequestFact
                 structureNumber,
                 correlationId,
                 occurredOnUtc),
-            "program.structure.calculate-personal-volume" =>
-                new CalculateStructurePersonalVolumeRequest(
+            "program.structure.calculate-referral-volume" =>
+                new CalculateStructureReferralVolumeRequest(
                     marketingAddress,
                     structureNumber,
                     correlationId,
                     occurredOnUtc),
-            "program.structure.reset-personal-volume" =>
-                new ResetStructurePersonalVolumeRequest(
+            "program.structure.reset-referral-volume" =>
+                new ResetStructureReferralVolumeRequest(
                     marketingAddress,
                     structureNumber,
                     correlationId,

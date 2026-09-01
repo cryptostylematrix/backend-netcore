@@ -40,8 +40,6 @@ internal sealed class PlaceConfiguration : IEntityTypeConfiguration<Place>
             .HasConversion<long>()
             .IsConcurrencyToken();
         builder.Property(place => place.Deep).HasColumnName("deep").HasConversion<long>();
-        builder.Property(place => place.PersonalVolume).HasColumnName("personal_volume").HasConversion<long>();
-        builder.Property(place => place.GroupVolume).HasColumnName("group_volume").HasConversion<long>();
         builder.Property(place => place.MatrixFilling).HasColumnName("matrix_filling");
         builder.Ignore(place => place.DomainEvents);
     }

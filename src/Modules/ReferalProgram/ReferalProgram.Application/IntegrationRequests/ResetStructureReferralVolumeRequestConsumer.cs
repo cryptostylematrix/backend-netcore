@@ -1,17 +1,15 @@
 using IntegrationRequests;
 using MassTransit;
 using ReferalProgram.Application.Abstractions;
-using ReferalProgram.Core.PlaceAggregate;
 
 namespace ReferalProgram.Application.IntegrationRequests;
 
-public sealed class ResetStructurePersonalVolumeRequestConsumer(
-    IPlaceRepository placeRepository,
-    IProgramUnitOfWork unitOfWork)
-    : IConsumer<ResetStructurePersonalVolumeRequest>
+public sealed class ResetStructureReferralVolumeRequestConsumer(
+    IProfileVolumeMaintenance maintenance)
+    : IConsumer<ResetStructureReferralVolumeRequest>
 {
     public async Task Consume(
-        ConsumeContext<ResetStructurePersonalVolumeRequest> context)
+        ConsumeContext<ResetStructureReferralVolumeRequest> context)
     {
         if (context.Message.StructureNumber is < byte.MinValue or > byte.MaxValue)
         {
@@ -22,15 +20,10 @@ public sealed class ResetStructurePersonalVolumeRequestConsumer(
             return;
         }
 
-        var places = await placeRepository.GetStructurePlacesAsync(
+        await maintenance.ResetReferralAsync(
             context.Message.MarketingAddress,
             checked((byte)context.Message.StructureNumber),
             context.CancellationToken);
-
-        foreach (var place in places)
-            place.ResetPersonalVolume();
-
-        await unitOfWork.SaveChangesAsync(context.CancellationToken);
 
         await context.RespondAsync(new IntegrationRequestResponse(null));
     }

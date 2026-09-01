@@ -1,6 +1,6 @@
 namespace IntegrationRequests;
 
-public sealed record CalculateStructurePersonalVolumeRequest(
+public sealed record CalculateStructureReferralVolumeRequest(
     string MarketingAddress,
     int StructureNumber,
     Guid CorrelationId,

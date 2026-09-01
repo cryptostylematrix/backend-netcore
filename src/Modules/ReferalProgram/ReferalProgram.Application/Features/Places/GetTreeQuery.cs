@@ -19,6 +19,7 @@ internal sealed class GetTreeQueryHandler(
     ILockQueries lockQueries,
     IStructureQueries structureQueries,
     IStructureRankQueries structureRankQueries,
+    IProfileVolumeQueries profileVolumeQueries,
     IPositionRootResolver positionRootResolver,
     IPositionAlgorithmConfigurationParser configurationParser,
     INextPosService nextPosService,
@@ -158,6 +159,17 @@ internal sealed class GetTreeQueryHandler(
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
         rowsByMp[selected.Mp] = selected;
 
+        var referralVolumes = await profileVolumeQueries.GetReferralVolumesAsync(
+            request.MarketingAddr,
+            request.StructureNumber,
+            rowsByMp.Values
+                .Select(place => place.ProfileAddr)
+                .Where(profileAddr => profileAddr is not null)
+                .Cast<string>()
+                .Distinct(StringComparer.Ordinal)
+                .ToArray(),
+            ct);
+
         var treeCounts = await placeQueries.GetTreeCountsByMpAsync(
             request.MarketingAddr,
             request.StructureNumber,
@@ -256,7 +268,9 @@ internal sealed class GetTreeQueryHandler(
                 Rank = StructureRankCalculator.Resolve(
                     structureRanks,
                     row.ProfileAddr,
-                    row.PersonalVolume),
+                    row.ProfileAddr is not null
+                        ? referralVolumes.GetValueOrDefault(row.ProfileAddr)
+                        : 0),
                 MatrixPlacesCount = MatrixSizeCalculator.ResolveFilling(
                     structure.Width,
                     structure.Height,

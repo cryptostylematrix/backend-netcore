@@ -57,9 +57,7 @@ BEGIN
             kind,
             pos,
             filling,
-            deep,
-            personal_volume,
-            group_volume
+            deep
         )
         VALUES
         (
@@ -81,9 +79,7 @@ BEGIN
             0,
             p_pos,
             0,
-            1,
-            0,
-            0
+            1
         )
         ON CONFLICT ON CONSTRAINT places_place_unique
         DO NOTHING;

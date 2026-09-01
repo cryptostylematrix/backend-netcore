@@ -90,9 +90,7 @@ internal sealed class ChooseInviterCommandHandler(
                 deep: checked(inviter.Deep + 1),
                 isActive: false,
                 createdAt: DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                activatedAt: null,
-                personalVolume: 0,
-                groupVolume: 0);
+                activatedAt: null);
 
             placeRepository.Add(createdPlace);
 

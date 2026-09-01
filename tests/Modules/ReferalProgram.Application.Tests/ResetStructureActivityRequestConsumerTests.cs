@@ -115,9 +115,7 @@ public sealed class ResetStructureActivityRequestConsumerTests
             deep: 2,
             isActive,
             createdAt: 1,
-            activatedAt,
-            personalVolume: 0,
-            groupVolume: 0);
+            activatedAt);
 
     private static Place CreateRootPlace()
     {

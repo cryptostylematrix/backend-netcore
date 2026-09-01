@@ -48,6 +48,8 @@ Read the root `README.md` first. Important focused documentation:
 - `src/Modules/Marketing`: legacy Neo/Marketing implementation retained for
   internal and migration compatibility.
 - `src/ProgramMigrator`: legacy Multi and Neo import console application.
+- `src/ProgramMatrixFillingRecalculator`: dry-run-first matrix-filling repair tool.
+- `src/ProgramVolumeRecalculator`: dry-run-first profile-volume repair tool.
 - `src/ProgramInviterChanger`: administrative referral-subtree mover.
 - `src/TaskProcessor`: orphaned legacy reference artifacts with no project file;
   it is not built or registered. Do not treat it as the live task processor.
@@ -203,14 +205,18 @@ source of truth. Important rules include:
   height cannot be reached, use the last reachable parent (or the created
   place itself) and return response code 0. Height 0 uses the created place as
   its source.
-- Structure rank shown in a filled tree node is calculated dynamically from
-  structure ranks and personal volume. System-place rank is null.
+- Profile volume belongs to a marketing address, structure number, and profile
+  address. Missing rows mean zero. Structure rank shown in a filled tree node
+  is calculated dynamically from structure ranks and referral volume.
+  System-place rank is null.
 - Choosing an inviter creates the profile's inactive structure-0 first place
   beneath an active profiled inviter. The profile's first paid place in any
   structure above zero—purchase, clone, or reinvest—activates that invite;
-  later paid places never reactivate it. A purchase increments the inviter's
-  first-place personal volume in the purchased structure when that place
-  exists. System places do not produce profile paid-place effects.
+  later paid places never reactivate it. Purchases, activations, clones, and
+  reinvests increment the operating profile's personal volume and its current
+  direct inviter's referral volume in that structure. The inviter does not
+  need a place in the target structure. System places do not produce profile
+  volume effects.
 - Creating any child updates its tracked parent's filling through
   `PlaceCreatedDomainEvent`; the expected filling must still equal
   `position - 1`, which protects left-to-right insertion from stale writes.
@@ -356,6 +362,12 @@ by default; `--marketing-addr` restricts it to one program, and `--apply` enable
 writes. Apply mode processes and verifies each program in its own transaction,
 locking `places` while that program is updated. Stop the task processor and
 other Programs-database writers while it runs.
+
+`ProgramVolumeRecalculator` requires a volume type, marketing address, and
+structure number and is dry-run by default. Personal and referral volume are
+rebuilt from profiled places whose `activated_at` is non-null. Group volume is
+reserved but not implemented. Apply mode locks `places` and `profile_volumes`
+and verifies the selected scope before committing.
 
 `ProgramInviterChanger` moves only a structure-0 referral subtree. It resolves
 logins through the contracts API, recalculates descendant MP and depth values,

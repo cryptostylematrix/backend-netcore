@@ -1,4 +1,5 @@
 using ReferalProgram.Core.PlaceAggregate;
+using ReferalProgram.Core.ProfileVolumeAggregate;
 
 namespace ReferalProgram.Application.Tests;
 
@@ -26,19 +27,15 @@ public sealed class PlaceActivityTests
             deep: 2,
             isActive: false,
             createdAt: 1,
-            activatedAt: null,
-            personalVolume: 0,
-            groupVolume: 0);
+            activatedAt: null);
 
         place.Activate(10, setActiveOnActivation: false);
 
         Assert.Equal(10, place.ActivatedAt);
         Assert.False(place.IsActive);
         Assert.Contains(place.DomainEvents, domainEvent =>
-            domainEvent is PlaceActivatedDomainEvent activated
-            && activated.StructureNumber == 1
-            && activated.ProfileAddr == "profile"
-            && activated.PlaceNumber == 1);
+            domainEvent is ProfileVolumeOperationDomainEvent volume
+            && volume.Operation == ProfileVolumeOperation.ActivatePlace);
     }
 
     [Theory]
@@ -70,9 +67,7 @@ public sealed class PlaceActivityTests
             deep: 2,
             isActive,
             createdAt: 1,
-            activatedAt,
-            personalVolume: 0,
-            groupVolume: 0);
+            activatedAt);
 
         place.ResetActivity();
 

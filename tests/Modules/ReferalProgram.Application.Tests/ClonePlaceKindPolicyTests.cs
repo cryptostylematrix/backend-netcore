@@ -68,9 +68,7 @@ public sealed class ClonePlaceKindPolicyTests
             deep: 2,
             isActive: true,
             createdAt: 1,
-            activatedAt: 1,
-            personalVolume: 0,
-            groupVolume: 0);
+            activatedAt: 1);
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
             terminalClone.RegisterChild(expectedFilling: 0));

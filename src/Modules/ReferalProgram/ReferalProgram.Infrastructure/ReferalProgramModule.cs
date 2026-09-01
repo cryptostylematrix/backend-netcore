@@ -14,6 +14,7 @@ using ReferalProgram.Core.LockAggregate;
 using ReferalProgram.Core.MarketingTaskAggregate;
 using ReferalProgram.Core.PlaceAggregate;
 using ReferalProgram.Core.ProgramAggregate;
+using ReferalProgram.Core.ProfileVolumeAggregate;
 using ReferalProgram.Infrastructure.Persistence;
 using ReferalProgram.Infrastructure.Queries;
 using ReferalProgram.Infrastructure.Repositories;
@@ -31,8 +32,8 @@ public static class ReferalProgramModule
         registration.AddConsumer<EnableProgramTaskProcessingRequestConsumer>();
         registration.AddConsumer<ResetStructureActivaityRequestConsumer>();
         registration.AddConsumer<CompressStructureRequestConsumer>();
-        registration.AddConsumer<CalculateStructurePersonalVolumeRequestConsumer>();
-        registration.AddConsumer<ResetStructurePersonalVolumeRequestConsumer>();
+        registration.AddConsumer<CalculateStructureReferralVolumeRequestConsumer>();
+        registration.AddConsumer<ResetStructureReferralVolumeRequestConsumer>();
     }
 
     extension(IServiceCollection services)
@@ -62,11 +63,13 @@ public static class ReferalProgramModule
             services.AddScoped<IProgramUnitOfWork>(provider =>
                 provider.GetRequiredService<DataContext>());
             services.AddScoped<IPlaceRepository, PlaceRepository>();
+            services.AddScoped<IProfileVolumeRepository, ProfileVolumeRepository>();
             services.AddScoped<IPositionLockRepository, PositionLockRepository>();
             services.AddScoped<IMarketingTaskRepository, MarketingTaskRepository>();
             services.AddScoped<IReferalProgramRepository, ReferalProgramRepository>();
 
             services.AddScoped<IPlaceQueries, PlaceQueries>();
+            services.AddScoped<IProfileVolumeQueries, ProfileVolumeQueries>();
             services.AddScoped<ILockQueries, LockQueries>();
             services.AddScoped<IPositionCandidateQueries>(provider =>
                 (IPositionCandidateQueries)provider.GetRequiredService<IPlaceQueries>());
@@ -86,6 +89,7 @@ public static class ReferalProgramModule
             services.AddScoped<IBuyPlacePolicy, BuyPlacePolicy>();
             services.AddScoped<IActivatePlacePolicy, ActivatePlacePolicy>();
             services.AddScoped<IClonePlaceKindPolicy, ClonePlaceKindPolicy>();
+            services.AddSingleton<IProfileVolumeAmountPolicy, ProfileVolumeAmountPolicy>();
             services.AddScoped<ISourcePlaceResolver, SourcePlaceResolver>();
             services.AddScoped<IRequestedPositionResolver, RequestedPositionResolver>();
             services.AddScoped<IRelativePlaceResolver, RelativePlaceResolver>();
@@ -107,6 +111,7 @@ public static class ReferalProgramModule
                 EmptyParentPositionAlgorithmStrategy>();
             services.AddScoped<INextPosService, NextPosService>();
             services.AddScoped<IStructureCompressionService, StructureCompressionService>();
+            services.AddScoped<IProfileVolumeMaintenance, ProfileVolumeMaintenance>();
             services.AddScoped<IReferalProgramQueries, ReferalProgramQueries>();
             services.AddScoped<ScheduledTasks.Application.ITaskCommandRequestFactory,
                 ProgramTaskCommandRequestFactory>();

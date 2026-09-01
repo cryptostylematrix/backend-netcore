@@ -312,12 +312,7 @@ internal sealed class ProgramDataWriter(
                 parent_profile_addr = NULL,
                 parent_profile_login = NULL,
                 parent_place_number = NULL,
-                personal_volume = 0,
-                group_volume = 0,
-                matrix_filling = 1,
-                task_key = 0,
-                task_query_id = 0,
-                task_source_addr = NULL
+                matrix_filling = 1
             WHERE id = @rootId;
             """;
 
@@ -345,8 +340,7 @@ internal sealed class ProgramDataWriter(
                 profile_addr, place_number, profile_login, "index",
                 parent_profile_addr, parent_profile_login, parent_place_number,
                 created_at, activated_at, is_active, kind, pos, filling, deep,
-                personal_volume, group_volume, matrix_filling,
-                task_key, task_query_id, task_source_addr
+                matrix_filling
             )
             VALUES
             (
@@ -354,7 +348,7 @@ internal sealed class ProgramDataWriter(
                 @profileAddr, @placeNumber, @profileLogin, @index,
                 @parentProfileAddr, @parentProfileLogin, @parentPlaceNumber,
                 @createdAt, @createdAt, true, @kind, @pos, @filling, @deep,
-                0, 0, 1, 0, 0, NULL
+                1
             )
             RETURNING id;
             """;

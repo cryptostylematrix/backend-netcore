@@ -198,8 +198,6 @@ BEGIN
         pos,
         filling,
         deep,
-        personal_volume,
-        group_volume,
         matrix_filling
     )
     SELECT
@@ -223,8 +221,6 @@ BEGIN
         source_place.pos,
         source_place.filling,
         source_place.deep,
-        source_place.personal_volume,
-        source_place.group_volume,
         source_place.matrix_filling
     FROM public.places source_place
     JOIN cryptocash_place_id_map place_map

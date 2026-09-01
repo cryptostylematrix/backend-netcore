@@ -1,6 +1,6 @@
 namespace IntegrationRequests;
 
-public sealed record ResetStructurePersonalVolumeRequest(
+public sealed record ResetStructureReferralVolumeRequest(
     string MarketingAddress,
     int StructureNumber,
     Guid CorrelationId,

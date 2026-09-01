@@ -1,6 +1,7 @@
 using Common.Domain;
 using ReferalProgram.Application.Mappings;
 using ReferalProgram.Core.PlaceAggregate;
+using ReferalProgram.Core.ProfileVolumeAggregate;
 
 namespace ReferalProgram.Application.Features.Places;
 
@@ -131,12 +132,15 @@ internal sealed class CreateSystemCloneCommandHandler(
                 deep: checked(parent.Deep + 1),
                 isActive: true,
                 createdAt,
-                activatedAt: createdAt,
-                personalVolume: 0,
-                groupVolume: 0);
+                activatedAt: createdAt);
 
             placeRepository.Add(createdPlace);
             createdPlace.EnsurePaidPlaceEffects();
+            createdPlace.RecordCloneVolumeOperation(
+                request.Operation == PositionOperation.CreateClone
+                    ? ProfileVolumeOperation.CreateClone
+                    : ProfileVolumeOperation.CreateReinvest,
+                createdAt);
 
             var source = await sourcePlaceResolver.ResolveAsync(
                 createdPlace,

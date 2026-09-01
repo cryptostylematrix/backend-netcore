@@ -1,6 +1,7 @@
 using Common.Domain;
 using ReferalProgram.Application.Mappings;
 using ReferalProgram.Core.PlaceAggregate;
+using ReferalProgram.Core.ProfileVolumeAggregate;
 
 namespace ReferalProgram.Application.Features.Places;
 
@@ -111,7 +112,10 @@ internal sealed class BuyPlaceCommandHandler(
                 kind: 0,
                 pos: nextPosition.Pos,
                 deep: checked(parent.Deep + 1),
-                boughtAt);
+                boughtAt,
+                request.Kind == BuyPlaceKind.First
+                    ? ProfileVolumeOperation.BuyFirstPlace
+                    : ProfileVolumeOperation.BuyPlace);
 
             placeRepository.Add(boughtPlace);
 

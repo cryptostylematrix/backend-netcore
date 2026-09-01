@@ -5,8 +5,8 @@
 -- Run while connected to the correct programs database as the table owner
 -- or as a role with DELETE permission on all affected tables.
 --
--- Requires migration 018_scope_processed_tasks_by_marketing.sql so processed
--- tasks can be scoped safely by marketing_addr.
+-- Requires migrations 018_scope_processed_tasks_by_marketing.sql and
+-- 026_create_profile_volumes.sql.
 
 BEGIN;
 
@@ -25,6 +25,7 @@ DECLARE
     v_marketing_addr text;
     v_deleted_tasks bigint;
     v_deleted_locks bigint;
+    v_deleted_volumes bigint;
     v_deleted_places bigint;
     v_deleted_structures bigint;
     v_deleted_programs bigint;
@@ -57,6 +58,11 @@ BEGIN
     WHERE marketing_addr = v_marketing_addr;
     GET DIAGNOSTICS v_deleted_locks = ROW_COUNT;
 
+    -- Volumes belong to profiles within a specific program structure.
+    DELETE FROM public.profile_volumes
+    WHERE marketing_addr = v_marketing_addr;
+    GET DIAGNOSTICS v_deleted_volumes = ROW_COUNT;
+
     -- A single statement removes the complete self-referencing place tree.
     DELETE FROM public.places
     WHERE marketing_addr = v_marketing_addr;
@@ -72,11 +78,12 @@ BEGIN
     GET DIAGNOSTICS v_deleted_programs = ROW_COUNT;
 
     RAISE NOTICE
-        'Deleted marketing=%, programs=%, structures=%, places=%, locks=%, processed_tasks=%',
+        'Deleted marketing=%, programs=%, structures=%, places=%, profile_volumes=%, locks=%, processed_tasks=%',
         v_marketing_addr,
         v_deleted_programs,
         v_deleted_structures,
         v_deleted_places,
+        v_deleted_volumes,
         v_deleted_locks,
         v_deleted_tasks;
 END;
@@ -105,6 +112,12 @@ CROSS JOIN LATERAL
 
     SELECT 'places', COUNT(*)
     FROM public.places
+    WHERE marketing_addr = target.marketing_addr
+
+    UNION ALL
+
+    SELECT 'profile_volumes', COUNT(*)
+    FROM public.profile_volumes
     WHERE marketing_addr = target.marketing_addr
 
     UNION ALL

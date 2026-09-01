@@ -32,9 +32,7 @@ public sealed class PlaceQueries(
             kind                  AS "Kind",
             pos                   AS "Pos",
             filling               AS "Filling",
-            deep                  AS "Deep",
-            personal_volume       AS "PersonalVolume",
-            group_volume          AS "GroupVolume"
+            deep                  AS "Deep"
         FROM public.places
         """;
 
@@ -178,8 +176,6 @@ public sealed class PlaceQueries(
                 pos                   AS "Pos",
                 filling               AS "Filling",
                 deep                  AS "Deep",
-                personal_volume       AS "PersonalVolume",
-                group_volume          AS "GroupVolume",
                 @matrixSize            AS "MatrixSize",
                 CASE
                     WHEN @isMatrixStructure THEN matrix_filling
@@ -619,9 +615,7 @@ public sealed class PlaceQueries(
                 kind                  AS "Kind",
                 pos                   AS "Pos",
                 filling               AS "Filling",
-                deep                  AS "Deep",
-                personal_volume       AS "PersonalVolume",
-                group_volume          AS "GroupVolume"
+                deep                  AS "Deep"
             FROM candidates
             WHERE deep >= (SELECT value FROM min_depth)
               AND deep < (SELECT value FROM min_depth) + @depthSpread

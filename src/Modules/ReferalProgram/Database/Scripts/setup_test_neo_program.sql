@@ -185,9 +185,7 @@ BEGIN
             kind,
             pos,
             filling,
-            deep,
-            personal_volume,
-            group_volume
+            deep
         )
         VALUES
         (
@@ -209,9 +207,7 @@ BEGIN
             0,
             0,
             0,
-            1,
-            0,
-            0
+            1
         );
     END LOOP;
 END;

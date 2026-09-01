@@ -68,12 +68,5 @@ public class PlaceResponse
     [JsonPropertyName("deep")]
     public uint Deep { get; init; }
 
-    [JsonPropertyName("personal_volume")]
-    public uint PersonalVolume { get; init; }
-
-    [JsonPropertyName("group_volume")]
-    public uint GroupVolume { get; init; }
-
-
 }
     

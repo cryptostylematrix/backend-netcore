@@ -18,6 +18,9 @@ BEGIN
     DELETE FROM public.locks
     WHERE marketing_addr = v_marketing_addr;
 
+    DELETE FROM public.profile_volumes
+    WHERE marketing_addr = v_marketing_addr;
+
     DELETE FROM public.places
     WHERE marketing_addr = v_marketing_addr;
 
@@ -48,6 +51,13 @@ UNION ALL
 
 SELECT 'places', COUNT(*)
 FROM public.places
+WHERE marketing_addr =
+    'EQCFZmVrYR-tLGIWDHjBb-Oyk1tcePk2_ThcytEZA08dNLbO'
+
+UNION ALL
+
+SELECT 'profile_volumes', COUNT(*)
+FROM public.profile_volumes
 WHERE marketing_addr =
     'EQCFZmVrYR-tLGIWDHjBb-Oyk1tcePk2_ThcytEZA08dNLbO'
 

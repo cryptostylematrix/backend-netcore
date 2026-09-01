@@ -67,9 +67,7 @@ public sealed class PaidPlaceCreatedDomainEventHandlerTests
             deep: 2,
             isActive: false,
             createdAt: 1,
-            activatedAt: null,
-            personalVolume: 0,
-            groupVolume: 0);
+            activatedAt: null);
 
         public override Task<Place?> GetAsync(
             string marketingAddr,

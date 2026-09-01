@@ -20,7 +20,6 @@ public sealed class ActivatePlaceCommandHandlerTests
         Assert.True(result.IsSuccess);
         Assert.True(repository.Target.IsActive);
         Assert.NotNull(repository.Target.ActivatedAt);
-        Assert.Equal<uint>(0, repository.CuratorPlace!.PersonalVolume);
         Assert.Equal<uint>(7, result.Value.Code);
         Assert.Equal(1, unitOfWork.SaveCount);
     }
@@ -157,9 +156,7 @@ public sealed class ActivatePlaceCommandHandlerTests
             deep: 2,
             isActive,
             createdAt: 1,
-            activatedAt,
-            personalVolume: 0,
-            groupVolume: 0);
+            activatedAt);
 
     private sealed class UnitOfWork : IProgramUnitOfWork
     {

@@ -17,6 +17,7 @@ public sealed class StructureCompressionService(
     IPositionLockRepository positionLockRepository,
     IStructureQueries structureQueries,
     IStructureRankQueries rankQueries,
+    IProfileVolumeQueries profileVolumeQueries,
     IPositionAlgorithmConfigurationParser configurationParser,
     IProgramUnitOfWork unitOfWork) : IStructureCompressionService
 {
@@ -47,6 +48,11 @@ public sealed class StructureCompressionService(
             .ToArray();
         var removed = places.Except(retained).ToArray();
         var ranks = await rankQueries.GetAllAsync(marketingAddr, number, cancellationToken);
+        var referralVolumes = await profileVolumeQueries.GetReferralVolumesAsync(
+            marketingAddr,
+            number,
+            retained.Select(place => place.ProfileAddr!).Distinct(StringComparer.Ordinal).ToArray(),
+            cancellationToken);
         var inviters = await placeRepository.GetInvitersAsync(marketingAddr, cancellationToken);
         var positionLocks = await positionLockRepository.GetStructureLocksAsync(
             marketingAddr, number, cancellationToken);
@@ -68,8 +74,8 @@ public sealed class StructureCompressionService(
 
         var ordered = retained
             .Where(place => place.Id != root.Id)
-            .OrderByDescending(place => RankThreshold(place, ranks))
-            .ThenByDescending(place => place.PersonalVolume)
+            .OrderByDescending(place => RankThreshold(place, ranks, referralVolumes))
+            .ThenByDescending(place => referralVolumes.GetValueOrDefault(place.ProfileAddr!))
             .ThenBy(place => place.ActivatedAt ?? long.MaxValue)
             .ThenBy(place => place.Id)
             .ToArray();
@@ -163,8 +169,12 @@ public sealed class StructureCompressionService(
         return null;
     }
 
-    private static uint RankThreshold(Place place, IEnumerable<StructureRankResponse> ranks) =>
-        ranks.Where(rank => rank.RequiredActiveReferralPlaces <= place.PersonalVolume)
+    private static uint RankThreshold(
+        Place place,
+        IEnumerable<StructureRankResponse> ranks,
+        IReadOnlyDictionary<string, uint> referralVolumes) =>
+        ranks.Where(rank => rank.RequiredActiveReferralPlaces
+                <= referralVolumes.GetValueOrDefault(place.ProfileAddr!))
             .Select(rank => rank.RequiredActiveReferralPlaces)
             .DefaultIfEmpty(0u)
             .Max();

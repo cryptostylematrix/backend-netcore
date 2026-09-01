@@ -5,13 +5,13 @@ internal static class StructureRankCalculator
     public static string? Resolve(
         IEnumerable<StructureRankResponse> ranks,
         string? profileAddr,
-        uint personalVolume)
+        uint referralVolume)
     {
         if (string.IsNullOrWhiteSpace(profileAddr))
             return null;
 
         return ranks
-            .Where(rank => rank.RequiredActiveReferralPlaces <= personalVolume)
+            .Where(rank => rank.RequiredActiveReferralPlaces <= referralVolume)
             .OrderByDescending(rank => rank.RequiredActiveReferralPlaces)
             .Select(rank => rank.Name)
             .FirstOrDefault();

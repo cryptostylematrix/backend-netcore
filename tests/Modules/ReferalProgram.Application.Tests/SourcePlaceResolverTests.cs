@@ -98,9 +98,7 @@ public sealed class SourcePlaceResolverTests
             deep,
             isActive: true,
             createdAt: 100,
-            activatedAt: 100,
-            personalVolume: 3,
-            groupVolume: 4);
+            activatedAt: 100);
 
         if (id != 0)
         {

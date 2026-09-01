@@ -41,9 +41,7 @@ public sealed class PlaceCreatedDomainEventHandlerTests
             deep: 2,
             isActive: true,
             createdAt: 1,
-            activatedAt: 1,
-            personalVolume: 0,
-            groupVolume: 0);
+            activatedAt: 1);
 
         public int? IncrementParentId { get; private set; }
 

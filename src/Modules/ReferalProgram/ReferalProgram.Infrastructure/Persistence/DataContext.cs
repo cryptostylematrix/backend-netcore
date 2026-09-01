@@ -4,6 +4,7 @@ using ReferalProgram.Core.LockAggregate;
 using ReferalProgram.Core.MarketingTaskAggregate;
 using ReferalProgram.Core.PlaceAggregate;
 using ReferalProgram.Core.ProgramAggregate;
+using ReferalProgram.Core.ProfileVolumeAggregate;
 using ReferalProgram.Application.Abstractions;
 using Microsoft.EntityFrameworkCore.Storage;
 using ReferalProgramAggregate = ReferalProgram.Core.ProgramAggregate.ReferalProgram;
@@ -23,6 +24,7 @@ public sealed class DataContext : DbContext, IProgramUnitOfWork
     }
 
     public DbSet<Place> Places => Set<Place>();
+    public DbSet<ProfileVolume> ProfileVolumes => Set<ProfileVolume>();
     public DbSet<PositionLock> PositionLocks => Set<PositionLock>();
     public DbSet<MarketingTask> MarketingTasks => Set<MarketingTask>();
     public DbSet<ReferalProgramAggregate> ReferalPrograms =>

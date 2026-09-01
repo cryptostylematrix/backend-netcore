@@ -41,11 +41,21 @@ profile, and `activated_at` is null. Structure `0` follows the same rules.
 Activation always sets `activated_at`. The extensible activity setting
 `set_active_on_activation` defaults to `true` inside a non-null activity object;
 when false, activation leaves `is_active` unchanged. A successful activation
-increments the curator's first-place personal volume in the activated structure
-when that place exists, resolves its response source exactly like a purchase,
-and records the result through the shared Marketing-task idempotency boundary.
+increments the profile's personal volume and its current direct curator's
+referral volume in the activated structure. The curator does not need a place
+in that structure. It resolves its response source exactly like a purchase and
+records the result through the shared Marketing-task idempotency boundary.
 
 Paid purchases, clones, and reinvest clones start active and activated. Only a
 profile's first paid place in any structure greater than `0` activates its
 structure-0 invite. Once any such place exists, later paid-place creation never
 changes the invite, even if an integration command reset its activation date.
+
+## Profile volume
+
+Volume belongs to `(marketing address, structure number, profile address)`, not
+to a place. A missing row means zero. A profiled first-place purchase, regular
+purchase, activation, clone, or reinvest currently adds one personal-volume
+unit to the operating profile and one referral-volume unit to its direct
+curator from structure `0`. Terminal clones are included. Structure `0` follows
+the same operation rules. Group volume is stored but is not calculated yet.

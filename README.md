@@ -20,6 +20,7 @@ Entity Framework Core, MediatR, and the included TON SDK projects.
 | `src/Modules/ScheduledTasks` | System-wide UTC task scheduling, sequential in-process command execution, and marketing coordination. |
 | `src/ProgramMigrator` | Console application for importing legacy Multi and Neo data. |
 | `src/ProgramMatrixFillingRecalculator` | Dry-run-first maintenance tool for recalculating persisted matrix filling in all existing programs or one selected program. |
+| `src/ProgramVolumeRecalculator` | Dry-run-first maintenance tool for rebuilding one profile-volume type in one program structure. |
 | `src/ProgramInviterChanger` | Administrative console application for moving a referral subtree. |
 | `src/BuildingBlocks` | Shared domain, integration-event, and messaging infrastructure. |
 | `src/Libs/TonSdk.*` | TON client and core libraries used by the Contracts module. |
@@ -44,6 +45,8 @@ name is intentionally preserved in paths and namespaces.
   structure-specific imports, Multi and Neo configuration, and applying data.
 - [Program Matrix Filling Recalculator](src/ProgramMatrixFillingRecalculator/README.md)
   describes checking and backfilling matrix counts for existing programs.
+- [Program Volume Recalculator](src/ProgramVolumeRecalculator/README.md)
+  describes checking and rebuilding personal or referral profile volume.
 - [Program Inviter Changer](src/ProgramInviterChanger/README.md) describes its
   safety checks, required permissions, and invocation.
 - [Referral Program database scripts](src/Modules/ReferalProgram/Database/Scripts)

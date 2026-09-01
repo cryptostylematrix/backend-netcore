@@ -195,9 +195,7 @@ BEGIN
             kind,
             pos,
             filling,
-            deep,
-            personal_volume,
-            group_volume
+            deep
         )
         VALUES
         (
@@ -219,9 +217,7 @@ BEGIN
             0,                              -- kind
             0,                              -- pos
             0,                              -- filling
-            1,                              -- deep
-            0,                              -- personal_volume
-            0                              -- group_volume
+            1                               -- deep
         );
     END LOOP;
 
@@ -245,4 +241,3 @@ END;
 $$;
 
 COMMIT;
-

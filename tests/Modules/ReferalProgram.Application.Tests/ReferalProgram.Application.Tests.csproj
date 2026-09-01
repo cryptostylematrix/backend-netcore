@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Modules\ReferalProgram\ReferalProgram.Application\ReferalProgram.Application.csproj" />
+    <ProjectReference Include="..\..\..\src\ProgramVolumeRecalculator\ProgramVolumeRecalculator.csproj" />
   </ItemGroup>
 
 </Project>

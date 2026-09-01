@@ -2,6 +2,7 @@ using Common.Domain;
 using ReferalProgram.Application.Abstractions;
 using ReferalProgram.Application.Features.Places;
 using ReferalProgram.Core.PlaceAggregate;
+using ReferalProgram.Core.ProfileVolumeAggregate;
 using ReferalProgram.Dto;
 
 namespace ReferalProgram.Application.Tests;
@@ -44,6 +45,9 @@ public sealed class BuyPlaceCommandHandlerTests
 
         Assert.True(result.IsSuccess);
         Assert.NotNull(repository.AddedPlace);
+        Assert.Contains(repository.AddedPlace.DomainEvents, domainEvent =>
+            domainEvent is ProfileVolumeOperationDomainEvent volume
+            && volume.Operation == ProfileVolumeOperation.BuyPlace);
         Assert.Equal(1, unitOfWork.SaveCount);
     }
 
@@ -79,9 +83,7 @@ public sealed class BuyPlaceCommandHandlerTests
             deep: 1,
             isActive: true,
             createdAt: 1,
-            activatedAt: 1,
-            personalVolume: 0,
-            groupVolume: 0);
+            activatedAt: 1);
 
         public Place? AddedPlace { get; private set; }
 
@@ -158,7 +160,7 @@ public sealed class BuyPlaceCommandHandlerTests
     private static Place CreateSourcePlace() => Place.Create(
         1, "marketing", 2, "parent-profile", "parent-login", "parent1", 1,
         "root-profile", "root", 1, "00000000", 0, 0, 1, 0, 1,
-        true, 1, 1, 0, 0);
+        true, 1, 1);
 
     private sealed class UnitOfWork : IProgramUnitOfWork
     {

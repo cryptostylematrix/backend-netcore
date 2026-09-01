@@ -13,14 +13,14 @@ public sealed class StructureRankCalculatorTests
     [InlineData(50, "Gold")]
     [InlineData(1000, "Diamond")]
     [InlineData(5000, "Diamond")]
-    public void Resolves_highest_rank_achieved_by_personal_volume(
-        uint personalVolume,
+    public void Resolves_highest_rank_achieved_by_referral_volume(
+        uint referralVolume,
         string expected)
     {
         var result = StructureRankCalculator.Resolve(
             Ranks(),
             profileAddr: "profile",
-            personalVolume);
+            referralVolume);
 
         Assert.Equal(expected, result);
     }
@@ -33,7 +33,7 @@ public sealed class StructureRankCalculatorTests
         var result = StructureRankCalculator.Resolve(
             ranks,
             profileAddr: "profile",
-            personalVolume: 4);
+            referralVolume: 4);
 
         Assert.Null(result);
     }
@@ -44,7 +44,7 @@ public sealed class StructureRankCalculatorTests
         var result = StructureRankCalculator.Resolve(
             Ranks(),
             profileAddr: null,
-            personalVolume: 5000);
+            referralVolume: 5000);
 
         Assert.Null(result);
     }

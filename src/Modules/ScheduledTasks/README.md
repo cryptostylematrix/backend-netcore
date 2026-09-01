@@ -69,8 +69,8 @@ Supported Program command types are:
 - `program.task-processing.enable`
 - `program.structure.update-activity`
 - `program.structure.compress`
-- `program.structure.calculate-personal-volume`
-- `program.structure.reset-personal-volume`
+- `program.structure.calculate-referral-volume`
+- `program.structure.reset-referral-volume`
 
 Each target module registers a command factory and owns its concrete MassTransit
 consumers. The shared message-broker setup
@@ -143,3 +143,8 @@ scripts manually in order:
    in the Programs database.
 4. `ReferalProgram/Database/Scripts/022_add_task_processing_enabled_to_referal_program.sql`
    in the Programs database.
+
+After deploying profile-scoped volume support, run
+`ScheduledTasks/Database/Scripts/005_rename_referral_volume_commands.sql` in an
+existing Tasks database. It updates stored personal-volume command names to the
+new referral-volume names without changing command order.

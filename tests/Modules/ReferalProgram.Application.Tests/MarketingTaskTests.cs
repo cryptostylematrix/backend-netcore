@@ -217,9 +217,7 @@ public sealed class MarketingTaskTests
         deep: 2,
         isActive: true,
         createdAt: 1,
-        activatedAt: 1,
-        personalVolume: 0,
-        groupVolume: 0);
+        activatedAt: 1);
 
     private static MarketingTask CreateTask() => MarketingTask.RecordProcessedCommand(
         "marketing",

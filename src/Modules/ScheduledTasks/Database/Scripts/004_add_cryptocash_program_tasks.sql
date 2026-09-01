@@ -101,7 +101,7 @@ BEGIN
                 'arguments', '{}'::jsonb),
             jsonb_build_object(
                 'module', 'program',
-                'type', 'program.structure.calculate-personal-volume',
+                'type', 'program.structure.calculate-referral-volume',
                 'version', 1,
                 'target', jsonb_build_object(
                     'marketingAddress', v_marketing_address),
@@ -125,7 +125,7 @@ BEGIN
                     'structureNumber', task_configuration.structure_number)),
             jsonb_build_object(
                 'module', 'program',
-                'type', 'program.structure.reset-personal-volume',
+                'type', 'program.structure.reset-referral-volume',
                 'version', 1,
                 'target', jsonb_build_object(
                     'marketingAddress', v_marketing_address),

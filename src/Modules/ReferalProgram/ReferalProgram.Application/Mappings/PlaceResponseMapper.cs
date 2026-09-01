@@ -25,8 +25,6 @@ internal static class PlaceResponseMapper
         Kind = place.Kind,
         Pos = place.Pos,
         Filling = place.Filling,
-        Deep = place.Deep,
-        PersonalVolume = place.PersonalVolume,
-        GroupVolume = place.GroupVolume
+        Deep = place.Deep
     };
 }

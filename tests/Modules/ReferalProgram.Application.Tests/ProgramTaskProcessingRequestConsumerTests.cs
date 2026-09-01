@@ -112,7 +112,7 @@ public sealed class ProgramTaskProcessingRequestConsumerTests
         var place = Place.Create(
             1, "EQ_TEST", 1, "profile", "profile", "profile1", 1,
             "parent", "parent", 1, "00000001", 0, 0, 1, 0, 1,
-            true, 1, 1, 0, 0);
+            true, 1, 1);
         var task = MarketingTask.RecordProcessedCommand(
             "EQ_TEST", 1, 1, "wallet", place, place, 0, DateTimeOffset.UtcNow);
         task.RecordResponseAttempt(DateTimeOffset.UtcNow);

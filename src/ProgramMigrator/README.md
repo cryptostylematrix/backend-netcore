@@ -128,8 +128,8 @@ from `0/1` to `1/2`, and Multi `clone` is mapped to `kind`.
 
 Legacy contract addresses are used only to resolve parent places and locks. Old
 `parent_addr`, `width`, `height`, `seq_no`, `filling2`, `inviter_profile_addr`,
-`confirmed`, and task metadata are not copied. Destination task fields and volumes
-start at `0`.
+`confirmed`, task metadata, and legacy place volumes are not copied. Profile
+volumes can be rebuilt after import with `ProgramVolumeRecalculator`.
 
 Exact duplicate legacy locks are treated idempotently: the first row is imported
 and subsequent rows with the same structure, place address, locking profile, and

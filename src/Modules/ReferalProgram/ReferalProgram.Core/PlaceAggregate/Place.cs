@@ -1,4 +1,5 @@
 using Common.Domain;
+using ReferalProgram.Core.ProfileVolumeAggregate;
 
 namespace ReferalProgram.Core.PlaceAggregate;
 
@@ -27,9 +28,7 @@ public sealed class Place : Entity, IAggregateRoot
         uint deep,
         bool isActive,
         long createdAt,
-        long? activatedAt,
-        uint personalVolume,
-        uint groupVolume)
+        long? activatedAt)
     {
         ParentId = parentId;
         MarketingAddr = marketingAddr;
@@ -50,8 +49,6 @@ public sealed class Place : Entity, IAggregateRoot
         IsActive = isActive;
         CreatedAt = createdAt;
         ActivatedAt = activatedAt;
-        PersonalVolume = personalVolume;
-        GroupVolume = groupVolume;
         MatrixFilling = 1;
     }
 
@@ -75,8 +72,6 @@ public sealed class Place : Entity, IAggregateRoot
     public uint Pos { get; private set; }
     public uint Filling { get; private set; }
     public uint Deep { get; private set; }
-    public uint PersonalVolume { get; private set; }
-    public uint GroupVolume { get; private set; }
     public long MatrixFilling { get; private set; } = 1;
 
     public static Place Create(
@@ -98,9 +93,7 @@ public sealed class Place : Entity, IAggregateRoot
         uint deep,
         bool isActive,
         long createdAt,
-        long? activatedAt,
-        uint personalVolume,
-        uint groupVolume)
+        long? activatedAt)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(marketingAddr);
         ArgumentException.ThrowIfNullOrWhiteSpace(index);
@@ -137,9 +130,7 @@ public sealed class Place : Entity, IAggregateRoot
             deep,
             isActive,
             createdAt,
-            activatedAt,
-            personalVolume,
-            groupVolume);
+            activatedAt);
 
         place.AddPlaceCreatedDomainEvent();
 
@@ -162,7 +153,8 @@ public sealed class Place : Entity, IAggregateRoot
         byte kind,
         uint pos,
         uint deep,
-        long boughtAt)
+        long boughtAt,
+        ProfileVolumeOperation volumeOperation)
     {
         var place = Create(
             parentId,
@@ -183,11 +175,9 @@ public sealed class Place : Entity, IAggregateRoot
             deep,
             isActive: true,
             createdAt: boughtAt,
-            activatedAt: boughtAt,
-            personalVolume: 0,
-            groupVolume: 0);
+            activatedAt: boughtAt);
 
-        place.EnsureBoughtEffects();
+        place.RecordPurchaseVolumeOperation(volumeOperation);
         place.EnsurePaidPlaceEffects();
 
         return place;
@@ -228,9 +218,7 @@ public sealed class Place : Entity, IAggregateRoot
             deep,
             isActive: true,
             createdAt: boughtAt,
-            activatedAt: boughtAt,
-            personalVolume: 0,
-            groupVolume: 0);
+            activatedAt: boughtAt);
     }
 
     private void AddPlaceCreatedDomainEvent()
@@ -243,17 +231,17 @@ public sealed class Place : Entity, IAggregateRoot
             expectedParentFilling: checked(Pos - 1)));
     }
 
-    public void EnsureBoughtEffects()
+    private void RecordPurchaseVolumeOperation(ProfileVolumeOperation volumeOperation)
     {
         if (string.IsNullOrWhiteSpace(ProfileAddr))
             throw new InvalidOperationException("A bought place must have a profile address.");
+        if (volumeOperation is not ProfileVolumeOperation.BuyFirstPlace
+            and not ProfileVolumeOperation.BuyPlace)
+        {
+            throw new ArgumentOutOfRangeException(nameof(volumeOperation));
+        }
 
-        AddDomainEvent(new PlaceBoughtDomainEvent(
-            MarketingAddr,
-            StructureNumber,
-            ProfileAddr,
-            PlaceNumber,
-            ActivatedAt ?? CreatedAt));
+        AddProfileVolumeOperation(volumeOperation, ActivatedAt ?? CreatedAt);
     }
 
     public void EnsurePaidPlaceEffects()
@@ -300,21 +288,6 @@ public sealed class Place : Entity, IAggregateRoot
         Filling = checked(Filling + 1);
     }
 
-    public void IncreasePersonalVolume()
-    {
-        PersonalVolume = checked(PersonalVolume + 1);
-    }
-
-    public void ResetPersonalVolume()
-    {
-        PersonalVolume = 0;
-    }
-
-    public void SetPersonalVolume(uint personalVolume)
-    {
-        PersonalVolume = personalVolume;
-    }
-
     public void Activate(long activatedAt, bool setActiveOnActivation)
     {
         if (string.IsNullOrWhiteSpace(ProfileAddr))
@@ -323,12 +296,35 @@ public sealed class Place : Entity, IAggregateRoot
             throw new InvalidOperationException("The place is already activated.");
 
         ApplyActivity(activatedAt, setActiveOnActivation);
-        AddDomainEvent(new PlaceActivatedDomainEvent(
+        AddProfileVolumeOperation(ProfileVolumeOperation.ActivatePlace, activatedAt);
+    }
+
+    public void RecordCloneVolumeOperation(
+        ProfileVolumeOperation operation,
+        long occurredAt)
+    {
+        if (operation is not ProfileVolumeOperation.CreateClone
+            and not ProfileVolumeOperation.CreateReinvest)
+        {
+            throw new ArgumentOutOfRangeException(nameof(operation));
+        }
+
+        AddProfileVolumeOperation(operation, occurredAt);
+    }
+
+    private void AddProfileVolumeOperation(
+        ProfileVolumeOperation operation,
+        long occurredAt)
+    {
+        if (string.IsNullOrWhiteSpace(ProfileAddr))
+            return;
+
+        AddDomainEvent(new ProfileVolumeOperationDomainEvent(
             MarketingAddr,
             StructureNumber,
             ProfileAddr,
-            PlaceNumber,
-            activatedAt));
+            operation,
+            occurredAt));
     }
 
     public void InitializeActivityFromFirstPaidPlace(long activatedAt)
