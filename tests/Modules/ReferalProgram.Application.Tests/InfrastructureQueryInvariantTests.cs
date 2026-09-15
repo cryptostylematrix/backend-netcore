@@ -150,6 +150,41 @@ public sealed class InfrastructureQueryInvariantTests
     }
 
     [Fact]
+    public void Program_statistics_keep_active_and_activated_counts_separate()
+    {
+        var root = FindRepositoryRoot();
+        var source = File.ReadAllText(Path.Combine(
+            root,
+            "src",
+            "Modules",
+            "ReferalProgram",
+            "ReferalProgram.Infrastructure",
+            "Queries",
+            "ProgramStatisticsQueries.cs"));
+
+        Assert.Contains(
+            "COUNT(*) FILTER (WHERE is_active)::bigint AS active_places",
+            source,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "COUNT(*) FILTER (WHERE activated_at IS NOT NULL)::bigint AS activated_places",
+            source,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "AND is_active\n                        )::bigint AS active_profiles",
+            source,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "AND activated_at IS NOT NULL\n                        )::bigint AS activated_profiles",
+            source,
+            StringComparison.Ordinal);
+        Assert.Contains(
+            "FILTER (WHERE place.activated_at IS NOT NULL)::bigint AS activated_referrals",
+            source,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Matrix_filling_updates_use_bounded_parent_traversal()
     {
         var root = FindRepositoryRoot();

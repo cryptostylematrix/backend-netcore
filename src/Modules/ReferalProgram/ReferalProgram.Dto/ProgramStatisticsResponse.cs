@@ -25,6 +25,12 @@ public sealed class ReferralCountStatisticsResponse
 
     [JsonPropertyName("inactive")]
     public long Inactive { get; init; }
+
+    [JsonPropertyName("activated")]
+    public long Activated { get; init; }
+
+    [JsonPropertyName("not_activated")]
+    public long NotActivated { get; init; }
 }
 
 public sealed class StructureStatisticsResponse
@@ -38,11 +44,17 @@ public sealed class StructureStatisticsResponse
     [JsonPropertyName("active_places")]
     public long ActivePlaces { get; init; }
 
+    [JsonPropertyName("activated_places")]
+    public long ActivatedPlaces { get; init; }
+
     [JsonPropertyName("total_profiles")]
     public long TotalProfiles { get; init; }
 
     [JsonPropertyName("active_profiles")]
     public long ActiveProfiles { get; init; }
+
+    [JsonPropertyName("activated_profiles")]
+    public long ActivatedProfiles { get; init; }
 
     [JsonPropertyName("referrals")]
     public StructureReferralStatisticsResponse Referrals { get; init; } = null!;
@@ -59,9 +71,18 @@ public sealed class StructureReferralStatisticsResponse
     [JsonPropertyName("inactive")]
     public long Inactive { get; init; }
 
+    [JsonPropertyName("activated")]
+    public long Activated { get; init; }
+
+    [JsonPropertyName("not_activated")]
+    public long NotActivated { get; init; }
+
     [JsonPropertyName("total_places")]
     public long TotalPlaces { get; init; }
 
     [JsonPropertyName("active_places")]
     public long ActivePlaces { get; init; }
+
+    [JsonPropertyName("activated_places")]
+    public long ActivatedPlaces { get; init; }
 }
