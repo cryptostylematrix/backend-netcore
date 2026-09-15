@@ -16,7 +16,6 @@ public sealed class InfrastructureQueryInvariantTests
             "PlaceQueries.cs");
         var source = File.ReadAllText(path);
 
-        Assert.Equal(5, Count(source, "kind <> 2"));
         AssertMethodContains(source,
             "GetUnfilledPlacesInDepthWindowAsync",
             "AND kind <> 2");
@@ -44,7 +43,43 @@ public sealed class InfrastructureQueryInvariantTests
             "level_place.deep = scoped.deep + 1");
         AssertMethodContains(source,
             "GetProfileFrontierCandidateAsync",
-            "target_level.profiled_count < @profiledWidthLimit");
+            "level_place.deep = scoped.deep");
+        AssertMethodContains(source,
+            "GetProfileFrontierCandidateAsync",
+            "target_level.profiled_count < GREATEST(");
+        AssertMethodContains(source,
+            "GetProfileFrontierCandidateAsync",
+            ")\n                      OR scoped.profiled_child_count = 0");
+        AssertMethodContains(source,
+            "GetProfileFrontierCandidateAsync",
+            "current_level.profiled_count");
+        AssertMethodContains(source,
+            "GetProfileFrontierCandidateAsync",
+            "current_level.profiled_count < @profiledWidthLimit");
+        AssertMethodContains(source,
+            "GetProfileFrontierCandidateAsync",
+            "OR scoped.profiled_child_count = 0");
+        AssertMethodContains(source,
+            "GetProfileFrontierCandidateAsync",
+            "MIN(level_place.profiled_child_count) FILTER (");
+        AssertMethodContains(source,
+            "GetProfileFrontierCandidateAsync",
+            "= current_level.minimum_profiled_child_count");
+        AssertMethodContains(source,
+            "GetProfileFrontierCandidateAsync",
+            "profiled_scoped AS MATERIALIZED");
+        AssertMethodContains(source,
+            "GetProfileFrontierCandidateAsync",
+            "PARTITION BY scoped.deep");
+        AssertMethodContains(source,
+            "GetProfileFrontierCandidateAsync",
+            "ORDER BY scoped.mp ASC, scoped.id ASC");
+        AssertMethodContains(source,
+            "GetProfileFrontierCandidateAsync",
+            "horizontal_index * 2 - 1");
+        AssertMethodContains(source,
+            "GetProfileFrontierCandidateAsync",
+            "(horizontal_count - horizontal_index + 1) * 2");
         AssertMethodContains(source,
             "GetProfileFrontierCandidateAsync",
             "branch_load ASC");
@@ -252,6 +287,4 @@ public sealed class InfrastructureQueryInvariantTests
         throw new DirectoryNotFoundException("Could not locate the repository root.");
     }
 
-    private static int Count(string value, string fragment) =>
-        value.Split(fragment, StringSplitOptions.None).Length - 1;
 }

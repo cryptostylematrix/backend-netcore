@@ -139,16 +139,38 @@ next-position candidate query.
 ### `profile_frontier` and `system_gap`
 
 These algorithms are intended to be configured together through version 2
-operation overrides. Despite its legacy name, `profile_frontier` enforces a
-hard per-level profiled-place width through `profiled_width_limit`. A candidate
-parent is eligible only when the number of profiled places at its child's
-target depth is below the limit. Levels that already meet or exceed the limit
-are skipped, including historical overfilled levels.
+operation overrides. Despite its legacy name, `profile_frontier` bounds the
+profiled-place width through `profiled_width_limit`. For each candidate parent,
+the effective width of the child level is the greater of the configured limit
+and the profiled width of the parent's current level. A normally built tree
+therefore stops widening at the configured value, while a historical level
+that is already wider keeps that width on subsequent levels so that every
+profiled chain can continue. Once the current level reaches or exceeds the
+configured limit, each of its profiled places can receive only one direct
+profiled child. This makes continuation mandatory before any widening and
+prevents already saturated levels from branching further, including while
+another parent is temporarily excluded by a placement lock.
+
+At every level, a parent can receive another profiled child only while its
+direct profiled-child count is the minimum among all active, non-terminal
+parents with capacity on that level. Placement locks are deliberately applied
+after this minimum is calculated. Consequently, a locked unfinished chain can
+wait without allowing another chain to get further ahead.
+
+Historical data can already contain an uneven child level whose effective
+width has been reached while some parent still has no profiled continuation.
+In that case the child level may grow only by the minimum number of places
+needed to give each such parent one profiled child. Parents that already have a
+profiled child remain ineligible, so this repair allowance cannot create
+additional branching.
 
 Eligible parents are considered in breadth-first order. At the same depth,
-parents with fewer direct profiled children win; profiled subtree load and MP
-order break further ties. This keeps the profiled structure balanced while
-ensuring that a new level never grows beyond the configured width. Profiled
+parents with fewer direct profiled children win. Parents with the same number
+of profiled children are selected in chess order across the complete level:
+leftmost, rightmost, second from the left, second from the right, and so on.
+Profiled subtree load and MP order provide deterministic fallback ordering.
+This keeps the profiled structure balanced while
+ensuring that a new level never grows beyond its effective width. Profiled
 places are never placed beneath system places. The former
 `profiled_frontier_limit` property remains accepted as a backward-compatible
 alias with the corrected per-level width semantics; new configurations should

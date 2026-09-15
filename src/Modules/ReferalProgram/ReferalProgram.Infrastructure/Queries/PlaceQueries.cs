@@ -421,11 +421,26 @@ public sealed class PlaceQueries(
                   AND parent.mp LIKE @mpPrefix
                 GROUP BY parent.id
             ),
+            profiled_scoped AS MATERIALIZED
+            (
+                SELECT
+                    scoped.*,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY scoped.deep
+                        ORDER BY scoped.mp ASC, scoped.id ASC
+                    ) AS horizontal_index,
+                    COUNT(*) OVER (
+                        PARTITION BY scoped.deep
+                    ) AS horizontal_count
+                FROM scoped
+                WHERE scoped.profile_addr IS NOT NULL
+            ),
             eligible AS
             (
                 SELECT
                     scoped.*,
                     target_level.profiled_count AS target_level_profiled_count,
+                    current_level.profiled_count AS current_level_profiled_count,
                     ARRAY(
                         SELECT
                         (
@@ -442,7 +457,19 @@ public sealed class PlaceQueries(
                         ) AS path(path_length)
                         ORDER BY path_length
                     ) AS branch_load
-                FROM scoped
+                FROM profiled_scoped scoped
+                CROSS JOIN LATERAL
+                (
+                    SELECT
+                        COUNT(*)::bigint AS profiled_count,
+                        MIN(level_place.profiled_child_count) FILTER (
+                            WHERE level_place.is_active = true
+                              AND level_place.kind <> 2
+                              AND (@width = 0 OR level_place.filling < @width)
+                        ) AS minimum_profiled_child_count
+                    FROM profiled_scoped level_place
+                    WHERE level_place.deep = scoped.deep
+                ) current_level
                 CROSS JOIN LATERAL
                 (
                     SELECT COUNT(*)::bigint AS profiled_count
@@ -454,7 +481,19 @@ public sealed class PlaceQueries(
                   AND scoped.is_active = true
                   AND scoped.kind <> 2
                   AND (@width = 0 OR scoped.filling < @width)
-                  AND target_level.profiled_count < @profiledWidthLimit
+                  AND (
+                      target_level.profiled_count < GREATEST(
+                          @profiledWidthLimit,
+                          current_level.profiled_count
+                      )
+                      OR scoped.profiled_child_count = 0
+                  )
+                  AND (
+                      current_level.profiled_count < @profiledWidthLimit
+                      OR scoped.profiled_child_count = 0
+                  )
+                  AND scoped.profiled_child_count
+                      = current_level.minimum_profiled_child_count
                   AND NOT EXISTS
                   (
                       SELECT 1
@@ -470,6 +509,11 @@ public sealed class PlaceQueries(
                 ORDER BY
                     deep ASC,
                     profiled_child_count ASC,
+                    CASE
+                        WHEN horizontal_index <= (horizontal_count + 1) / 2
+                            THEN horizontal_index * 2 - 1
+                        ELSE (horizontal_count - horizontal_index + 1) * 2
+                    END ASC,
                     branch_load ASC,
                     mp ASC,
                     id ASC
