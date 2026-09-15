@@ -179,7 +179,7 @@ public sealed class PositionConfigurationTests
     }
 
     [Fact]
-    public void Parser_reads_profile_frontier_limit()
+    public void Parser_reads_profiled_width_limit()
     {
         using var document = JsonDocument.Parse("""
             {
@@ -191,7 +191,7 @@ public sealed class PositionConfigurationTests
                   "id": 0,
                   "algo": "profile_frontier",
                   "weight": 1,
-                  "profiled_frontier_limit": 35
+                  "profiled_width_limit": 35
                 }
               ]
             }
@@ -200,17 +200,19 @@ public sealed class PositionConfigurationTests
         var result = new PositionAlgorithmConfigurationParser().Parse(
             document.RootElement);
 
-        Assert.Equal((uint)35, Assert.Single(result.Groups).ProfiledFrontierLimit);
+        var group = Assert.Single(result.Groups);
+        Assert.Equal((uint)35, group.ProfiledWidthLimit);
+        Assert.Equal((uint)35, group.EffectiveProfiledWidthLimit);
     }
 
     [Theory]
     [InlineData(null)]
     [InlineData(0)]
-    public void Parser_rejects_missing_or_zero_profile_frontier_limit(int? limit)
+    public void Parser_rejects_missing_or_zero_profiled_width_limit(int? limit)
     {
         var limitProperty = limit is null
             ? string.Empty
-            : $", \"profiled_frontier_limit\": {limit}";
+            : $", \"profiled_width_limit\": {limit}";
         using var document = JsonDocument.Parse($$"""
             {
               "v": 1,
@@ -231,6 +233,61 @@ public sealed class PositionConfigurationTests
             new PositionAlgorithmConfigurationParser().Parse(document.RootElement));
 
         Assert.Contains("positive", exception.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Parser_accepts_legacy_profiled_frontier_limit_as_width_limit()
+    {
+        using var document = JsonDocument.Parse("""
+            {
+              "v": 1,
+              "root": "profile",
+              "relation": "relative",
+              "groups": [
+                {
+                  "id": 0,
+                  "algo": "profile_frontier",
+                  "weight": 1,
+                  "profiled_frontier_limit": 32
+                }
+              ]
+            }
+            """);
+
+        var result = new PositionAlgorithmConfigurationParser().Parse(
+            document.RootElement);
+
+        var group = Assert.Single(result.Groups);
+        Assert.Null(group.ProfiledWidthLimit);
+        Assert.Equal((uint)32, group.LegacyProfiledFrontierLimit);
+        Assert.Equal((uint)32, group.EffectiveProfiledWidthLimit);
+    }
+
+    [Fact]
+    public void Parser_rejects_both_width_limit_names()
+    {
+        using var document = JsonDocument.Parse("""
+            {
+              "v": 1,
+              "root": "profile",
+              "relation": "relative",
+              "groups": [
+                {
+                  "id": 0,
+                  "algo": "profile_frontier",
+                  "weight": 1,
+                  "profiled_width_limit": 32,
+                  "profiled_frontier_limit": 32
+                }
+              ]
+            }
+            """);
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            new PositionAlgorithmConfigurationParser().Parse(document.RootElement));
+
+        Assert.Contains("cannot define both", exception.Message,
+            StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

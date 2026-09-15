@@ -154,10 +154,10 @@ public sealed class PositionAlgorithmStrategyTests
         var strategy = new ProfileFrontierPositionAlgorithmStrategy(candidates);
 
         var result = await strategy.FindNextAsync(
-            Context(profiledFrontierLimit: 35),
+            Context(profiledWidthLimit: 35),
             CancellationToken.None);
 
-        Assert.Equal((uint)35, candidates.LastProfiledFrontierLimit);
+        Assert.Equal((uint)35, candidates.LastProfiledWidthLimit);
         Assert.Equal("profile", result?.ProfileAddr);
         Assert.Equal((uint)2, result?.Pos);
         Assert.Equal("ROOT0000000100000002", result?.Mp);
@@ -202,7 +202,7 @@ public sealed class PositionAlgorithmStrategyTests
         byte depthSpread = 1,
         string[]? lockMps = null,
         uint? cutFactor = null,
-        uint? profiledFrontierLimit = null) => new(
+        uint? profiledWidthLimit = null) => new(
             "marketing",
             4,
             3,
@@ -212,7 +212,7 @@ public sealed class PositionAlgorithmStrategyTests
             depthSpread,
             lockMps ?? [],
             cutFactor,
-            profiledFrontierLimit);
+            profiledWidthLimit);
 
     private static PlaceResponse Place(
         string mp,
@@ -236,14 +236,14 @@ public sealed class PositionAlgorithmStrategyTests
         public PlaceResponse? ProfileFrontierCandidate { get; init; }
         public PlaceResponse? SystemGapCandidate { get; init; }
         public byte LastDepthSpread { get; private set; }
-        public uint LastProfiledFrontierLimit { get; private set; }
+        public uint LastProfiledWidthLimit { get; private set; }
 
         public Task<PlaceResponse?> GetProfileFrontierCandidateAsync(
             string marketingAddr, byte structureNumber, string rootMp, byte width,
-            uint profiledFrontierLimit, IReadOnlyCollection<string> lockMps,
+            uint profiledWidthLimit, IReadOnlyCollection<string> lockMps,
             CancellationToken cancellationToken)
         {
-            LastProfiledFrontierLimit = profiledFrontierLimit;
+            LastProfiledWidthLimit = profiledWidthLimit;
             return Task.FromResult(ProfileFrontierCandidate);
         }
 

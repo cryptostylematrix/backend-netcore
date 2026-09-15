@@ -96,8 +96,17 @@ public sealed class PositionGroupConfiguration
     [JsonPropertyName("cut_factor")]
     public uint? CutFactor { get; init; }
 
+    [JsonPropertyName("profiled_width_limit")]
+    public uint? ProfiledWidthLimit { get; init; }
+
+    // Backward-compatible alias for configurations written before the limit
+    // was corrected to apply per level rather than to the leaf frontier.
     [JsonPropertyName("profiled_frontier_limit")]
-    public uint? ProfiledFrontierLimit { get; init; }
+    public uint? LegacyProfiledFrontierLimit { get; init; }
+
+    [JsonIgnore]
+    public uint? EffectiveProfiledWidthLimit =>
+        ProfiledWidthLimit ?? LegacyProfiledFrontierLimit;
 }
 
 public interface IPositionAlgorithmConfigurationParser

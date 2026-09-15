@@ -128,10 +128,20 @@ public sealed class PositionAlgorithmConfigurationParser
             if (group.Algorithm.Equals(
                     ProfileFrontierPositionAlgorithmStrategy.AlgorithmName,
                     StringComparison.OrdinalIgnoreCase)
-                && group.ProfiledFrontierLimit is null or 0)
+                && group.ProfiledWidthLimit is not null
+                && group.LegacyProfiledFrontierLimit is not null)
             {
                 throw new InvalidOperationException(
-                    $"{configurationName} group {group.Id} must define a positive profiled_frontier_limit for {ProfileFrontierPositionAlgorithmStrategy.AlgorithmName}.");
+                    $"{configurationName} group {group.Id} cannot define both profiled_width_limit and profiled_frontier_limit.");
+            }
+
+            if (group.Algorithm.Equals(
+                    ProfileFrontierPositionAlgorithmStrategy.AlgorithmName,
+                    StringComparison.OrdinalIgnoreCase)
+                && group.EffectiveProfiledWidthLimit is null or 0)
+            {
+                throw new InvalidOperationException(
+                    $"{configurationName} group {group.Id} must define a positive profiled_width_limit for {ProfileFrontierPositionAlgorithmStrategy.AlgorithmName}.");
             }
         }
     }

@@ -302,7 +302,7 @@ public sealed class StructureCompressionService(
 
         public Task<PlaceResponse?> GetProfileFrontierCandidateAsync(
             string marketingAddr, byte structureNumber, string rootMp, byte width,
-            uint profiledFrontierLimit, IReadOnlyCollection<string> lockMps,
+            uint profiledWidthLimit, IReadOnlyCollection<string> lockMps,
             CancellationToken cancellationToken) => throw new NotSupportedException();
 
         public Task<PlaceResponse?> GetSystemGapCandidateAsync(

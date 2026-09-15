@@ -64,7 +64,7 @@ public sealed class EmptyParentPositionAlgorithmStrategyTests
             CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<PlaceResponse>>(page == 1 ? candidates : []);
 
-        public Task<PlaceResponse?> GetProfileFrontierCandidateAsync(string marketingAddr, byte structureNumber, string rootMp, byte width, uint profiledFrontierLimit, IReadOnlyCollection<string> lockMps, CancellationToken cancellationToken) => throw new NotSupportedException();
+        public Task<PlaceResponse?> GetProfileFrontierCandidateAsync(string marketingAddr, byte structureNumber, string rootMp, byte width, uint profiledWidthLimit, IReadOnlyCollection<string> lockMps, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<PlaceResponse?> GetSystemGapCandidateAsync(string marketingAddr, byte structureNumber, string rootMp, byte width, IReadOnlyCollection<string> lockMps, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<IReadOnlyList<PlaceResponse>> GetUnfilledPlacesInDepthWindowAsync(string marketingAddr, byte structureNumber, string rootMp, byte width, byte depthSpread, IReadOnlyCollection<string> lockMps, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<PlaceResponse?> GetFirstActiveUnfilledPlaceAsync(string marketingAddr, byte structureNumber, string rootMp, byte width, bool profiledPlacesPrioritized, byte depthSpread, IReadOnlyCollection<string> lockMps, CancellationToken cancellationToken) => throw new NotSupportedException();

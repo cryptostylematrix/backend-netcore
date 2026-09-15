@@ -400,7 +400,7 @@ public sealed class PlaceQueries(
         byte structureNumber,
         string rootMp,
         byte width,
-        uint profiledFrontierLimit,
+        uint profiledWidthLimit,
         IReadOnlyCollection<string> lockMps,
         CancellationToken cancellationToken)
     {
@@ -421,46 +421,40 @@ public sealed class PlaceQueries(
                   AND parent.mp LIKE @mpPrefix
                 GROUP BY parent.id
             ),
-            frontier AS
-            (
-                SELECT COUNT(*)::bigint AS value
-                FROM scoped
-                WHERE profile_addr IS NOT NULL
-                  AND profiled_child_count = 0
-            ),
             eligible AS
             (
                 SELECT
                     scoped.*,
-                    CASE
-                        WHEN frontier.value >= @profiledFrontierLimit THEN ARRAY(
-                            SELECT
-                            (
-                                SELECT COUNT(*)::bigint
-                                FROM scoped descendant
-                                WHERE descendant.profile_addr IS NOT NULL
-                                  AND descendant.mp LIKE
-                                      left(scoped.mp, path_length) || '%'
-                            )
-                            FROM generate_series(
-                                char_length(@rootMp) + 8,
-                                char_length(scoped.mp),
-                                8
-                            ) AS path(path_length)
-                            ORDER BY path_length
+                    target_level.profiled_count AS target_level_profiled_count,
+                    ARRAY(
+                        SELECT
+                        (
+                            SELECT COUNT(*)::bigint
+                            FROM scoped descendant
+                            WHERE descendant.profile_addr IS NOT NULL
+                              AND descendant.mp LIKE
+                                  left(scoped.mp, path_length) || '%'
                         )
-                        ELSE ARRAY[]::bigint[]
-                    END AS branch_load
+                        FROM generate_series(
+                            char_length(@rootMp) + 8,
+                            char_length(scoped.mp),
+                            8
+                        ) AS path(path_length)
+                        ORDER BY path_length
+                    ) AS branch_load
                 FROM scoped
-                CROSS JOIN frontier
+                CROSS JOIN LATERAL
+                (
+                    SELECT COUNT(*)::bigint AS profiled_count
+                    FROM scoped level_place
+                    WHERE level_place.profile_addr IS NOT NULL
+                      AND level_place.deep = scoped.deep + 1
+                ) target_level
                 WHERE scoped.profile_addr IS NOT NULL
                   AND scoped.is_active = true
                   AND scoped.kind <> 2
                   AND (@width = 0 OR scoped.filling < @width)
-                  AND (
-                      frontier.value < @profiledFrontierLimit
-                      OR scoped.profiled_child_count = 0
-                  )
+                  AND target_level.profiled_count < @profiledWidthLimit
                   AND NOT EXISTS
                   (
                       SELECT 1
@@ -474,9 +468,9 @@ public sealed class PlaceQueries(
                 SELECT *
                 FROM eligible
                 ORDER BY
-                    branch_load ASC,
                     deep ASC,
                     profiled_child_count ASC,
+                    branch_load ASC,
                     mp ASC,
                     id ASC
                 LIMIT 1
@@ -494,7 +488,7 @@ public sealed class PlaceQueries(
                     mpPrefix = rootMp + "%",
                     rootMp,
                     width = (long)width,
-                    profiledFrontierLimit = (long)profiledFrontierLimit,
+                    profiledWidthLimit = (long)profiledWidthLimit,
                     lockMps = lockMps.ToArray()
                 },
                 cancellationToken: cancellationToken));

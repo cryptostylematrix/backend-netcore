@@ -20,7 +20,7 @@ public interface IPositionCandidateQueries
         byte structureNumber,
         string rootMp,
         byte width,
-        uint profiledFrontierLimit,
+        uint profiledWidthLimit,
         IReadOnlyCollection<string> lockMps,
         CancellationToken cancellationToken);
 

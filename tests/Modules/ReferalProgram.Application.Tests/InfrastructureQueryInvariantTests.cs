@@ -41,10 +41,10 @@ public sealed class InfrastructureQueryInvariantTests
 
         AssertMethodContains(source,
             "GetProfileFrontierCandidateAsync",
-            "frontier.value < @profiledFrontierLimit");
+            "level_place.deep = scoped.deep + 1");
         AssertMethodContains(source,
             "GetProfileFrontierCandidateAsync",
-            "scoped.profiled_child_count = 0");
+            "target_level.profiled_count < @profiledWidthLimit");
         AssertMethodContains(source,
             "GetProfileFrontierCandidateAsync",
             "branch_load ASC");

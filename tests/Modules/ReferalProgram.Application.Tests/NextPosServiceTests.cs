@@ -38,7 +38,7 @@ public sealed class NextPosServiceTests
         Assert.Equal((byte)3, algorithm.Context.Width);
         Assert.Equal((byte)2, algorithm.Context.DepthSpread);
         Assert.False(algorithm.Context.ProfiledPlacesPrioritized);
-        Assert.Equal((uint)35, algorithm.Context.ProfiledFrontierLimit);
+        Assert.Equal((uint)35, algorithm.Context.ProfiledWidthLimit);
         Assert.Equal(["LOCK"], algorithm.Context.RootProfileLockMps);
         Assert.Equal("root", locks.ProfileAddr);
     }
@@ -75,7 +75,7 @@ public sealed class NextPosServiceTests
                   "weight": 1,
                   "profiled_places_prioritized": false,
                   "depth_spread": 2,
-                  "profiled_frontier_limit": 35
+                  "profiled_width_limit": 35
                 }
               ]
             }

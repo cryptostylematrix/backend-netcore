@@ -79,7 +79,7 @@ public sealed class NextPosService(
                 group.DepthSpread,
                 lockMps,
                 group.CutFactor,
-                group.ProfiledFrontierLimit));
+                group.EffectiveProfiledWidthLimit));
     }
 
     public Task<NextPosResponse?> FindNextAsync(

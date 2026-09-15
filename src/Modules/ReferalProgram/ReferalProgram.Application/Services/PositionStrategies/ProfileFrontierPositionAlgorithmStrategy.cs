@@ -11,10 +11,10 @@ public sealed class ProfileFrontierPositionAlgorithmStrategy(
         PositionAlgorithmStrategyContext context,
         CancellationToken cancellationToken)
     {
-        if (context.ProfiledFrontierLimit is null or 0)
+        if (context.ProfiledWidthLimit is null or 0)
         {
             throw new InvalidOperationException(
-                "Profile frontier positioning requires a positive profiled frontier limit.");
+                "Profile positioning requires a positive profiled width limit.");
         }
 
         var parent = await placeQueries.GetProfileFrontierCandidateAsync(
@@ -22,7 +22,7 @@ public sealed class ProfileFrontierPositionAlgorithmStrategy(
             context.StructureNumber,
             context.Root.Mp,
             context.Width,
-            context.ProfiledFrontierLimit.Value,
+            context.ProfiledWidthLimit.Value,
             context.RootProfileLockMps,
             cancellationToken);
 

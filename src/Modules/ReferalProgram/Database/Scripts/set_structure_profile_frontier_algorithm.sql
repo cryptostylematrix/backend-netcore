@@ -59,7 +59,7 @@ BEGIN
                     'id', 0,
                     'algo', 'profile_frontier',
                     'weight', 1,
-                    'profiled_frontier_limit', v_profiled_width_limit))),
+                    'profiled_width_limit', v_profiled_width_limit))),
         'operations', jsonb_build_object(
             'buy_system_place', jsonb_build_object(
                 'root', 'owner',
@@ -83,7 +83,7 @@ BEGIN
     END IF;
 
     RAISE NOTICE
-        'Configured profile frontier limit % for marketing %, structure %. New pos_algo: %',
+        'Configured profiled width limit % for marketing %, structure %. New pos_algo: %',
         v_profiled_width_limit,
         v_marketing_addr,
         v_structure_number,

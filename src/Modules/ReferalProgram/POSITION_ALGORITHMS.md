@@ -139,19 +139,20 @@ next-position candidate query.
 ### `profile_frontier` and `system_gap`
 
 These algorithms are intended to be configured together through version 2
-operation overrides. `profile_frontier` limits the number of profiled places
-that do not yet have a profiled child. System children do not remove a place
-from this profiled frontier.
+operation overrides. Despite its legacy name, `profile_frontier` enforces a
+hard per-level profiled-place width through `profiled_width_limit`. A candidate
+parent is eligible only when the number of profiled places at its child's
+target depth is below the limit. Levels that already meet or exceed the limit
+are skipped, including historical overfilled levels.
 
-While the frontier is below `profiled_frontier_limit`, profiled places expand
-in breadth-first order. Parents at the same depth receive profiled children
-evenly from left to right. Once the limit is reached, only frontier places can
-receive the next profiled child: the old parent leaves the frontier and the new
-child enters it, so the limit is not increased. Candidate leaves are compared
-by profiled subtree load at every branch from the root; the least-loaded branch
-wins, with depth and left-to-right MP order breaking ties. This keeps profiled
-descendant counts balanced after the frontier reaches its limit. Profiled
-places are never placed beneath system places.
+Eligible parents are considered in breadth-first order. At the same depth,
+parents with fewer direct profiled children win; profiled subtree load and MP
+order break further ties. This keeps the profiled structure balanced while
+ensuring that a new level never grows beyond the configured width. Profiled
+places are never placed beneath system places. The former
+`profiled_frontier_limit` property remains accepted as a backward-compatible
+alias with the corrected per-level width semantics; new configurations should
+use `profiled_width_limit`.
 
 `system_gap` prioritizes profiled parents. It first selects profiled parents
 with no direct children, then parents with one child, and so on. If no eligible
@@ -172,7 +173,7 @@ system places, while an open system parent can still receive the place.
     "relation": "relative",
     "groups": [
       { "id": 0, "algo": "profile_frontier", "weight": 1,
-        "profiled_frontier_limit": 35 }
+        "profiled_width_limit": 35 }
     ]
   },
   "operations": {

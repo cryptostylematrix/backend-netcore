@@ -144,7 +144,7 @@ public sealed class ProgramSetupScriptTests
         Assert.Contains("'algo', 'profile_frontier'", sql, StringComparison.Ordinal);
         Assert.Contains("'buy_system_place', jsonb_build_object", sql,
             StringComparison.Ordinal);
-        Assert.Contains("'profiled_frontier_limit', v_profiled_width_limit", sql,
+        Assert.Contains("'profiled_width_limit', v_profiled_width_limit", sql,
             StringComparison.Ordinal);
         Assert.Contains("'algo', 'system_gap'", sql, StringComparison.Ordinal);
         Assert.DoesNotContain("v_existing_pos_algo", sql, StringComparison.Ordinal);
