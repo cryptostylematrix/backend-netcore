@@ -503,7 +503,7 @@ public sealed class PlaceQueries(
         CancellationToken cancellationToken)
     {
         var sql = """
-            WITH eligible AS
+            WITH scoped AS MATERIALIZED
             (
                 SELECT
                     parent.*,
@@ -511,53 +511,62 @@ public sealed class PlaceQueries(
                         WHEN parent.profile_addr IS NOT NULL THEN 0
                         ELSE 1
                     END AS parent_kind_priority,
-                    COUNT(child.id) FILTER (
-                        WHERE child.profile_addr IS NOT NULL
-                    )::bigint AS profiled_child_count
+                    ROW_NUMBER() OVER (
+                        PARTITION BY
+                            CASE
+                                WHEN parent.profile_addr IS NOT NULL THEN 0
+                                ELSE 1
+                            END,
+                            parent.deep
+                        ORDER BY parent.mp ASC, parent.id ASC
+                    ) AS horizontal_index,
+                    COUNT(*) OVER (
+                        PARTITION BY
+                            CASE
+                                WHEN parent.profile_addr IS NOT NULL THEN 0
+                                ELSE 1
+                            END,
+                            parent.deep
+                    ) AS horizontal_count
                 FROM public.places parent
-                LEFT JOIN public.places child
-                  ON child.parent_id = parent.id
-                 AND child.profile_addr IS NOT NULL
                 WHERE parent.marketing_addr = @marketingAddr
                   AND parent.structure_number = @structureNumber
                   AND parent.mp LIKE @mpPrefix
-                  AND parent.is_active = true
-                  AND parent.kind <> 2
-                  AND (@width = 0 OR parent.filling < @width)
+            ),
+            eligible AS
+            (
+                SELECT
+                    scoped.*,
+                    child_counts.profiled_child_count
+                FROM scoped
+                CROSS JOIN LATERAL
+                (
+                    SELECT COUNT(*)::bigint AS profiled_child_count
+                    FROM public.places child
+                    WHERE child.parent_id = scoped.id
+                      AND child.profile_addr IS NOT NULL
+                ) child_counts
+                WHERE scoped.is_active = true
+                  AND scoped.kind <> 2
+                  AND (@width = 0 OR scoped.filling < @width)
                   AND NOT EXISTS
                   (
                       SELECT 1
                       FROM unnest(@lockMps) AS locks(lock_mp)
-                      WHERE lower(parent.mp || lpad(to_hex(parent.filling + 1), 8, '0'))
+                      WHERE lower(scoped.mp || lpad(to_hex(scoped.filling + 1), 8, '0'))
                           LIKE lower(lock_mp) || '%'
                   )
-                GROUP BY parent.id
-                HAVING NOT (
-                    parent.profile_addr IS NOT NULL
-                    AND COUNT(child.id) FILTER (
-                        WHERE child.profile_addr IS NOT NULL
-                    ) = 0
+                  AND NOT (
+                    scoped.profile_addr IS NOT NULL
+                    AND child_counts.profiled_child_count = 0
                     AND @width > 0
-                    AND parent.filling + 1 >= @width
+                    AND scoped.filling + 1 >= @width
                 )
-            ),
-            ranked AS
-            (
-                SELECT
-                    eligible.*,
-                    ROW_NUMBER() OVER (
-                        PARTITION BY parent_kind_priority, filling, deep
-                        ORDER BY mp ASC, id ASC
-                    ) AS horizontal_index,
-                    COUNT(*) OVER (
-                        PARTITION BY parent_kind_priority, filling, deep
-                    ) AS horizontal_count
-                FROM eligible
             ),
             candidates AS
             (
                 SELECT *
-                FROM ranked
+                FROM eligible
                 ORDER BY
                     parent_kind_priority ASC,
                     filling ASC,

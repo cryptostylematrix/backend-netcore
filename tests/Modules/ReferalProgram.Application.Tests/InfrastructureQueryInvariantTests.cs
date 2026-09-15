@@ -31,7 +31,7 @@ public sealed class InfrastructureQueryInvariantTests
             "scoped.kind <> 2");
         AssertMethodContains(source,
             "GetSystemGapCandidateAsync",
-            "parent.kind <> 2");
+            "scoped.kind <> 2");
     }
 
     [Fact]
@@ -56,7 +56,7 @@ public sealed class InfrastructureQueryInvariantTests
             "mpPrefix = rootMp + \"%\",\n                    rootMp,");
         AssertMethodContains(source,
             "GetSystemGapCandidateAsync",
-            "parent.filling + 1 >= @width");
+            "scoped.filling + 1 >= @width");
         AssertMethodContains(source,
             "GetSystemGapCandidateAsync",
             "WHEN parent.profile_addr IS NOT NULL THEN 0");
@@ -74,10 +74,22 @@ public sealed class InfrastructureQueryInvariantTests
             "ROW_NUMBER() OVER (");
         AssertMethodContains(source,
             "GetSystemGapCandidateAsync",
+            "WITH scoped AS MATERIALIZED");
+        AssertMethodContains(source,
+            "GetSystemGapCandidateAsync",
+            "END,\n                            parent.deep");
+        AssertMethodDoesNotContain(source,
+            "GetSystemGapCandidateAsync",
             "PARTITION BY parent_kind_priority, filling, deep");
         AssertMethodContains(source,
             "GetSystemGapCandidateAsync",
-            "ORDER BY mp ASC, id ASC");
+            "ORDER BY parent.mp ASC, parent.id ASC");
+        AssertMethodContains(source,
+            "GetSystemGapCandidateAsync",
+            "FROM scoped");
+        AssertMethodContains(source,
+            "GetSystemGapCandidateAsync",
+            "child_counts.profiled_child_count");
         AssertMethodContains(source,
             "GetSystemGapCandidateAsync",
             "horizontal_index * 2 - 1");
@@ -205,6 +217,25 @@ public sealed class InfrastructureQueryInvariantTests
             : source[methodStart..nextMethod];
 
         Assert.Contains(expected, method, StringComparison.Ordinal);
+    }
+
+    private static void AssertMethodDoesNotContain(
+        string source,
+        string methodName,
+        string unexpected)
+    {
+        var methodStart = source.IndexOf(methodName, StringComparison.Ordinal);
+        Assert.True(methodStart >= 0, $"Method {methodName} was not found.");
+
+        var nextMethod = source.IndexOf(
+            "public async Task",
+            methodStart + methodName.Length,
+            StringComparison.Ordinal);
+        var method = nextMethod < 0
+            ? source[methodStart..]
+            : source[methodStart..nextMethod];
+
+        Assert.DoesNotContain(unexpected, method, StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()
