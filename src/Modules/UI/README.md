@@ -240,14 +240,18 @@ in the frontend error-code map.
 
 ## Database setup
 
-Run:
+For production migration through pgAdmin, use the
+[pgAdmin scripts and walkthrough](Database/PgAdmin/README.md).
+
+For a fresh installation with no existing UI tables, run:
 
 ```text
 src/Modules/UI/Database/Scripts/001_create_ui_profile_intents.sql
 ```
 
 Before execution, set `v_database_username` inside the script to the database
-role used by the API.
+role used by the API. When migrating existing data, follow the pgAdmin guide
+instead; restoring its backup also creates the tables.
 
 The preferred configuration is a dedicated connection:
 

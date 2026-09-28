@@ -31,6 +31,8 @@ name is intentionally preserved in paths and namespaces.
 
 ## Documentation
 
+- [UI database migration with pgAdmin](src/Modules/UI/Database/PgAdmin/README.md)
+  covers creating a dedicated UI database/login and moving existing data from Programs.
 - [Referral Program processing invariants](src/Modules/ReferalProgram/PROGRAM_PROCESSING.md)
   explains purchase prerequisites, command selection, source-place responses,
   and the current activation status.
