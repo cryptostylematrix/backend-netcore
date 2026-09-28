@@ -30,7 +30,6 @@ Read the root `README.md` first. Important focused documentation:
 - `src/Modules/ReferalProgram/PROGRAM_PROCESSING.md`
 - `src/Modules/ReferalProgram/POSITION_ALGORITHMS.md`
 - `src/Modules/UI/README.md`
-- `src/ProgramMigrator/README.md`
 - `src/ProgramInviterChanger/README.md`
 
 ## Repository map
@@ -43,20 +42,14 @@ Read the root `README.md` first. Important focused documentation:
   placement algorithms, public program APIs, persistence, and SQL scripts.
 - `src/Modules/UI`: profile-display intents, cached profile content, ownership
   synchronization, and intent history.
-- `src/Modules/Matrix`: legacy Multi implementation retained for internal and
-  migration compatibility.
-- `src/Modules/Marketing`: legacy Neo/Marketing implementation retained for
-  internal and migration compatibility.
-- `src/ProgramMigrator`: legacy Multi and Neo import console application.
+- `src/Modules/ScheduledTasks`: UTC scheduling, command execution, and marketing coordination.
 - `src/ProgramMatrixFillingRecalculator`: dry-run-first matrix-filling repair tool.
 - `src/ProgramVolumeRecalculator`: dry-run-first profile-volume repair tool.
 - `src/ProgramInviterChanger`: administrative referral-subtree mover.
-- `src/TaskProcessor`: orphaned legacy reference artifacts with no project file;
-  it is not built or registered. Do not treat it as the live task processor.
 - `src/BuildingBlocks`: shared domain and messaging abstractions.
 - `src/Libs/TonSdk.*`: vendored TON SDK projects; expect existing compiler
   warnings and avoid unrelated rewrites.
-- `tests/Modules`: automated tests for Referral Program and UI behavior.
+- `tests/Modules`: automated tests for Referral Program, UI, and Scheduled Tasks behavior.
 
 ## Public API boundary
 
@@ -69,24 +62,13 @@ Public presentation assemblies are currently:
 - ReferalProgram
 - UI
 
-The Matrix and Marketing presentation assemblies are deliberately not
-registered. Their `/api/matrix/*` and `/api/marketing/*` routes must remain
-unavailable at runtime and absent from Swagger unless the user explicitly asks
-to restore them.
-
-The following endpoint groups inside Contracts are legacy and are filtered out
-of discovery even though their source remains in the repository:
-
-- `Invite/*`
-- `Marketing/*` (but not `MarketingV3/*`)
-- `Multi/*`
-- `Place/*`
-- `ProfileItem/BuildChooseInviterBody`
-- `ProfileItem/GetPrograms`
-
-Do not merely hide legacy routes from Swagger. They must not be registered in
-the runtime route table. Preserve the code until deletion is explicitly
-requested.
+The legacy Matrix and Marketing modules, `ProgramMigrator`, and orphaned
+`src/TaskProcessor` have been removed. Their `/api/matrix/*` and `/api/marketing/*` routes remain unavailable.
+Legacy Contracts endpoints under `Invite`, `Marketing`, `Multi`, and `Place`,
+plus `ProfileItem/BuildChooseInviterBody` and `ProfileItem/GetPrograms`, and their
+unused handlers/adapters have also been removed. Preserve explicit assembly
+discovery and do not restore these routes without an explicit request.
+`MarketingV3` remains the current contract integration.
 
 ## Sources of truth
 
@@ -304,8 +286,8 @@ a deliberate public API/security change.
 
 There are distinct logical connection strings:
 
-- `ConnectionStrings__Matrix`: shared by legacy Matrix and Marketing modules.
 - `ConnectionStrings__Programs`: Referral Program database.
+- `ConnectionStrings__Tasks`: dedicated Scheduled Tasks database.
 - `ConnectionStrings__UI`: optional UI database; falls back to Programs when
   empty.
 
@@ -349,13 +331,6 @@ Do not run setup, cleanup, permission, or migration scripts against a database
 unless the user explicitly asks for execution and the target is unambiguous.
 
 ## Administrative console applications
-
-`ProgramMigrator` is dry-run by default and imports structure 0 separately from
-structures 1+ and locks. `--apply` is required for writes, and each selected
-scope is one PostgreSQL transaction. Exact duplicate legacy locks are skipped;
-do not weaken other identity or topology validation merely to make an import
-finish. It recalculates matrix filling for each imported structure. Consult its
-README before changing legacy-field mappings.
 
 `ProgramMatrixFillingRecalculator` checks all existing programs in dry-run mode
 by default; `--marketing-addr` restricts it to one program, and `--apply` enables
@@ -422,11 +397,12 @@ This is a public repository.
   whether values are missing, not the values themselves.
 - If a credential may have entered Git history, advise immediate rotation and
   history cleanup; deleting it in a later commit is insufficient.
-- Preserve explicit public endpoint discovery and all legacy endpoint filters.
+- Preserve explicit public endpoint discovery and keep retired routes unavailable.
 
-There is currently a restore/build advisory for `Microsoft.OpenApi` 2.3.0
-(`NU1903`, high severity). Do not silently upgrade unrelated dependencies, but
-surface the warning and address it when dependency remediation is requested.
+The API explicitly references `Microsoft.OpenApi` 2.7.5 to fix
+`GHSA-v5pm-xwqc-g5wc` in Swashbuckle's older transitive dependency. Preserve
+this patched minimum when updating Swagger dependencies; do not suppress NuGet
+security auditing to hide dependency warnings.
 
 ## Coding conventions
 
@@ -468,12 +444,15 @@ Run tests:
 dotnet test tests/Modules/ReferalProgram.Application.Tests/ReferalProgram.Application.Tests.csproj
 dotnet test tests/Modules/UI.Application.Tests/UI.Application.Tests.csproj
 dotnet test tests/Modules/UI.Infrastructure.Tests/UI.Infrastructure.Tests.csproj
+dotnet test tests/Modules/ScheduledTasks.Application.Tests/ScheduledTasks.Application.Tests.csproj
 ```
 
 These are currently the only automated test projects. A green solution test
 run verifies Referral Program application behavior plus selected SQL-text
 invariants/setup topologies, UI application behavior, and UI wallet-address
-infrastructure behavior. It does **not** establish coverage of every project.
+infrastructure behavior, plus Scheduled Tasks scheduling, command execution,
+dispatch, aggregate, and persistence-mapping behavior. It does **not** establish
+coverage of every project.
 
 There is currently no automated integration/end-to-end coverage for:
 
@@ -482,8 +461,7 @@ There is currently no automated integration/end-to-end coverage for:
 - Contracts parsing, message building, TonCenter resilience, or live TON calls;
 - Referral Program Dapper queries against a real PostgreSQL schema and public
   FastEndpoints request/response mapping;
-- legacy Matrix and Marketing modules;
-- ProgramMigrator or ProgramInviterChanger against real source/destination
+- ProgramInviterChanger against real source/destination
   databases;
 - actually executing schema/setup/permission/cleanup SQL; or
 - frontend and smart-contract behavior, which live in separate repositories.

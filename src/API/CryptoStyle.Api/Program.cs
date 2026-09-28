@@ -2,7 +2,6 @@ using Contracts.Infrastructure;
 using CryptoStyle.Api.BackgroundServices;
 using dotenv.net;
 using FastEndpoints;
-using Matrix.Infrastructure;
 using ReferalProgram.Infrastructure;
 using UI.Infrastructure;
 using ScheduledTasks.Infrastructure;
@@ -75,22 +74,17 @@ builder.Services.AddFastEndpoints(options =>
         ReferalProgramPresentation.Assembly,
         UIPresentation.Assembly
     ];
-
-    options.Filter = type => !IsLegacyContractsEndpoint(type);
 });
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
-    // Multiple modules expose DTOs with the same class name (for example,
-    // Matrix.Dto.PlaceResponse and Marketing.Dto.PlaceResponse).
+    // Qualify DTO names to avoid collisions between modules.
     options.CustomSchemaIds(type =>
         type.FullName?.Replace("+", ".") ?? type.Name);
 });
 
 builder.Services.AddContractsModule(builder.Configuration);
-builder.Services.AddMatrixModule(builder.Configuration);
-builder.Services.AddMarketingModule(builder.Configuration);
 builder.Services.AddReferalProgramModule(builder.Configuration);
 builder.Services.AddScheduledTasksModule(builder.Configuration);
 builder.Services.AddUIModule(builder.Configuration);
@@ -176,29 +170,3 @@ app.UseCors("OpenCors");
 app.UseFastEndpoints();
 
 app.Run();
-
-static bool IsLegacyContractsEndpoint(Type type)
-{
-    var endpointNamespace = type.Namespace;
-    if (endpointNamespace is null)
-        return false;
-
-    return endpointNamespace.StartsWith(
-            "Contracts.Presentation.Endpoints.Invite.",
-            StringComparison.Ordinal)
-        || endpointNamespace.StartsWith(
-            "Contracts.Presentation.Endpoints.Marketing.",
-            StringComparison.Ordinal)
-        || endpointNamespace.StartsWith(
-            "Contracts.Presentation.Endpoints.Multi.",
-            StringComparison.Ordinal)
-        || endpointNamespace.StartsWith(
-            "Contracts.Presentation.Endpoints.Place.",
-            StringComparison.Ordinal)
-        || endpointNamespace.StartsWith(
-            "Contracts.Presentation.Endpoints.ProfileItem.BuildChooseInviterBody.",
-            StringComparison.Ordinal)
-        || endpointNamespace.StartsWith(
-            "Contracts.Presentation.Endpoints.ProfileItem.GetPrograms.",
-            StringComparison.Ordinal);
-}

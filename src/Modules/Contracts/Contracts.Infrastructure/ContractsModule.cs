@@ -21,7 +21,6 @@ public static class ContractsModule
             // Options
             services.AddOptions<TonContractAddressesOptions>()
                 .Bind(configuration.GetSection("TonContractAddresses"))
-                .Validate(o => !string.IsNullOrWhiteSpace(o.MultiAddr), "TonContractAddresses:MultiAddr is required")
                 .Validate(o => !string.IsNullOrWhiteSpace(o.ProfileCollectionAddr), "TonContractAddresses:ProfileCollectionAddr is required")
                 .ValidateOnStart();
 
@@ -62,17 +61,12 @@ public static class ContractsModule
             services.AddInfrastructure();
 
             // Query services
-            services.AddScoped<IInviteQueries, InviteQueries>();
             services.AddScoped<IProfileItemQueries, ProfileItemQueries>();
-            services.AddScoped<IMultiQueries, MultiQueries>();
             services.AddScoped<IProfileCollectionQueries, ProfileCollectionQueries>();
-            services.AddScoped<IPlaceQueries, PlaceQueries>();
             services.AddScoped<IGeneralQueries, GeneralQueries>();
             services.AddScoped<IWalletQueries, WalletQueries>();
-            services.AddScoped<IMarketingQueries, MarketingQueries>();
             services.AddScoped<IMarketingV3Queries, MarketingV3Queries>();
             services.AddSingleton<IMarketingTransactionSender, MarketingTransactionSender>();
-            services.AddScoped<IMatrixPlaceQueries, MatrixPlaceQueries>();
             services.AddScoped<IJetttonMinterQueries, JetttonMinterQueries>();
             services.AddScoped<IJettonWalletQueries, JettonWalletQueries>();
 

@@ -18,8 +18,4 @@ public sealed class TonQueryCacheOptions
     /// </summary>
     public int NftDataIsInitMinusOneTtlDays { get; init; } = 1;
 
-    /// <summary>
-    /// GetPlaceDataAsync: cache when FillCount == 4
-    /// </summary>
-    public int PlaceDataFilledTtlDays { get; init; } = 30;
 }
