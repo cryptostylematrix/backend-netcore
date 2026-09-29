@@ -48,7 +48,7 @@ internal sealed class GetAvatarQueryHandler : IQueryHandler<GetAvatarQuery, stri
                   <feDropShadow dx="0" dy="5" stdDeviation="0" flood-color="{shadow}"/>
                   <feDropShadow dx="0" dy="12" stdDeviation="10" flood-color="#000000" flood-opacity=".65"/>
                 </filter>
-                <clipPath id="frame"><rect width="512" height="512"/></clipPath>
+                <clipPath id="frame"><rect width="512" height="512" rx="64"/></clipPath>
               </defs>
               <g clip-path="url(#frame)">
                 <rect width="512" height="512" fill="#090d17"/>
@@ -59,6 +59,8 @@ internal sealed class GetAvatarQueryHandler : IQueryHandler<GetAvatarQuery, stri
                   <ellipse cx="256" cy="226" rx="322" ry="199" stroke-opacity=".05"/>
                 </g>
                 <path d="M-40 408L390 -22M60 534L552 42" stroke="{highlight}" stroke-opacity=".035" stroke-width="44"/>
+                <rect x="15" y="15" width="482" height="482" rx="51" fill="none" stroke="url(#rim)"/>
+                <rect x="24" y="24" width="464" height="464" rx="44" fill="none" stroke="{accent}" stroke-opacity=".07"/>
                 <path d="M238 57L256 51L274 57L256 63Z" fill="{accent}"/>
                 <circle cx="220" cy="57" r="2" fill="{highlight}" opacity=".6"/>
                 <circle cx="292" cy="57" r="2" fill="{highlight}" opacity=".6"/>
