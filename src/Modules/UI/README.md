@@ -282,3 +282,23 @@ The endpoints currently follow the rest of the API and are anonymous. A caller
 can therefore submit another wallet's address. The data represents a claimed
 wallet intention until wallet-signature authentication is added. Do not use it
 as cryptographic evidence of wallet behavior or ownership.
+
+## Generated profile avatars
+
+`GET /avatar?login=alice` (also `/api/ui/avatar?login=alice`) returns a 512×512
+SVG with a dimensional metallic CS monogram, a CRYPTO STYLE ribbon,
+subtle orbital decoration, and centered login text below it. The accent palette
+and orbit angle are derived deterministically from the login hash.
+The seed is SHA-256 of the trimmed, lowercase UTF-8 login, interpreted as the
+Profile Collection's unsigned big-endian NFT index. The login identifies the
+avatar; the accent color alone is not guaranteed unique. No database or
+TON request is required, so avatars also work before profile deployment.
+
+The avatar endpoint accepts 4–20 ASCII letters/digits/hyphens, with a letter
+or digit at each end, matching profile creation and the documented 20-character
+profile login maximum.
+Long avatar labels shrink to fit within the frame. Invalid input returns HTTP 400. Successful images use
+`image/svg+xml` and one-day public caching. The frontend uses this URL when an
+image is omitted during creation/update and displays generated avatars for
+cached profiles with missing images or the old shared default. Existing NFT
+metadata is not rewritten automatically. Deploy the API before the frontend.

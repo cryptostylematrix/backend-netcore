@@ -8,8 +8,8 @@ public static class StringHelpers
     {
         public string NormalizeImage()
         {
-            var lower = value?.Trim().ToLowerInvariant();
-            return !string.IsNullOrEmpty(lower) ? lower : DefaultImage;
+            var image = value?.Trim();
+            return !string.IsNullOrEmpty(image) ? image : DefaultImage;
         }
 
         public string? Capitalize()
