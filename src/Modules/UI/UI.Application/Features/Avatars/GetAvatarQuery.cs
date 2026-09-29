@@ -1,21 +1,18 @@
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.RegularExpressions;
+using Contracts.Application.Validation;
 
 namespace UI.Application.Features.Avatars;
 
 public sealed record GetAvatarQuery(string Login) : IQuery<string>;
 
-internal sealed partial class GetAvatarQueryHandler : IQueryHandler<GetAvatarQuery, string>
+internal sealed class GetAvatarQueryHandler : IQueryHandler<GetAvatarQuery, string>
 {
-    [GeneratedRegex("\\A[a-z0-9][a-z0-9-]{2,18}[a-z0-9]\\z", RegexOptions.CultureInvariant)]
-    private static partial Regex LoginPattern();
-
     public Task<Result<string>> Handle(GetAvatarQuery request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var login = request.Login?.Trim().ToLowerInvariant() ?? "";
-        if (!LoginPattern().IsMatch(login))
+        if (!ProfileLogin.IsValid(login))
             return Task.FromResult(Result<string>.Error(UiErrorCodes.InvalidLogin));
 
         // Profile Collection's NFT index is the unsigned big-endian SHA-256 of login UTF-8.
@@ -51,7 +48,7 @@ internal sealed partial class GetAvatarQueryHandler : IQueryHandler<GetAvatarQue
                   <feDropShadow dx="0" dy="5" stdDeviation="0" flood-color="{shadow}"/>
                   <feDropShadow dx="0" dy="12" stdDeviation="10" flood-color="#000000" flood-opacity=".65"/>
                 </filter>
-                <clipPath id="frame"><rect width="512" height="512" rx="64"/></clipPath>
+                <clipPath id="frame"><rect width="512" height="512"/></clipPath>
               </defs>
               <g clip-path="url(#frame)">
                 <rect width="512" height="512" fill="#090d17"/>
@@ -62,8 +59,6 @@ internal sealed partial class GetAvatarQueryHandler : IQueryHandler<GetAvatarQue
                   <ellipse cx="256" cy="226" rx="322" ry="199" stroke-opacity=".05"/>
                 </g>
                 <path d="M-40 408L390 -22M60 534L552 42" stroke="{highlight}" stroke-opacity=".035" stroke-width="44"/>
-                <rect x="15" y="15" width="482" height="482" rx="51" fill="none" stroke="url(#rim)"/>
-                <rect x="24" y="24" width="464" height="464" rx="44" fill="none" stroke="{accent}" stroke-opacity=".07"/>
                 <path d="M238 57L256 51L274 57L256 63Z" fill="{accent}"/>
                 <circle cx="220" cy="57" r="2" fill="{highlight}" opacity=".6"/>
                 <circle cx="292" cy="57" r="2" fill="{highlight}" opacity=".6"/>

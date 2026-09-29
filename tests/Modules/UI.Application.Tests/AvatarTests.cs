@@ -42,6 +42,10 @@ public sealed class AvatarTests
     [InlineData("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwx")]
     [InlineData("<script>alert(1)</script>")]
     [InlineData("al ice")]
+    [InlineData("ali_ce")]
+    [InlineData("алиса")]
+    [InlineData("alicé")]
+    [InlineData("alice🐸")]
     public async Task InvalidLoginsCannotProduceSvg(string login)
     {
         var result = await new GetAvatarQueryHandler().Handle(new GetAvatarQuery(login), default);
