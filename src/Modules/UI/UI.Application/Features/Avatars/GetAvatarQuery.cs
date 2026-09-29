@@ -29,10 +29,8 @@ internal sealed class GetAvatarQueryHandler : IQueryHandler<GetAvatarQuery, stri
         var backgroundLight = $"hsl({secondaryHue}, 68%, 29%)";
         var backgroundDark = $"hsl({secondaryHue}, 58%, 8%)";
         var orbitRotation = hash[3] % 90;
-        // Reserve 48px on either side; explicit textLength keeps font fallbacks inside this width.
-        const int loginMaxWidth = 416;
-        var fontSize = Math.Min(64, loginMaxWidth * 5 / (3 * login.Length));
-        var loginTextWidth = fontSize * 3 * login.Length / 5;
+        var loginOutline = AvatarLettering.Create(login, "Login", 64, 416);
+        var brandOutline = AvatarLettering.Create("CRYPTO STYLE", "Brand", 30, 372, .1);
 
         var svg = $"""
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="CryptoStyle avatar">
@@ -51,10 +49,6 @@ internal sealed class GetAvatarQueryHandler : IQueryHandler<GetAvatarQuery, stri
                 <linearGradient id="rim" x2="100%" y2="100%">
                   <stop stop-color="{highlight}" stop-opacity=".7"/><stop offset=".45" stop-color="{accent}" stop-opacity=".08"/><stop offset="1" stop-color="{accent}" stop-opacity=".45"/>
                 </linearGradient>
-                <filter id="relief" x="-15%" y="-15%" width="140%" height="145%">
-                  <feDropShadow dx="0" dy="5" stdDeviation="0" flood-color="{shadow}"/>
-                  <feDropShadow dx="0" dy="12" stdDeviation="10" flood-color="#000000" flood-opacity=".65"/>
-                </filter>
                 <clipPath id="frame"><rect width="512" height="512" rx="64"/></clipPath>
               </defs>
               <g clip-path="url(#frame)">
@@ -72,16 +66,21 @@ internal sealed class GetAvatarQueryHandler : IQueryHandler<GetAvatarQuery, stri
                 <circle cx="220" cy="57" r="2" fill="{highlight}" opacity=".6"/>
                 <circle cx="292" cy="57" r="2" fill="{highlight}" opacity=".6"/>
               </g>
-              <g fill="url(#metal)" stroke="{highlight}" stroke-width=".7" filter="url(#relief)">
+              <g fill="{shadow}" transform="translate(0 5)">
+                <path d="M230 92V172H216C203 123 181 110 153 110C108 110 83 149 83 213C83 277 108 315 153 315C185 315 206 296 220 257H233L227 330H216L209 312C192 328 170 336 144 336C75 336 42 283 42 215C42 143 84 90 147 90C177 90 194 99 210 111L218 92Z"/>
+                <path d="M445 93V164H432C422 125 399 109 373 109C341 109 321 125 321 148C321 174 344 184 380 198C427 216 458 233 458 275C458 316 425 338 379 338C350 338 325 328 308 316L301 334H289V258H303C315 300 342 319 374 319C406 319 427 304 427 280C427 255 402 244 366 230C319 212 289 194 289 153C289 117 320 90 365 90C391 90 414 99 430 110L436 93Z"/>
+              </g>
+              <g fill="url(#metal)" stroke="{highlight}" stroke-width=".7">
                 <path d="M230 92V172H216C203 123 181 110 153 110C108 110 83 149 83 213C83 277 108 315 153 315C185 315 206 296 220 257H233L227 330H216L209 312C192 328 170 336 144 336C75 336 42 283 42 215C42 143 84 90 147 90C177 90 194 99 210 111L218 92Z"/>
                 <path d="M445 93V164H432C422 125 399 109 373 109C341 109 321 125 321 148C321 174 344 184 380 198C427 216 458 233 458 275C458 316 425 338 379 338C350 338 325 328 308 316L301 334H289V258H303C315 300 342 319 374 319C406 319 427 304 427 280C427 255 402 244 366 230C319 212 289 194 289 153C289 117 320 90 365 90C391 90 414 99 430 110L436 93Z"/>
               </g>
               <path d="M32 187H480L468 219L480 251H32L44 219Z" fill="url(#ribbon)"/>
               <path d="M56 188H456M56 250H456" stroke="url(#rim)" stroke-width="1"/>
-              <text x="256" y="230" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" letter-spacing="3" textLength="372" lengthAdjust="spacingAndGlyphs" fill="{highlight}">CRYPTO STYLE</text>
+              <g aria-label="CRYPTO STYLE" transform="{AvatarLettering.Place(brandOutline, 230)}" fill="{highlight}">{brandOutline.Paths}</g>
               <path d="M218 375H244M268 375H294" stroke="{accent}" stroke-opacity=".45"/>
               <path d="M252 375L256 371L260 375L256 379Z" fill="{accent}"/>
-              <text id="login" x="256" y="440" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="{fontSize}" font-weight="600" textLength="{loginTextWidth}" lengthAdjust="spacingAndGlyphs" fill="url(#metal)" stroke="{highlight}" stroke-width=".7" filter="url(#relief)">{login}</text>
+              <g transform="{AvatarLettering.Place(loginOutline, 445)}" fill="{shadow}">{loginOutline.Paths}</g>
+              <g id="login" aria-label="{login}" transform="{AvatarLettering.Place(loginOutline, 440)}" fill="url(#metal)"><title>{login}</title>{loginOutline.Paths}</g>
             </svg>
             """;
         return Task.FromResult(Result.Success(svg));

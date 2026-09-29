@@ -302,3 +302,17 @@ Long avatar labels shrink to fit within the frame. Invalid input returns HTTP 40
 image is omitted during creation/update and displays generated avatars for
 cached profiles with missing images or the old shared default. Existing NFT
 metadata is not rewritten automatically. Deploy the API before the frontend.
+
+### Indexer SVG compatibility
+
+All visible lettering is embedded vector geometry. The login uses open-licensed
+serif outlines and the brand uses sans-serif outlines; indexers need no system
+fonts. Letter depth uses offset copies rather than SVG filter primitives, which
+can suppress shapes in image proxies. The generator has no runtime font or
+native rendering dependency. See `UI.Application/Features/Avatars/Assets/README.md`
+for source fonts, licenses, and regeneration instructions.
+
+Existing NFT image URLs remain valid. External indexers may retain an older
+rasterized preview after deployment; the API cannot purge their caches. Refresh
+through the indexer when available, or update the NFT image URL with a new
+version query parameter using the normal wallet-approved profile update.
