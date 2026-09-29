@@ -128,6 +128,18 @@ before running them against the intended Programs database.
 Never run a setup, cleanup, permission, or migration script against production
 without reviewing its target database, role, and marketing address.
 
+To label program contracts in the database, apply
+`027_add_comment_to_referal_program.sql`. The optional `referal_program.comment`
+text column can be edited directly by the table owner, for example:
+
+```sql
+UPDATE public.referal_program
+SET comment = 'Silver Matrix — main contract'
+WHERE marketing_addr = '<contract address>';
+```
+
+Comments are administrative database notes and are not exposed by the public API.
+
 ## Public-repository security
 
 - Real `.env` files are ignored by Git. Commit only `.env.example` templates
