@@ -18,9 +18,16 @@ internal sealed class GetAvatarQueryHandler : IQueryHandler<GetAvatarQuery, stri
         // Profile Collection's NFT index is the unsigned big-endian SHA-256 of login UTF-8.
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes(login));
         var hue = ((hash[0] << 8) | hash[1]) % 360;
-        var accent = $"hsl({hue}, 72%, 62%)";
-        var highlight = $"hsl({(hue + 36) % 360}, 85%, 88%)";
-        var shadow = $"hsl({hue}, 62%, 24%)";
+        // Vary the full palette, not just a faint accent over a common black background.
+        var secondaryHue = (hue + 90 + hash[4] % 181) % 360;
+        var saturation = 72 + hash[5] % 23;
+        var accent = $"hsl({hue}, {saturation}%, 62%)";
+        var highlight = $"hsl({hue}, 90%, 82%)";
+        var secondary = $"hsl({secondaryHue}, 82%, 64%)";
+        var shadow = $"hsl({hue}, 70%, 25%)";
+        var background = $"hsl({secondaryHue}, 62%, 14%)";
+        var backgroundLight = $"hsl({secondaryHue}, 68%, 29%)";
+        var backgroundDark = $"hsl({secondaryHue}, 58%, 8%)";
         var orbitRotation = hash[3] % 90;
         // Reserve 48px on either side; explicit textLength keeps font fallbacks inside this width.
         const int loginMaxWidth = 416;
@@ -33,13 +40,13 @@ internal sealed class GetAvatarQueryHandler : IQueryHandler<GetAvatarQuery, stri
                 <linearGradient id="metal" x1="12%" y1="100%" x2="80%" y2="0%">
                   <stop stop-color="{shadow}"/><stop offset=".25" stop-color="{accent}"/>
                   <stop offset=".49" stop-color="{highlight}"/><stop offset=".52" stop-color="{accent}"/>
-                  <stop offset=".8" stop-color="{highlight}"/><stop offset="1" stop-color="#ffffff"/>
+                  <stop offset=".8" stop-color="{secondary}"/><stop offset="1" stop-color="{highlight}"/>
                 </linearGradient>
                 <radialGradient id="ambient" cx="28%" cy="15%" r="90%">
-                  <stop stop-color="{accent}" stop-opacity=".32"/><stop offset=".65" stop-color="{shadow}" stop-opacity=".15"/><stop offset="1" stop-color="#070a13"/>
+                  <stop stop-color="{backgroundLight}"/><stop offset=".6" stop-color="{background}"/><stop offset="1" stop-color="{backgroundDark}"/>
                 </radialGradient>
                 <linearGradient id="ribbon" x2="100%">
-                  <stop stop-color="#0a0e19"/><stop offset=".5" stop-color="{shadow}"/><stop offset="1" stop-color="#0a0e19"/>
+                  <stop stop-color="{backgroundDark}"/><stop offset=".5" stop-color="{background}"/><stop offset="1" stop-color="{backgroundDark}"/>
                 </linearGradient>
                 <linearGradient id="rim" x2="100%" y2="100%">
                   <stop stop-color="{highlight}" stop-opacity=".7"/><stop offset=".45" stop-color="{accent}" stop-opacity=".08"/><stop offset="1" stop-color="{accent}" stop-opacity=".45"/>
@@ -51,7 +58,7 @@ internal sealed class GetAvatarQueryHandler : IQueryHandler<GetAvatarQuery, stri
                 <clipPath id="frame"><rect width="512" height="512" rx="64"/></clipPath>
               </defs>
               <g clip-path="url(#frame)">
-                <rect width="512" height="512" fill="#090d17"/>
+                <rect width="512" height="512" fill="{backgroundDark}"/>
                 <rect width="512" height="512" fill="url(#ambient)"/>
                 <g transform="rotate({orbitRotation} 256 226)" fill="none" stroke="{accent}">
                   <ellipse cx="256" cy="226" rx="298" ry="175" stroke-opacity=".12"/>

@@ -14,7 +14,7 @@ public sealed class AvatarTests
         var canonical = await handler.Handle(new GetAvatarQuery(" ALICE "), default);
         Assert.True(result.IsSuccess);
         Assert.Equal(result.Value, canonical.Value);
-        Assert.Contains("hsl(64, 72%, 62%)", result.Value);
+        Assert.Contains("hsl(64, 90%, 82%)", result.Value);
         Assert.Equal("svg", XDocument.Parse(result.Value).Root!.Name.LocalName);
         var other = await handler.Handle(new GetAvatarQuery("bobby"), default);
         Assert.NotEqual(result.Value, other.Value);
