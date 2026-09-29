@@ -286,7 +286,7 @@ as cryptographic evidence of wallet behavior or ownership.
 ## Generated profile avatars
 
 `GET /avatar?login=alice` (also `/api/ui/avatar?login=alice`) returns a 512×512
-SVG with a dimensional metallic CS monogram, a CRYPTO STYLE ribbon,
+SVG with a dimensional solid-color CS monogram, a CRYPTO STYLE ribbon,
 subtle orbital decoration, and centered login text below it. The accent palette
 and orbit angle are derived deterministically from the login hash.
 The seed is SHA-256 of the trimmed, lowercase UTF-8 login, interpreted as the

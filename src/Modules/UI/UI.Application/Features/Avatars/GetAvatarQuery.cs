@@ -23,7 +23,6 @@ internal sealed class GetAvatarQueryHandler : IQueryHandler<GetAvatarQuery, stri
         var saturation = 72 + hash[5] % 23;
         var accent = $"hsl({hue}, {saturation}%, 62%)";
         var highlight = $"hsl({hue}, 90%, 82%)";
-        var secondary = $"hsl({secondaryHue}, 82%, 64%)";
         var shadow = $"hsl({hue}, 70%, 25%)";
         var background = $"hsl({secondaryHue}, 62%, 14%)";
         var backgroundLight = $"hsl({secondaryHue}, 68%, 29%)";
@@ -35,11 +34,6 @@ internal sealed class GetAvatarQueryHandler : IQueryHandler<GetAvatarQuery, stri
         var svg = $"""
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="CryptoStyle avatar">
               <defs>
-                <linearGradient id="metal" x1="12%" y1="100%" x2="80%" y2="0%">
-                  <stop stop-color="{shadow}"/><stop offset=".25" stop-color="{accent}"/>
-                  <stop offset=".49" stop-color="{highlight}"/><stop offset=".52" stop-color="{accent}"/>
-                  <stop offset=".8" stop-color="{secondary}"/><stop offset="1" stop-color="{highlight}"/>
-                </linearGradient>
                 <radialGradient id="ambient" cx="28%" cy="15%" r="90%">
                   <stop stop-color="{backgroundLight}"/><stop offset=".6" stop-color="{background}"/><stop offset="1" stop-color="{backgroundDark}"/>
                 </radialGradient>
@@ -70,7 +64,7 @@ internal sealed class GetAvatarQueryHandler : IQueryHandler<GetAvatarQuery, stri
                 <path d="M230 92V172H216C203 123 181 110 153 110C108 110 83 149 83 213C83 277 108 315 153 315C185 315 206 296 220 257H233L227 330H216L209 312C192 328 170 336 144 336C75 336 42 283 42 215C42 143 84 90 147 90C177 90 194 99 210 111L218 92Z"/>
                 <path d="M445 93V164H432C422 125 399 109 373 109C341 109 321 125 321 148C321 174 344 184 380 198C427 216 458 233 458 275C458 316 425 338 379 338C350 338 325 328 308 316L301 334H289V258H303C315 300 342 319 374 319C406 319 427 304 427 280C427 255 402 244 366 230C319 212 289 194 289 153C289 117 320 90 365 90C391 90 414 99 430 110L436 93Z"/>
               </g>
-              <g fill="url(#metal)" stroke="{highlight}" stroke-width=".7">
+              <g fill="{accent}" stroke="{highlight}" stroke-width=".7">
                 <path d="M230 92V172H216C203 123 181 110 153 110C108 110 83 149 83 213C83 277 108 315 153 315C185 315 206 296 220 257H233L227 330H216L209 312C192 328 170 336 144 336C75 336 42 283 42 215C42 143 84 90 147 90C177 90 194 99 210 111L218 92Z"/>
                 <path d="M445 93V164H432C422 125 399 109 373 109C341 109 321 125 321 148C321 174 344 184 380 198C427 216 458 233 458 275C458 316 425 338 379 338C350 338 325 328 308 316L301 334H289V258H303C315 300 342 319 374 319C406 319 427 304 427 280C427 255 402 244 366 230C319 212 289 194 289 153C289 117 320 90 365 90C391 90 414 99 430 110L436 93Z"/>
               </g>
@@ -80,7 +74,7 @@ internal sealed class GetAvatarQueryHandler : IQueryHandler<GetAvatarQuery, stri
               <path d="M218 375H244M268 375H294" stroke="{accent}" stroke-opacity=".45"/>
               <path d="M252 375L256 371L260 375L256 379Z" fill="{accent}"/>
               <g transform="{AvatarLettering.Place(loginOutline, 445)}" fill="{shadow}">{loginOutline.Paths}</g>
-              <g id="login" aria-label="{login}" transform="{AvatarLettering.Place(loginOutline, 440)}" fill="url(#metal)"><title>{login}</title>{loginOutline.Paths}</g>
+              <g id="login" aria-label="{login}" transform="{AvatarLettering.Place(loginOutline, 440)}" fill="{accent}"><title>{login}</title>{loginOutline.Paths}</g>
             </svg>
             """;
         return Task.FromResult(Result.Success(svg));
