@@ -236,6 +236,24 @@ public sealed class InfrastructureQueryInvariantTests
     }
 
     [Fact]
+    public void Place_counter_check_is_read_only_and_counts_direct_children_separately()
+    {
+        var source = File.ReadAllText(Path.Combine(
+            FindRepositoryRoot(), "src", "ProgramMatrixFillingRecalculator", "MatrixFillingRecalculator.cs"));
+        var start = source.IndexOf("private static async Task<bool> CheckProgramAsync", StringComparison.Ordinal);
+        var end = source.IndexOf("private static async Task RecalculateProgramAsync", start, StringComparison.Ordinal);
+        var check = source[start..end];
+
+        Assert.Contains("IsolationLevel.RepeatableRead", check, StringComparison.Ordinal);
+        Assert.Contains("SET TRANSACTION READ ONLY", check, StringComparison.Ordinal);
+        Assert.DoesNotContain("UPDATE ", check, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("GROUP BY parent_id", check, StringComparison.Ordinal);
+        Assert.Contains("COALESCE(child_counts.expected, 0)", check, StringComparison.Ordinal);
+        Assert.Contains("CASE WHEN @isMatrix THEN matrix_counts.expected ELSE 1::bigint END", check, StringComparison.Ordinal);
+        Assert.Contains("return fillingErrors == 0 && matrixErrors == 0", check, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Get_tree_loads_persisted_filling_and_descendants_in_one_batch()
     {
         var source = ReadPlaceQueries();

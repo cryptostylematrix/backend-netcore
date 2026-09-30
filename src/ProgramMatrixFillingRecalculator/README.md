@@ -1,8 +1,11 @@
 # Program Matrix Filling Recalculator
 
-This console application calculates `places.matrix_filling` for every place of
+This console application checks `places.filling` and `places.matrix_filling` for every place of
 every Referral Program, or one selected program. It is intended for existing programs that were created or
 migrated before the persisted matrix-filling counter was introduced.
+
+`filling` must equal the number of direct children in the same program and
+structure, excluding the place itself (zero for a leaf).
 
 For a matrix structure (`width > 0` and `height > 0`), a place's filling is the
 number of places in the matrix rooted at that place, including the place itself
@@ -28,7 +31,14 @@ Check the values without modifying PostgreSQL:
 dotnet run --project src/ProgramMatrixFillingRecalculator
 ```
 
-Apply the recalculation:
+Checks use a read-only, repeatable-read transaction per program and print each
+incorrect place ID with stored and expected values, plus totals per structure.
+Exit codes: `0` means all checked values match, `3` means mismatches were found,
+`1` means execution failed, `2` means invalid options, and `130` means cancelled.
+The check requires SELECT access only and does not require stopping writers.
+It assumes valid parent links and checks counters, not tree integrity.
+
+Apply the matrix-filling recalculation (`filling` is never modified):
 
 ```bash
 dotnet run --project src/ProgramMatrixFillingRecalculator -- --apply

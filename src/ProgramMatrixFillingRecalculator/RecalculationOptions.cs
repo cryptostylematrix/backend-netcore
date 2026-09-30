@@ -31,9 +31,9 @@ internal sealed record RecalculationOptions(
     }
 
     public const string Usage = """
-        Recalculates persisted matrix filling for Referral Programs.
+        Checks filling and matrix_filling for Referral Programs.
 
-        The command is a dry run unless --apply is supplied. Run --apply while the
+        The default check is read-only. --apply repairs matrix_filling only. Run --apply while the
         API task processor and other writers for the Programs database are stopped.
 
         Usage:
@@ -47,7 +47,7 @@ internal sealed record RecalculationOptions(
                                        PROGRAM_MATRIX_FILLING_MARKETING_ADDR.
                                        Omit it to process every Referral Program.
           --env-file VALUE             Load settings from this .env file
-          --apply                      Update PostgreSQL; otherwise dry-run
+          --apply                      Repair matrix_filling only; otherwise check both
           --help                       Show this help
         """;
 

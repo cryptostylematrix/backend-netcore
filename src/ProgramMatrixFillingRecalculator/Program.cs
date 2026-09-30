@@ -15,14 +15,14 @@ try
 
     Console.WriteLine(options.ApplyChanges
         ? "Recalculating and updating matrix filling..."
-        : "Checking matrix filling (dry run)...");
+        : "Checking filling and matrix_filling (read only)...");
 
     var recalculator = new MatrixFillingRecalculator(options.ConnectionString);
-    await recalculator.RunAsync(
+    var correct = await recalculator.RunAsync(
         options.MarketingAddr,
         options.ApplyChanges,
         cancellationSource.Token);
-    return 0;
+    return correct ? 0 : 3;
 }
 catch (OptionsException exception)
 {

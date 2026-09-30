@@ -5,7 +5,7 @@ namespace ProgramMatrixFillingRecalculator;
 
 internal sealed class MatrixFillingRecalculator(string connectionString)
 {
-    public async Task RunAsync(
+    public async Task<bool> RunAsync(
         string? marketingAddr,
         bool applyChanges,
         CancellationToken cancellationToken)
@@ -26,6 +26,7 @@ internal sealed class MatrixFillingRecalculator(string connectionString)
                 : $"Referral program {marketingAddr} was not found.");
         }
 
+        var correct = true;
         Console.WriteLine("Programs selected: {0}", marketingAddresses.Count);
         for (var index = 0; index < marketingAddresses.Count; index++)
         {
@@ -35,12 +36,118 @@ internal sealed class MatrixFillingRecalculator(string connectionString)
                 index + 1,
                 marketingAddresses.Count,
                 marketingAddresses[index]);
+            if (!applyChanges)
+            {
+                correct &= await CheckProgramAsync(connection, marketingAddresses[index], cancellationToken);
+                continue;
+            }
+
             await RecalculateProgramAsync(
                 connection,
                 marketingAddresses[index],
                 applyChanges,
                 cancellationToken);
         }
+
+        return correct;
+    }
+
+    private static async Task<bool> CheckProgramAsync(
+        NpgsqlConnection connection,
+        string marketingAddr,
+        CancellationToken cancellationToken)
+    {
+        await using var transaction = await connection.BeginTransactionAsync(
+            System.Data.IsolationLevel.RepeatableRead, cancellationToken);
+        await ExecuteAsync(connection, transaction, "SET TRANSACTION READ ONLY;", cancellationToken);
+        var structures = await LoadStructuresAsync(connection, marketingAddr, cancellationToken);
+        if (structures.Count == 0)
+            throw new InvalidOperationException("The referral program has no structures.");
+
+        long fillingErrors = 0;
+        long matrixErrors = 0;
+        foreach (var structure in structures)
+        {
+            const string sql = """
+                WITH RECURSIVE ancestors AS
+                (
+                    SELECT place.id AS descendant_id, place.id AS ancestor_id,
+                           place.parent_id, 0 AS distance
+                    FROM public.places place
+                    WHERE place.marketing_addr = @marketingAddr
+                      AND place.structure_number = @structureNumber
+                    UNION ALL
+                    SELECT ancestors.descendant_id, parent.id, parent.parent_id,
+                           ancestors.distance + 1
+                    FROM ancestors
+                    JOIN public.places parent
+                      ON parent.id = ancestors.parent_id
+                     AND parent.marketing_addr = @marketingAddr
+                     AND parent.structure_number = @structureNumber
+                    WHERE ancestors.distance < @height
+                ),
+                matrix_counts AS
+                (
+                    SELECT ancestor_id, COUNT(*)::bigint AS expected
+                    FROM ancestors
+                    GROUP BY ancestor_id
+                ),
+                child_counts AS
+                (
+                    SELECT parent_id, COUNT(*)::bigint AS expected
+                    FROM public.places
+                    WHERE marketing_addr = @marketingAddr
+                      AND structure_number = @structureNumber
+                    GROUP BY parent_id
+                )
+                SELECT place.id, place.filling, COALESCE(child_counts.expected, 0),
+                       place.matrix_filling,
+                       CASE WHEN @isMatrix THEN matrix_counts.expected ELSE 1::bigint END
+                FROM public.places place
+                JOIN matrix_counts ON matrix_counts.ancestor_id = place.id
+                LEFT JOIN child_counts ON child_counts.parent_id = place.id
+                WHERE place.marketing_addr = @marketingAddr
+                  AND place.structure_number = @structureNumber
+                ORDER BY place.id;
+                """;
+            await using var command = new NpgsqlCommand(sql, connection, transaction);
+            command.Parameters.AddWithValue("marketingAddr", marketingAddr);
+            command.Parameters.AddWithValue("structureNumber", (short)structure.Number);
+            command.Parameters.AddWithValue("height", structure.IsMatrix ? (int)structure.Height : 0);
+            command.Parameters.AddWithValue("isMatrix", structure.IsMatrix);
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            long places = 0;
+            long incorrectFilling = 0;
+            long incorrectMatrix = 0;
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                places++;
+                var expectedFilling = reader.GetInt64(2);
+                var expectedMatrix = reader.GetInt64(4);
+                var fillingWrong = reader.IsDBNull(1) || reader.GetInt64(1) != expectedFilling;
+                var matrixWrong = reader.IsDBNull(3) || reader.GetInt64(3) != expectedMatrix;
+                if (fillingWrong) incorrectFilling++;
+                if (matrixWrong) incorrectMatrix++;
+                if (fillingWrong || matrixWrong)
+                {
+                    Console.WriteLine(
+                        "Structure {0}, place {1}: filling {2} (expected {3}); matrix_filling {4} (expected {5}).",
+                        structure.Number, reader.GetValue(0),
+                        reader.IsDBNull(1) ? "NULL" : reader.GetValue(1), expectedFilling,
+                        reader.IsDBNull(3) ? "NULL" : reader.GetValue(3), expectedMatrix);
+                }
+            }
+
+            fillingErrors += incorrectFilling;
+            matrixErrors += incorrectMatrix;
+            Console.WriteLine("Structure {0}: {1} places, filling incorrect: {2}, matrix_filling incorrect: {3}.",
+                structure.Number, places, incorrectFilling, incorrectMatrix);
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+        Console.WriteLine("Check complete: filling incorrect: {0}; matrix_filling incorrect: {1}. No database changes were made.",
+            fillingErrors, matrixErrors);
+        return fillingErrors == 0 && matrixErrors == 0;
     }
 
     private static async Task RecalculateProgramAsync(
