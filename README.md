@@ -18,6 +18,7 @@ Entity Framework Core, MediatR, and the included TON SDK projects.
 | `src/Modules/ScheduledTasks` | System-wide UTC task scheduling, sequential in-process command execution, and marketing coordination. |
 | `src/ProgramMatrixFillingRecalculator` | Dry-run-first maintenance tool for recalculating persisted matrix filling in all existing programs or one selected program. |
 | `src/ProgramVolumeRecalculator` | Dry-run-first maintenance tool for rebuilding one profile-volume type in one program structure. |
+| `src/LegacyPlacesXmindExporter` | Read-only export of a legacy PostgreSQL places structure to an editable XMind file. |
 | `src/ProgramInviterChanger` | Administrative console application for moving a referral subtree. |
 | `src/BuildingBlocks` | Shared domain, integration-event, and messaging infrastructure. |
 | `src/Libs/TonSdk.*` | TON client and core libraries used by the Contracts module. |
@@ -27,6 +28,8 @@ Entity Framework Core, MediatR, and the included TON SDK projects.
 name is intentionally preserved in paths and namespaces.
 
 ## Documentation
+
+- [Legacy Places XMind Exporter](src/LegacyPlacesXmindExporter/README.md) describes exporting old-system places for manual editing before migration.
 
 - [UI database migration with pgAdmin](src/Modules/UI/Database/PgAdmin/README.md)
   covers creating a dedicated UI database/login and moving existing data from Programs.

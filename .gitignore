@@ -100,3 +100,6 @@ TestResult.xml
 nunit-*.xml
 src/API/CryptoStyle.Api/env.development
 *.sln
+
+# Generated XMind exports
+*.xmind
