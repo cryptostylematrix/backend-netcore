@@ -13,6 +13,9 @@ public sealed class TonQueryCacheOptions
     /// </summary>
     public int LongTtlDays { get; init; } = 365;
 
+    /// <summary>Metadata cache lifetime in hours (1–168).</summary>
+    public int JettonMetadataTtlHours { get; init; } = 24;
+
     /// <summary>
     /// GetNftDataAsync: cache when IsInit == -1
     /// </summary>

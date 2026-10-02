@@ -15,6 +15,33 @@ while deterministic correlation IDs and target-module idempotency prevent repeat
 business effects. PostgreSQL `xmin` ensures only one worker advances the task row
 and protects manual database edits.
 
+## Public schedules
+
+`GET /api/scheduled-tasks/schedules?module=program&scope={stored_address}&resource_type=structure`
+returns UTC timing, recurrence, status and public action references. Each action
+has a type and a target (`module`, `scope`, `resource_type`, `resource_id`).
+All three filters are required. Unknown modules or unmatched targets return an
+empty array; database failures remain errors.
+
+ScheduledTasks reads only its own Tasks database. It knows no program addresses,
+structure settings or structure command whitelist. Command owners implement
+`IntegrationRequests.Scheduling.IPublicTaskCommandDescriptor`: a parameterized
+JSON containment filter and an explicit public projection of their commands.
+ReferalProgram's adapter maps the existing stored command format to structure
+references and permits only supported maintenance commands. Raw arguments,
+internal errors and task-control commands are never returned. Actions retain
+execution order and are filtered to the requested module, scope and resource type.
+
+The frontend combines these references with
+`GET /api/program/{marketing_addr}/structures` and Marketing V3 data. Pass the
+stored address returned by the structures API as `scope`; the scheduler treats
+it as an opaque identifier. Structure names, grouping and labels belong to the
+program report. Schedule failures are shown independently of other sections.
+
+The combined program specification route and program-specific scheduler route
+are removed. Deploy backend and frontend together; persisted commands and the
+DDD execution/write path are unchanged, so no database migration is needed.
+
 ## Lifecycle
 
 - `execute_at_utc IS NULL` disables a scheduled task.

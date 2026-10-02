@@ -1,5 +1,6 @@
 using Contracts.Application;
 using Contracts.Infrastructure.Queries;
+using Contracts.Infrastructure.Metadata;
 using Contracts.Infrastructure.Ton;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -69,6 +70,9 @@ public static class ContractsModule
             services.AddSingleton<IMarketingTransactionSender, MarketingTransactionSender>();
             services.AddScoped<IJetttonMinterQueries, JetttonMinterQueries>();
             services.AddScoped<IJettonWalletQueries, JettonWalletQueries>();
+            services.AddScoped<IJettonMetadataQueries, JettonMetadataQueries>();
+            services.AddSingleton<JettonMetadataCache>();
+            services.AddSingleton<IJettonMetadataDocumentClient, JettonMetadataHttpClient>();
 
             return services;
         }

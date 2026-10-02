@@ -61,6 +61,7 @@ Public presentation assemblies are currently:
 - Contracts
 - ReferalProgram
 - UI
+- ScheduledTasks (read-only schedules with generic public target references)
 
 The legacy Matrix and Marketing modules, `ProgramMigrator`, and orphaned
 `src/TaskProcessor` have been removed. Their `/api/matrix/*` and `/api/marketing/*` routes remain unavailable.

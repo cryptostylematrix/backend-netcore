@@ -28,6 +28,8 @@ public static class ScheduledTasksModule
                 options.UseNpgsql(connectionString));
             services.TryAddSingleton(TimeProvider.System);
 
+            services.AddMediatR(options => options.RegisterServicesFromAssembly(typeof(GetPublicSchedulesQuery).Assembly));
+            services.AddScoped<IPublicScheduleQueries, PublicScheduleQueries>();
             services.AddScoped<IScheduledTaskRepository, ScheduledTaskRepository>();
             services.AddScoped<IScheduledTasksUnitOfWork>(provider =>
                 provider.GetRequiredService<ScheduledTasksDataContext>());

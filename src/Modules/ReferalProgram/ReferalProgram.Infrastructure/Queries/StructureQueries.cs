@@ -8,14 +8,52 @@ using ReferalProgram.Dto;
 namespace ReferalProgram.Infrastructure.Queries;
 
 public sealed class StructureQueries(
-    [FromKeyedServices("Programs")] NpgsqlDataSource dataSource) : IStructureQueries
+    [FromKeyedServices("Programs")] NpgsqlDataSource dataSource) : IStructureQueries, IProgramStructureListQueries
 {
     public async Task<StructureResponse?> GetStructureAsync(
         string marketingAddr,
         byte structureNumber,
         CancellationToken cancellationToken)
     {
-        const string sql = """
+        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        var row = await connection.QuerySingleOrDefaultAsync<StructureRow>(
+            new CommandDefinition(
+                SelectSql + " WHERE marketing_addr = @marketingAddr AND structure_number = @structureNumber;",
+                new
+                {
+                    marketingAddr,
+                    structureNumber = (short)structureNumber
+                },
+                cancellationToken: cancellationToken));
+
+        return row is null ? null : Map(row);
+    }
+
+    public async Task<IReadOnlyList<StructureResponse>> GetAsync(string marketingAddress, CancellationToken ct)
+    {
+        await using var connection = await dataSource.OpenConnectionAsync(ct);
+        var rows = await connection.QueryAsync<StructureRow>(new CommandDefinition(
+            SelectSql + " WHERE marketing_addr = @marketingAddress ORDER BY structure_number;",
+            new { marketingAddress }, cancellationToken: ct));
+        return rows.Select(Map).ToArray();
+    }
+
+    private static StructureResponse Map(StructureRow row) => new()
+    {
+        MarketingAddr = row.MarketingAddr,
+        StructureNumber = checked((byte)row.StructureNumber),
+        MaxPlacesPerProfile = row.MaxPlacesPerProfile,
+        Width = checked((byte)row.Width),
+        Height = checked((byte)row.Height),
+        DisplayHeight = checked((byte)row.DisplayHeight),
+        PrevRequired = row.PrevRequired,
+        PosAlgo = JsonSerializer.Deserialize<JsonElement>(row.PosAlgoJson),
+        Activity = row.ActivityJson is null
+            ? null
+            : JsonSerializer.Deserialize<JsonElement>(row.ActivityJson)
+    };
+
+    private const string SelectSql = """
             SELECT
                 marketing_addr          AS "MarketingAddr",
                 structure_number        AS "StructureNumber",
@@ -27,38 +65,7 @@ public sealed class StructureQueries(
                 pos_algo::text          AS "PosAlgoJson",
                 activity::text          AS "ActivityJson"
             FROM public.structures
-            WHERE marketing_addr = @marketingAddr
-              AND structure_number = @structureNumber;
             """;
-
-        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
-        var row = await connection.QuerySingleOrDefaultAsync<StructureRow>(
-            new CommandDefinition(
-                sql,
-                new
-                {
-                    marketingAddr,
-                    structureNumber = (short)structureNumber
-                },
-                cancellationToken: cancellationToken));
-
-        return row is null
-            ? null
-            : new StructureResponse
-            {
-                MarketingAddr = row.MarketingAddr,
-                StructureNumber = checked((byte)row.StructureNumber),
-                MaxPlacesPerProfile = row.MaxPlacesPerProfile,
-                Width = checked((byte)row.Width),
-                Height = checked((byte)row.Height),
-                DisplayHeight = checked((byte)row.DisplayHeight),
-                PrevRequired = row.PrevRequired,
-                PosAlgo = JsonSerializer.Deserialize<JsonElement>(row.PosAlgoJson),
-                Activity = row.ActivityJson is null
-                    ? null
-                    : JsonSerializer.Deserialize<JsonElement>(row.ActivityJson)
-            };
-    }
 
     private sealed class StructureRow
     {

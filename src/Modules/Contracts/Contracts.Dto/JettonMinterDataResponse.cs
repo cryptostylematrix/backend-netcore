@@ -9,10 +9,16 @@ public sealed class JettonMinterDataResponse
     public bool Mintable { get; init; }
 
     [JsonPropertyName("admin_address")]
-    public string AdminAddress { get; init; } = null!;
+    public string? AdminAddress { get; init; }
 
     [JsonPropertyName("metadata_uri")]
     public string? MetadataUri { get; init; }
+
+    [JsonPropertyName("name")]
+    public string? Name { get; init; }
+
+    [JsonPropertyName("symbol")]
+    public string? Symbol { get; init; }
 
     [JsonPropertyName("decimals")]
     public byte? Decimals { get; init; }

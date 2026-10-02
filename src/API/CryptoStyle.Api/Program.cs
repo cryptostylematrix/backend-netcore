@@ -11,6 +11,7 @@ using Serilog.Debugging;
 using Serilog.Events;
 using ContractsPresentation = Contracts.Presentation.PresentationReference;
 using ReferalProgramPresentation = ReferalProgram.Presentation.PresentationReference;
+using ScheduledTasksPresentation = ScheduledTasks.Presentation.PresentationReference;
 using UIPresentation = UI.Presentation.PresentationReference;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -72,7 +73,8 @@ builder.Services.AddFastEndpoints(options =>
     [
         ContractsPresentation.Assembly,
         ReferalProgramPresentation.Assembly,
-        UIPresentation.Assembly
+        UIPresentation.Assembly,
+        ScheduledTasksPresentation.Assembly
     ];
 });
 

@@ -63,6 +63,38 @@ The same applies to legacy Contracts endpoints under `Invite`, `Marketing`,
 `ProfileItem/GetPrograms`. The `MarketingV3` contract endpoints and other
 current Contracts endpoints remain registered.
 
+## Jetton display metadata
+
+`GET /contracts/jetton-wallet/{addr}/metadata` resolves the wallet's minter and
+returns `minter_addr`, `name`, `symbol`, and `decimals`. The frontend uses this
+endpoint instead of downloading token JSON directly from the browser.
+
+The backend supports on-chain, off-chain, and semi-chain metadata in
+[TEP-64](https://github.com/ton-blockchain/TEPs/blob/master/text/0064-token-data-standard.md),
+including snake/chunked values and IPFS URIs. On-chain fields take precedence.
+Missing decimals default to 9 only after metadata was successfully read; invalid
+decimals and failed external requests are not treated as valid metadata.
+
+Wallet-to-minter mappings and resolved metadata have separate cache entries,
+keyed by normalized TON addresses. The default TTL is 24 hours, configurable with
+`TonQueryCache__JettonMetadataTtlHours` (1–168 hours). Balances and total supply
+are not cached by this endpoint. Failed lookups are retried on later requests.
+Concurrent requests share one lookup per key within an API process.
+The existing `IDistributedCache` implementation determines whether entries
+survive API restarts; the default in-memory cache does not.
+
+Remote JSON reads have a 10-second timeout, a 256 KiB limit, and checked redirects.
+Only public HTTP(S) destinations are allowed. Internal addresses are blocked,
+including after DNS resolution. For display, the frontend uses the symbol, then
+the name if the symbol is absent. `JETTON` remains a fallback only when both are
+missing in successfully loaded metadata.
+
+Metadata regression tests (no database or network required):
+
+```bash
+dotnet test tests/Modules/Contracts.Infrastructure.Tests/Contracts.Infrastructure.Tests.csproj
+```
+
 ## Local setup
 
 Requirements:
@@ -168,3 +200,13 @@ specific deployed address is intentionally being documented.
 Matrix, Marketing, the old task processor, and ProgramMigrator have been removed.
 Their dedicated legacy PostgreSQL database can be removed manually in pgAdmin
 after backing it up and confirming it contains no current application data.
+
+### Specification read APIs
+
+- `GET /api/program/{marketing_addr}/structures`: Referral Program structure settings.
+- `GET /api/scheduled-tasks/schedules?module=program&scope={stored_address}&resource_type=structure`: Scheduled Tasks public schedules with generic target references.
+
+Each module owns its endpoint and database reads. The frontend composes the
+specification; the schedule read path uses a shared public-target descriptor contract instead of
+querying structures from ScheduledTasks.
+The old combined `/specification` endpoint is removed.

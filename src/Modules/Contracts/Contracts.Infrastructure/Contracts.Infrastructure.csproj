@@ -22,4 +22,7 @@
     <ProjectReference Include="..\Contracts.Presentation\Contracts.Presentation.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Contracts.Infrastructure.Tests" />
+  </ItemGroup>
 </Project>

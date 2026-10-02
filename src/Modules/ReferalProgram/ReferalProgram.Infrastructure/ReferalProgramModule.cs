@@ -75,6 +75,7 @@ public static class ReferalProgramModule
                 (IPositionCandidateQueries)provider.GetRequiredService<IPlaceQueries>());
             services.AddScoped<IPositionLockQueries>(provider =>
                 (IPositionLockQueries)provider.GetRequiredService<ILockQueries>());
+            services.AddScoped<IProgramStructureListQueries, StructureQueries>();
             services.AddScoped<IStructureQueries, StructureQueries>();
             services.AddScoped<IStructureRankQueries, StructureRankQueries>();
             services.AddScoped<IProgramStatisticsQueries, ProgramStatisticsQueries>();
@@ -113,6 +114,8 @@ public static class ReferalProgramModule
             services.AddScoped<IStructureCompressionService, StructureCompressionService>();
             services.AddScoped<IProfileVolumeMaintenance, ProfileVolumeMaintenance>();
             services.AddScoped<IReferalProgramQueries, ReferalProgramQueries>();
+            services.AddSingleton<global::IntegrationRequests.Scheduling.IPublicTaskCommandDescriptor,
+                ReferalProgram.Application.Features.Structures.ProgramPublicTaskCommandDescriptor>();
             services.AddScoped<ScheduledTasks.Application.ITaskCommandRequestFactory,
                 ProgramTaskCommandRequestFactory>();
 
