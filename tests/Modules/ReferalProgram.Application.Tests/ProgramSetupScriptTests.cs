@@ -10,7 +10,7 @@ public sealed class ProgramSetupScriptTests
             "setup_lifestyler_program.sql",
             [
                 "FOR v_structure_number IN 0..11",
-                "CASE WHEN v_structure_number = 0 THEN 1 ELSE 0 END, CASE WHEN v_structure_number = 0 THEN 0 ELSE 2 END, CASE WHEN v_structure_number = 0 THEN 1 ELSE 2 END, CASE WHEN v_structure_number = 0 THEN 1 ELSE 2 END, v_structure_number BETWEEN 2 AND 11, v_pos_algo"
+                "CASE WHEN v_structure_number = 0 THEN 1 ELSE 0 END, CASE WHEN v_structure_number = 0 THEN 0 ELSE 2 END, CASE WHEN v_structure_number IN (0, 11) THEN 1 ELSE 2 END, CASE WHEN v_structure_number IN (0, 11) THEN 1 ELSE 2 END, v_structure_number BETWEEN 2 AND 11, v_pos_algo"
             ]
         },
         {

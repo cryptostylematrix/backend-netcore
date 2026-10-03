@@ -1,5 +1,7 @@
 -- Creates the LifeStyler referral program, structures 0 through 11, and the
 -- first place in every structure as one atomic operation.
+-- Structures 1-10 are seven-place matrices (width 2, height 2).
+-- Structure 11 is a three-place matrix (width 2, height 1).
 --
 -- Fill the four variables below before running the script:
 --   v_database_username
@@ -169,8 +171,8 @@ BEGIN
             v_structure_number,
             CASE WHEN v_structure_number = 0 THEN 1 ELSE 0 END,
             CASE WHEN v_structure_number = 0 THEN 0 ELSE 2 END,
-            CASE WHEN v_structure_number = 0 THEN 1 ELSE 2 END,
-            CASE WHEN v_structure_number = 0 THEN 1 ELSE 2 END,
+            CASE WHEN v_structure_number IN (0, 11) THEN 1 ELSE 2 END,
+            CASE WHEN v_structure_number IN (0, 11) THEN 1 ELSE 2 END,
             v_structure_number BETWEEN 2 AND 11,
             v_pos_algo
         );
