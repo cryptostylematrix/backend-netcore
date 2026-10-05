@@ -56,7 +56,8 @@ The nullable text `structures."group"` is trimmed, empty values become null,
 and group matching is case-sensitive and limited to one program.
 
 The event handler excludes the source place and uses the original operation's
-timestamp. Other places receive it only when their date is null or older.
+timestamp. Other places always receive that timestamp, replacing any existing
+date, including a newer one.
 Each destination's own `set_active_on_activation` controls whether its active
 flag becomes true, even if its date did not change; false preserves the flag.
 A null destination activity configuration leaves the flag unchanged. Destination

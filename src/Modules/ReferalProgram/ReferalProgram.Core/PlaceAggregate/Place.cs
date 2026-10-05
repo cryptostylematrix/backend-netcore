@@ -306,8 +306,7 @@ public sealed class Place : Entity, IAggregateRoot
         if (string.IsNullOrWhiteSpace(ProfileAddr))
             throw new InvalidOperationException("A system place cannot be activated.");
 
-        if (ActivatedAt is null || ActivatedAt < activatedAt)
-            ActivatedAt = activatedAt;
+        ActivatedAt = activatedAt;
         if (setActiveOnActivation)
             IsActive = true;
     }

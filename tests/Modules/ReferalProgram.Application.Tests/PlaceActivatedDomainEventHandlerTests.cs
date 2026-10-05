@@ -58,11 +58,11 @@ public sealed class PlaceActivatedDomainEventHandlerTests
     [InlineData(null, true, false, 100L, true)]
     [InlineData(50L, true, false, 100L, true)]
     [InlineData(100L, true, false, 100L, true)]
-    [InlineData(200L, true, false, 200L, true)]
+    [InlineData(200L, true, false, 100L, true)]
     [InlineData(50L, false, false, 100L, false)]
     [InlineData(50L, false, true, 100L, true)]
-    [InlineData(200L, false, false, 200L, false)]
-    public async Task Uses_destination_flag_setting_and_never_moves_date_backwards(
+    [InlineData(200L, false, false, 100L, false)]
+    public async Task Uses_destination_flag_setting_and_always_replaces_date(
         long? previous, bool setActive, bool wasActive, long expectedDate, bool expectedActive)
     {
         var target = CreatePlace(2, 1, activatedAt: previous, active: wasActive);
