@@ -66,9 +66,7 @@ public sealed class InviteActivitySettings : ActivitySettings
     [JsonPropertyName("when_inactive")]
     public InactiveInviteSettings WhenInactive { get; init; } = new();
 
-    public override bool HasPendingRules() => WhenInactive.AllowInvitingWithoutPlaces
-        || WhenInactive.AllowInvitingWithPlaces || WhenInactive.AllowAsFallbackRoot
-        || WhenInactive.AllowAsBonusRecipient || WhenInactive.AllowAsCloneRecipient
+    public override bool HasPendingRules() => WhenInactive.AllowAsBonusRecipient || WhenInactive.AllowAsCloneRecipient
         || WhenInactive.KeepOnCompression;
 }
 

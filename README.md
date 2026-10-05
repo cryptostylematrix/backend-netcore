@@ -149,6 +149,17 @@ invariants. UI tests cover profile intents, contract adapters, and wallet addres
 handling. Scheduled Tasks tests cover schedules, command parsing/execution,
 correlation IDs, dispatch, aggregates, and persistence mappings.
 
+Optional activity regression tests use a disposable local Docker PostgreSQL:
+
+```bash
+bash tests/Modules/ReferalProgram.Application.Tests/Postgres/run.sh
+```
+
+See [coverage and limits](tests/Modules/ReferalProgram.Application.Tests/Postgres/README.md).
+They exercise invitation, root lookup, and activation persistence with domain
+events; they do not connect to existing application databases. Without explicit
+opt-in, these PostgreSQL tests are skipped.
+
 These unit and source-invariant tests do not exercise live PostgreSQL, TON calls,
 or API endpoint discovery. Database cleanup scripts require separate validation
 on a disposable PostgreSQL instance before operational use.

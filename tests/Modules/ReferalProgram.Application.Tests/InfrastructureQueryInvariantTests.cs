@@ -3,6 +3,22 @@ namespace ReferalProgram.Application.Tests;
 public sealed class InfrastructureQueryInvariantTests
 {
     [Fact]
+    public void Invite_presence_check_is_scoped_to_the_program_and_counts_all_marketing_places()
+    {
+        var source = ReadPlaceQueries();
+        const string method = "HasProfilePlacesOutsideInviteStructureAsync";
+        AssertMethodContains(source, method, "marketing_addr = @marketingAddr");
+        AssertMethodContains(source, method, "profile_addr = @profileAddr");
+        AssertMethodContains(source, method, "structure_number > 0");
+        var start = source.IndexOf(method, StringComparison.Ordinal);
+        var end = source.IndexOf("public async", start + method.Length, StringComparison.Ordinal);
+        var body = source[start..end];
+        Assert.DoesNotContain("is_active", body);
+        Assert.DoesNotContain("activated_at", body);
+        Assert.DoesNotContain("kind =", body);
+    }
+
+    [Fact]
     public void Every_open_candidate_query_excludes_terminal_clones()
     {
         var root = FindRepositoryRoot();

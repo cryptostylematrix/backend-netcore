@@ -94,13 +94,26 @@ public sealed class ActivatePlacePolicyTests
     [Theory]
     [InlineData("null", "activity_configuration_invalid")]
     [InlineData("{\"type\":\"marketing\"}", "activity_configuration_invalid")]
-    [InlineData("{\"type\":\"invite\",\"when_inactive\":{\"allow_inviting_with_places\":true}}", "activity_rules_not_supported_yet")]
+    [InlineData("{\"type\":\"invite\",\"when_inactive\":{\"allow_as_bonus_recipient\":true}}", "activity_rules_not_supported_yet")]
     public void Invalid_or_not_yet_implemented_rules_return_a_business_error(string json, string reason)
     {
         var result = Policy().Evaluate(Structure(json),
             new HashSet<uint> { ProgramCommandTags.ActivatePlace }, Place());
         Assert.False(result.CanActivate);
         Assert.Equal(reason, result.Reason);
+    }
+
+    [Theory]
+    [InlineData("allow_inviting_without_places")]
+    [InlineData("allow_inviting_with_places")]
+    [InlineData("allow_as_fallback_root")]
+    public void Implemented_invite_rules_do_not_block_activation(string rule)
+    {
+        var result = Policy().Evaluate(
+            Structure($"{{\"type\":\"invite\",\"when_inactive\":{{\"{rule}\":true}}}}"),
+            new HashSet<uint> { ProgramCommandTags.ActivatePlace }, Place());
+        Assert.True(result.CanActivate);
+        Assert.True(result.SetActiveOnActivation);
     }
 
     private static ActivatePlacePolicy Policy() => new(

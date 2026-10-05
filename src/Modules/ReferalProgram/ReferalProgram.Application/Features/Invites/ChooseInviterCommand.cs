@@ -59,7 +59,23 @@ internal sealed class ChooseInviterCommandHandler(
                 return Result<CommandResponse>.Error("Invite is already created.");
 
             if (!inviter.IsActive)
-                return Result<CommandResponse>.Error("Inviter is not active.");
+            {
+                var settings = structure.Activity is { } activity
+                    ? (InviteActivitySettings)ActivitySettings.Parse(activity, StructureNumber)
+                    : new InviteActivitySettings();
+                var rules = settings.WhenInactive;
+                var canInvite = false;
+                if (rules.AllowInvitingWithPlaces || rules.AllowInvitingWithoutPlaces)
+                {
+                    var hasPlaces = await placeQueries.HasProfilePlacesOutsideInviteStructureAsync(
+                        request.MarketingAddr, request.InviterAddr, cancellationToken);
+                    canInvite = hasPlaces
+                        ? rules.AllowInvitingWithPlaces
+                        : rules.AllowInvitingWithoutPlaces;
+                }
+                if (!canInvite)
+                    return Result<CommandResponse>.Error("Inviter is not active.");
+            }
 
             var inviterProfileAddr = inviter.ProfileAddr;
             if (string.IsNullOrWhiteSpace(inviterProfileAddr))

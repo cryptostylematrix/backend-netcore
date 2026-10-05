@@ -1,6 +1,8 @@
 namespace ReferalProgram.Application.Services;
 
-public sealed class ProfileRootPlaceResolver(IPlaceQueries placeQueries)
+public sealed class ProfileRootPlaceResolver(
+    IPlaceQueries placeQueries,
+    IStructureQueries structureQueries)
     : IProfileRootPlaceResolver
 {
     private const byte InviteStructureNumber = 0;
@@ -15,6 +17,7 @@ public sealed class ProfileRootPlaceResolver(IPlaceQueries placeQueries)
         var currentProfileAddr = string.IsNullOrWhiteSpace(profileAddr)
             ? null
             : profileAddr;
+        bool? allowInactiveInviter = null;
         var visitedProfileAddrs = new HashSet<string>(StringComparer.Ordinal);
 
         while (true)
@@ -48,7 +51,17 @@ public sealed class ProfileRootPlaceResolver(IPlaceQueries placeQueries)
             if (invite is null)
                 return null;
 
-            var inviter = await FindFirstActiveInviterAsync(invite, cancellationToken);
+            if (allowInactiveInviter is null)
+            {
+                var structure = await structureQueries.GetStructureAsync(
+                    marketingAddr, InviteStructureNumber, cancellationToken);
+                allowInactiveInviter = structure?.Activity is { } activity
+                    && ((InviteActivitySettings)ActivitySettings.Parse(activity, InviteStructureNumber))
+                        .WhenInactive.AllowAsFallbackRoot;
+            }
+
+            var inviter = await FindFirstEligibleInviterAsync(
+                invite, allowInactiveInviter.Value, cancellationToken);
             if (inviter?.ProfileAddr is not { } inviterProfileAddr
                 || string.IsNullOrWhiteSpace(inviterProfileAddr))
             {
@@ -59,8 +72,9 @@ public sealed class ProfileRootPlaceResolver(IPlaceQueries placeQueries)
         }
     }
 
-    private async Task<PlaceResponse?> FindFirstActiveInviterAsync(
+    private async Task<PlaceResponse?> FindFirstEligibleInviterAsync(
         PlaceResponse invite,
+        bool allowInactiveInviter,
         CancellationToken cancellationToken)
     {
         var parentId = invite.ParentId;
@@ -75,7 +89,7 @@ public sealed class ProfileRootPlaceResolver(IPlaceQueries placeQueries)
             if (inviter is null || !visitedInviteIds.Add(inviter.Id))
                 return null;
 
-            if (inviter.IsActive
+            if ((inviter.IsActive || allowInactiveInviter)
                 && !string.IsNullOrWhiteSpace(inviter.ProfileAddr))
             {
                 return inviter;

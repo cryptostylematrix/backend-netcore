@@ -67,9 +67,6 @@ public sealed class ActivitySettingsTests
         Assert.Throws<JsonException>(() => Parse(json, 0));
 
     [Theory]
-    [InlineData("allow_inviting_without_places")]
-    [InlineData("allow_inviting_with_places")]
-    [InlineData("allow_as_fallback_root")]
     [InlineData("allow_as_bonus_recipient")]
     [InlineData("allow_as_clone_recipient")]
     [InlineData("keep_on_compression")]

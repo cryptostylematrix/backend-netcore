@@ -57,7 +57,7 @@ profile's first paid place in any structure greater than `0` activates its
 structure-0 invite. Once any such place exists, later paid-place creation never
 changes the invite, even if an integration command reset its activation date.
 
-### Activity configuration rollout: stage 1
+### Activity configuration rollout: stages 1–2
 
 Legacy activity objects remain supported unchanged, including the default
 `set_active_on_activation = true` and ignored retired `activation_sync` values.
@@ -70,13 +70,45 @@ inverse of legacy `set_active_on_activation`. Mixing the two formats is rejected
 Unknown fields, duplicate keys, incorrect types, and null nested blocks are
 invalid in the new format. Omitted boolean options default to false.
 
-The typed models also define the agreed `when_inactive` options and marketing
-`spillover` options. Their placement, invitation, recipient, and compression
-consumers are **not connected in stage 1**. Do not deploy enabled options yet:
-activation rejects them with `activity_rules_not_supported_yet`, rather than
-silently accepting an unimplemented rule. Other operations still use their
-existing rules. Validation currently occurs on configuration parsing in the
-activation policy, not as a database constraint or a configuration write API.
+Stage 2 enables three structure-0 `when_inactive` options:
+
+- `allow_inviting_without_places`: an inactive inviter can invite if its profile
+  has no places in structures greater than 0 in this program.
+- `allow_inviting_with_places`: an inactive inviter can invite if such places
+  exist. Presence counts purchased places, clones, and reinvests regardless of
+  activity or activation date. Places in other programs do not count.
+- `allow_as_fallback_root`: profile-root resolution may use an inactive profiled
+  inviter when looking for a first place in the target structure. Ancestors
+  without a target place are skipped; system invites are skipped and cycles
+  terminate the search. The target place itself need not be active, as before.
+
+Missing activity, legacy activity, and omitted/false options preserve the old
+rules. Active inviters still invite normally. New invite children remain inactive
+with no activation date. Existing-invite and missing-profile checks still apply.
+Own first places are returned without reading invite settings. Position selection
+uses the resolved root owner's locks. The `owner` strategy used by CryptoCash
+remains independent of invite activity and these settings.
+
+Example allowing invitations and fallback through inactive invites:
+
+```json
+{
+  "type": "invite",
+  "when_inactive": {
+    "allow_inviting_without_places": true,
+    "allow_inviting_with_places": true,
+    "allow_as_fallback_root": true
+  }
+}
+```
+
+Placement, spillover, recipient, and compression options remain reserved for
+later stages. Activation rejects enabled pending rules with
+`activity_rules_not_supported_yet`; the three implemented invite rules no longer
+trigger this error. Other operations retain their existing restrictions.
+Validation occurs when settings are parsed by their consumers, not as a database
+constraint or a configuration write API. No existing program data or setup script
+is changed automatically.
 
 Equivalent activation examples:
 

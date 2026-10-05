@@ -88,8 +88,14 @@ Both algorithms accept these group options:
   window, starting with the highest open depth.
 
 Locks belong to the resolved root profile. With a profile root, resolution may
-fall back through active inviters until it finds the first inviter that has a
+fall back through eligible inviters until it finds the first inviter that has a
 place in the structure; that inviter's locks are then used.
+
+By default only active profiled inviters are eligible. Structure 0 can enable
+`activity.when_inactive.allow_as_fallback_root` in the `type: "invite"` format
+to include inactive profiled inviters. The target first place's activity is not
+checked during root resolution. Position selection uses the resolved owner's
+locks. This setting does not affect the `owner` root strategy.
 
 ### `empty_parent`
 
