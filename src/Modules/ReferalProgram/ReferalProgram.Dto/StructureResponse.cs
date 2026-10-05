@@ -26,6 +26,15 @@ public sealed class StructureResponse
     [JsonPropertyName("pos_algo")]
     public System.Text.Json.JsonElement PosAlgo { get; init; }
 
+    private string? _group;
+
+    [JsonPropertyName("group")]
+    public string? Group
+    {
+        get => _group;
+        init => _group = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
     [JsonPropertyName("activity")]
     public System.Text.Json.JsonElement? Activity { get; init; }
 }

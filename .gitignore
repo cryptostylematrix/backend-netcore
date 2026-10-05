@@ -103,3 +103,4 @@ src/API/CryptoStyle.Api/env.development
 
 # Generated XMind exports
 *.xmind
+*.temp

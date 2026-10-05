@@ -22,6 +22,7 @@ DECLARE
             "prev_required": null,
             "pos_algo": null,
             "activity": null,
+            "group": null,
             "profile_addr": null,
             "profile_login": null
         }
@@ -58,6 +59,7 @@ BEGIN
             prev_required          boolean,
             pos_algo               jsonb,
             activity               jsonb,
+            "group"                text,
             profile_addr           text,
             profile_login          text
         )
@@ -95,7 +97,8 @@ BEGIN
             display_height,
             prev_required,
             pos_algo,
-            activity
+            activity,
+            "group"
         )
         VALUES
         (
@@ -107,7 +110,8 @@ BEGIN
             v_structure.display_height,
             v_structure.prev_required,
             v_structure.pos_algo,
-            v_structure.activity
+            v_structure.activity,
+            v_structure."group"
         );
 
         INSERT INTO public.places

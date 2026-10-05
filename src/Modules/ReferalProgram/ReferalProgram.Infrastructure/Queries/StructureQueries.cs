@@ -47,6 +47,7 @@ public sealed class StructureQueries(
         Height = checked((byte)row.Height),
         DisplayHeight = checked((byte)row.DisplayHeight),
         PrevRequired = row.PrevRequired,
+        Group = row.Group,
         PosAlgo = JsonSerializer.Deserialize<JsonElement>(row.PosAlgoJson),
         Activity = row.ActivityJson is null
             ? null
@@ -63,7 +64,8 @@ public sealed class StructureQueries(
                 display_height          AS "DisplayHeight",
                 prev_required           AS "PrevRequired",
                 pos_algo::text          AS "PosAlgoJson",
-                activity::text          AS "ActivityJson"
+                activity::text          AS "ActivityJson",
+                "group"                 AS "Group"
             FROM public.structures
             """;
 
@@ -78,5 +80,6 @@ public sealed class StructureQueries(
         public bool PrevRequired { get; init; }
         public string PosAlgoJson { get; init; } = null!;
         public string? ActivityJson { get; init; }
+        public string? Group { get; init; }
     }
 }

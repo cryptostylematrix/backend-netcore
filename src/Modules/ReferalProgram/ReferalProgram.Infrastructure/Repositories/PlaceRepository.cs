@@ -6,6 +6,18 @@ namespace ReferalProgram.Infrastructure.Repositories;
 
 internal sealed class PlaceRepository(DataContext dataContext) : IPlaceRepository
 {
+    public async Task<IReadOnlyList<Place>> GetProfilePlacesAsync(
+        string marketingAddr,
+        string profileAddr,
+        byte[] structureNumbers,
+        CancellationToken cancellationToken) =>
+        await dataContext.Places
+            .Where(place => place.MarketingAddr == marketingAddr
+                && place.ProfileAddr == profileAddr
+                && structureNumbers.Contains(place.StructureNumber))
+            .OrderBy(place => place.Id)
+            .ToListAsync(cancellationToken);
+
     public async Task<IReadOnlyList<Place>> GetStructurePlacesAsync(
         string marketingAddr,
         byte structureNumber,

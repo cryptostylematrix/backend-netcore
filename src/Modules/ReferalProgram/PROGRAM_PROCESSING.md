@@ -46,6 +46,30 @@ referral volume in the activated structure. The curator does not need a place
 in that structure. It resolves its response source exactly like a purchase and
 records the result through the shared Marketing-task idempotency boundary.
 
+Explicit activation also emits `PlaceActivatedDomainEvent`. Optional
+`activity.activation_sync` controls synchronization of the same profile's other
+places within the same program: null/missing disables synchronization,
+`structure` selects the source structure, `group` selects structures with the
+same non-null `group`, and `program` selects every structure. Unknown values
+are rejected. A source without a group falls back to structure synchronization.
+The nullable text `structures."group"` is trimmed, empty values become null,
+and group matching is case-sensitive and limited to one program.
+
+The event handler excludes the source place and uses the original operation's
+timestamp. Other places receive it only when their date is null or older.
+Each destination's own `set_active_on_activation` controls whether its active
+flag becomes true, even if its date did not change; false preserves the flag.
+A null destination activity configuration leaves the flag unchanged. Destination
+synchronization settings do not cascade. Synchronization emits no volume or
+activation events. All effects commit in the existing domain-event transaction.
+System places are excluded; profiled roots participate. Profiles are identified
+by profile address, not wallet address. Purchases, invite initialization, and
+activity resets do not trigger this synchronization.
+
+Apply migration `028_add_group_to_structures.sql` before deploying the API.
+For example, `{"set_active_on_activation": true, "activation_sync": "group"}`
+enables group synchronization for explicit activations originating in a structure.
+
 Paid purchases, clones, and reinvest clones start active and activated. Only a
 profile's first paid place in any structure greater than `0` activates its
 structure-0 invite. Once any such place exists, later paid-place creation never

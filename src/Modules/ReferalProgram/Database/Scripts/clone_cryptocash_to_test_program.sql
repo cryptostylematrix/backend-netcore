@@ -125,7 +125,8 @@ BEGIN
         display_height,
         prev_required,
         pos_algo,
-        activity
+        activity,
+        "group"
     )
     SELECT
         v_target_marketing_addr,
@@ -136,7 +137,8 @@ BEGIN
         display_height,
         prev_required,
         pos_algo,
-        activity
+        activity,
+        "group"
     FROM public.structures
     WHERE marketing_addr = v_source_marketing_addr;
 
