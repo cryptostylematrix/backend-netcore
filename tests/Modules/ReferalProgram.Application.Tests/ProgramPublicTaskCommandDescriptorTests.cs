@@ -8,6 +8,7 @@ public sealed class ProgramPublicTaskCommandDescriptorTests
 {
     [Theory]
     [InlineData("program.structure.update-activity")]
+    [InlineData("program.structure.deactivate-expired-first-places")]
     [InlineData("program.structure.compress")]
     [InlineData("program.structure.calculate-referral-volume")]
     [InlineData("program.structure.reset-referral-volume")]
@@ -29,6 +30,7 @@ public sealed class ProgramPublicTaskCommandDescriptorTests
 
     [Theory]
     [InlineData("program", "program.task-processing.disable", 1, 1)]
+    [InlineData("program", "program.structure.deactivate-expired-places", 1, 1)]
     [InlineData("other", "program.structure.compress", 1, 1)]
     [InlineData("program", "program.structure.compress", -1, 1)]
     [InlineData("program", "program.structure.compress", 256, 1)]

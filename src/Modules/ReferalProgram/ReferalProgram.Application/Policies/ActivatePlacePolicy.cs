@@ -28,7 +28,7 @@ public sealed class ActivatePlacePolicy(
             return Denied("activity_configuration_invalid");
         }
 
-        if (configuration is null || !configuration.HasValidActivationSync)
+        if (configuration is null)
             return Denied("activity_configuration_invalid");
 
         if (place is null)

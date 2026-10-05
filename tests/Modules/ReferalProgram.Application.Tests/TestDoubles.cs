@@ -29,7 +29,6 @@ internal abstract class PlaceQueriesStub : IPlaceQueries
 
 internal abstract class PlaceRepositoryStub : IPlaceRepository
 {
-    public virtual Task<IReadOnlyList<Place>> GetProfilePlacesAsync(string marketingAddr, string profileAddr, byte[] structureNumbers, CancellationToken cancellationToken) => throw new NotSupportedException();
     public virtual Task<IReadOnlyList<Place>> GetStructurePlacesAsync(string marketingAddr, byte structureNumber, CancellationToken cancellationToken) => throw new NotSupportedException();
     public virtual Task<IReadOnlyDictionary<string, string?>> GetInvitersAsync(string marketingAddr, CancellationToken cancellationToken) => throw new NotSupportedException();
     public virtual Task<Place?> GetByIdAsync(int id, CancellationToken cancellationToken) => throw new NotSupportedException();

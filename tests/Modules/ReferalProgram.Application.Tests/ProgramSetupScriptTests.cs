@@ -78,9 +78,10 @@ public sealed class ProgramSetupScriptTests
     }
 
     [Fact]
-    public void Mini_setup_configures_groups_and_only_mini_10_activation_sync()
+    public void Mini_setup_configures_groups_and_only_mini_10_immediate_activation()
     {
         var sql = ReadNormalized("setup_mini_program.sql");
+        Assert.DoesNotContain("activation_sync", sql, StringComparison.Ordinal);
         Assert.Contains("pos_algo, \"group\", activity", sql, StringComparison.Ordinal);
         var groups = new (int First, int Last, string Name)[]
         {
@@ -95,8 +96,22 @@ public sealed class ProgramSetupScriptTests
         Assert.Contains(expectedGroups, sql, StringComparison.Ordinal);
         Assert.Contains(
             "CASE WHEN v_structure_number BETWEEN 1 AND 3 "
-            + "THEN '{\"activation_sync\":\"group\",\"set_active_on_activation\":true}'::jsonb "
+            + "THEN '{\"set_active_on_activation\":true}'::jsonb "
             + "ELSE NULL END", sql, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Mini_existing_program_settings_remove_retired_sync_and_preserve_other_activity()
+    {
+        var sql = ReadNormalized("set_mini_activation_groups.sql");
+        Assert.Contains("WHERE structure.marketing_addr = v_marketing_addr", sql, StringComparison.Ordinal);
+        Assert.Contains("IF v_updated_rows <> 17", sql, StringComparison.Ordinal);
+        Assert.Contains("THEN (COALESCE(structure.activity, '{}'::jsonb) - 'activation_sync')", sql,
+            StringComparison.Ordinal);
+        Assert.Contains("WHEN jsonb_typeof(structure.activity) = 'object' THEN structure.activity - 'activation_sync' ELSE structure.activity",
+            sql, StringComparison.Ordinal);
+        Assert.DoesNotContain("\"activation_sync\":", sql, StringComparison.Ordinal);
+        Assert.DoesNotContain("UPDATE public.places", sql, StringComparison.Ordinal);
     }
 
     [Fact]

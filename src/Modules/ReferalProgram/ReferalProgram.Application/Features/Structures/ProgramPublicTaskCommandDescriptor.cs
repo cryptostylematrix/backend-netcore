@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json;
 using IntegrationRequests.Scheduling;
+using IntegrationRequests;
 
 namespace ReferalProgram.Application.Features.Structures;
 
@@ -16,7 +17,8 @@ public sealed class ProgramPublicTaskCommandDescriptor : IPublicTaskCommandDescr
         if (Text(command, "module") != Module
             || Text(command, "type") is not { } type
             || type is not ("program.structure.update-activity" or "program.structure.compress"
-                or "program.structure.calculate-referral-volume" or "program.structure.reset-referral-volume")
+                or "program.structure.calculate-referral-volume" or "program.structure.reset-referral-volume"
+                or DeactivateExpiredFirstPlacesRequest.CommandType)
             || (command.TryGetProperty("version", out var version)
                 && (version.ValueKind != JsonValueKind.Number || !version.TryGetInt32(out var v) || v != 1))
             || !command.TryGetProperty("target", out var target)

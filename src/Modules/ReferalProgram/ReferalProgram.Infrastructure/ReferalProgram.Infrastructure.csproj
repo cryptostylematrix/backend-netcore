@@ -21,4 +21,8 @@
     <ProjectReference Include="..\..\ScheduledTasks\ScheduledTasks.Application\ScheduledTasks.Application.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="ReferalProgram.Application.Tests" />
+  </ItemGroup>
+
 </Project>

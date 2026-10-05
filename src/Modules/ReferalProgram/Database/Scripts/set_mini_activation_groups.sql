@@ -3,7 +3,9 @@
 -- Fill v_marketing_addr with the MINI program address, then run the whole file
 -- against the Programs database as the table owner or a role with SELECT on
 -- referal_program and SELECT/UPDATE on structures.
--- Safe to repeat. Preserves other activity settings and does not mutate places.
+-- Safe to repeat. Removes retired activation_sync settings from structures 1-17.
+-- Preserves other activity settings and does not mutate places.
+-- Groups are organizational labels; structures 1-3 activate immediately.
 
 BEGIN;
 
@@ -43,8 +45,10 @@ BEGIN
     UPDATE public.structures AS structure
     SET "group" = groups.group_name,
         activity = CASE WHEN structure.structure_number BETWEEN 1 AND 3
-            THEN COALESCE(structure.activity, '{}'::jsonb)
-                || '{"activation_sync":"group","set_active_on_activation":true}'::jsonb
+            THEN (COALESCE(structure.activity, '{}'::jsonb) - 'activation_sync')
+                || '{"set_active_on_activation":true}'::jsonb
+            WHEN jsonb_typeof(structure.activity) = 'object'
+                THEN structure.activity - 'activation_sync'
             ELSE structure.activity
         END
     FROM (VALUES
@@ -75,7 +79,7 @@ BEGIN
             v_updated_rows;
     END IF;
 
-    RAISE NOTICE 'Configured MINI groups for %. Group activation sync and immediate activation enabled for structures 1-3.',
+    RAISE NOTICE 'Configured MINI groups for %. Immediate activation enabled for structures 1-3.',
         v_marketing_addr;
 END;
 $$;

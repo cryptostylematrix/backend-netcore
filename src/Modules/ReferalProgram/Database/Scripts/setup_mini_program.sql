@@ -27,8 +27,8 @@
 -- The first structure of every group has no previous-structure requirement.
 --
 -- Requires migration 028_add_group_to_structures.sql.
--- Structures 1-3 (Mini 10) synchronize explicit activation within their group
--- and set active status immediately. Other structures have no activity config.
+-- Structures 1-3 (Mini 10) set active status immediately on activation.
+-- Other structures have no activity config. Groups are organizational labels.
 --
 -- This script is intended for first-time initialization and is not idempotent.
 -- Run it while connected to the correct programs database as its table owner.
@@ -230,7 +230,7 @@ BEGIN
                 ELSE NULL
             END,
             CASE WHEN v_structure_number BETWEEN 1 AND 3
-                THEN '{"activation_sync":"group","set_active_on_activation":true}'::jsonb
+                THEN '{"set_active_on_activation":true}'::jsonb
                 ELSE NULL
             END
         );

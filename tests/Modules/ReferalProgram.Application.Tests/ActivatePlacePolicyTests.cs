@@ -54,19 +54,17 @@ public sealed class ActivatePlacePolicyTests
     }
 
     [Theory]
-    [InlineData("structure", true)]
-    [InlineData("group", true)]
-    [InlineData("program", true)]
-    [InlineData("unknown", false)]
-    [InlineData("", false)]
-    public void Validates_activation_sync(string sync, bool allowed)
+    [InlineData("structure")]
+    [InlineData("group")]
+    [InlineData("program")]
+    [InlineData("unknown")]
+    public void Retired_sync_setting_is_ignored(string oldSetting)
     {
         var result = Policy().Evaluate(
-            Structure(JsonSerializer.Serialize(new { activation_sync = sync })),
+            Structure(JsonSerializer.Serialize(new { activation_sync = oldSetting })),
             new HashSet<uint> { ProgramCommandTags.ActivatePlace }, Place());
-        Assert.Equal(allowed, result.CanActivate);
-        if (!allowed)
-            Assert.Equal("activity_configuration_invalid", result.Reason);
+        Assert.True(result.CanActivate);
+        Assert.True(result.SetActiveOnActivation);
     }
 
     [Fact]

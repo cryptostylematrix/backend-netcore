@@ -95,6 +95,7 @@ Supported Program command types are:
 - `program.task-processing.disable`
 - `program.task-processing.enable`
 - `program.structure.update-activity`
+- `program.structure.deactivate-expired-first-places` (recognized, temporarily disabled)
 - `program.structure.compress`
 - `program.structure.calculate-referral-volume`
 - `program.structure.reset-referral-volume`
@@ -105,6 +106,36 @@ discovers those consumers and configures an in-memory endpoint for each one.
 The scheduler sends commands through MassTransit's request/response transport,
 so it can stop the sequence and mark the task as `error` when a consumer fails.
 UI and other command types can be added without changing the scheduler executor.
+
+## Expired first-place task (disabled)
+
+`program.structure.deactivate-expired-first-places` is recognized but temporarily
+disabled. Its consumer returns an explicit disabled error; the scheduler marks
+the occurrence as `error` and does not advance it. The service performs no
+place queries or business mutations and writes no processed-command receipt.
+The future target is profiles' first places (`place_number = 1`) in the requested
+structure; its behavior will be defined separately.
+
+The reserved command format is:
+
+```json
+{
+  "module": "program",
+  "type": "program.structure.deactivate-expired-first-places",
+  "version": 1,
+  "target": { "marketingAddress": "EQ_REPLACE_ME" },
+  "arguments": {
+    "structureNumber": 1,
+    "period": { "unit": "months", "value": 1 }
+  }
+}
+```
+
+The request parser accepts a positive integer period with units `years`,
+`months`, `weeks`, `days`, `hours`, or `minutes`. These parameters do not enable
+the disabled service. No task creation or rename script is provided while its
+behavior is on hold. `program.structure.update-activity` retains its existing
+period-reset behavior.
 
 ## Correlation IDs and idempotency
 

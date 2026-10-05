@@ -31,6 +31,7 @@ public static class ReferalProgramModule
         registration.AddConsumer<DisableProgramTaskProcessingRequestConsumer>();
         registration.AddConsumer<EnableProgramTaskProcessingRequestConsumer>();
         registration.AddConsumer<ResetStructureActivaityRequestConsumer>();
+        registration.AddConsumer<DeactivateExpiredFirstPlacesRequestConsumer>();
         registration.AddConsumer<CompressStructureRequestConsumer>();
         registration.AddConsumer<CalculateStructureReferralVolumeRequestConsumer>();
         registration.AddConsumer<ResetStructureReferralVolumeRequestConsumer>();
@@ -113,6 +114,7 @@ public static class ReferalProgramModule
             services.AddScoped<INextPosService, NextPosService>();
             services.AddScoped<IStructureCompressionService, StructureCompressionService>();
             services.AddScoped<IProfileVolumeMaintenance, ProfileVolumeMaintenance>();
+            services.AddScoped<ExpiredFirstPlaceDeactivationService>();
             services.AddScoped<IReferalProgramQueries, ReferalProgramQueries>();
             services.AddSingleton<global::IntegrationRequests.Scheduling.IPublicTaskCommandDescriptor,
                 ReferalProgram.Application.Features.Structures.ProgramPublicTaskCommandDescriptor>();

@@ -297,18 +297,6 @@ public sealed class Place : Entity, IAggregateRoot
 
         ApplyActivity(activatedAt, setActiveOnActivation);
         AddProfileVolumeOperation(ProfileVolumeOperation.ActivatePlace, activatedAt);
-        AddDomainEvent(new PlaceActivatedDomainEvent(
-            MarketingAddr, StructureNumber, ProfileAddr, PlaceNumber, activatedAt));
-    }
-
-    public void SynchronizeActivation(long activatedAt, bool setActiveOnActivation)
-    {
-        if (string.IsNullOrWhiteSpace(ProfileAddr))
-            throw new InvalidOperationException("A system place cannot be activated.");
-
-        ActivatedAt = activatedAt;
-        if (setActiveOnActivation)
-            IsActive = true;
     }
 
     public void RecordCloneVolumeOperation(

@@ -4,13 +4,6 @@ namespace ReferalProgram.Core.PlaceAggregate;
 
 public interface IPlaceRepository : IRepository<Place>
 {
-    Task<IReadOnlyList<Place>> GetProfilePlacesAsync(
-        string marketingAddr,
-        string profileAddr,
-        byte[] structureNumbers,
-        CancellationToken cancellationToken) =>
-        throw new NotSupportedException();
-
     Task<IReadOnlyList<Place>> GetStructurePlacesAsync(
         string marketingAddr,
         byte structureNumber,
