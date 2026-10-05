@@ -78,6 +78,28 @@ public sealed class ProgramSetupScriptTests
     }
 
     [Fact]
+    public void Mini_setup_configures_groups_and_only_mini_10_activation_sync()
+    {
+        var sql = ReadNormalized("setup_mini_program.sql");
+        Assert.Contains("pos_algo, \"group\", activity", sql, StringComparison.Ordinal);
+        var groups = new (int First, int Last, string Name)[]
+        {
+            (1, 3, "Mini 10"), (4, 5, "Mini 50"),
+            (6, 7, "Mini 100"), (8, 9, "Mini 200"),
+            (10, 11, "Mini 500"), (12, 13, "Mini 1200"),
+            (14, 15, "Mini 3000"), (16, 17, "Mini 7000")
+        };
+        var expectedGroups = "CASE " + string.Join(" ", groups.Select(group =>
+            $"WHEN v_structure_number BETWEEN {group.First} AND {group.Last} THEN '{group.Name}'"))
+            + " ELSE NULL END";
+        Assert.Contains(expectedGroups, sql, StringComparison.Ordinal);
+        Assert.Contains(
+            "CASE WHEN v_structure_number BETWEEN 1 AND 3 "
+            + "THEN '{\"activation_sync\":\"group\",\"set_active_on_activation\":true}'::jsonb "
+            + "ELSE NULL END", sql, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void CryptoCash_setup_preserves_owner_root_chess_and_radar_topology()
     {
         var sql = ReadNormalized("setup_test_cryptocash_program.sql");

@@ -26,6 +26,10 @@
 --   16 -> 17
 -- The first structure of every group has no previous-structure requirement.
 --
+-- Requires migration 028_add_group_to_structures.sql.
+-- Structures 1-3 (Mini 10) synchronize explicit activation within their group
+-- and set active status immediately. Other structures have no activity config.
+--
 -- This script is intended for first-time initialization and is not idempotent.
 -- Run it while connected to the correct programs database as its table owner.
 
@@ -200,7 +204,9 @@ BEGIN
             height,
             display_height,
             prev_required,
-            pos_algo
+            pos_algo,
+            "group",
+            activity
         )
         VALUES
         (
@@ -211,7 +217,22 @@ BEGIN
             1,
             1,
             v_structure_number IN (2, 3, 5, 7, 9, 11, 13, 15, 17),
-            v_pos_algo
+            v_pos_algo,
+            CASE
+                WHEN v_structure_number BETWEEN 1 AND 3 THEN 'Mini 10'
+                WHEN v_structure_number BETWEEN 4 AND 5 THEN 'Mini 50'
+                WHEN v_structure_number BETWEEN 6 AND 7 THEN 'Mini 100'
+                WHEN v_structure_number BETWEEN 8 AND 9 THEN 'Mini 200'
+                WHEN v_structure_number BETWEEN 10 AND 11 THEN 'Mini 500'
+                WHEN v_structure_number BETWEEN 12 AND 13 THEN 'Mini 1200'
+                WHEN v_structure_number BETWEEN 14 AND 15 THEN 'Mini 3000'
+                WHEN v_structure_number BETWEEN 16 AND 17 THEN 'Mini 7000'
+                ELSE NULL
+            END,
+            CASE WHEN v_structure_number BETWEEN 1 AND 3
+                THEN '{"activation_sync":"group","set_active_on_activation":true}'::jsonb
+                ELSE NULL
+            END
         );
 
         INSERT INTO public.places
