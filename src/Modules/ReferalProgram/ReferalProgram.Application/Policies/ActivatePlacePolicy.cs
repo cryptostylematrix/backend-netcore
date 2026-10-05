@@ -18,18 +18,18 @@ public sealed class ActivatePlacePolicy(
         if (structure.Activity is null)
             return Denied("activity_configuration_missing");
 
-        ActivityConfiguration? configuration;
+        ActivitySettings configuration;
         try
         {
-            configuration = structure.Activity.Value.Deserialize<ActivityConfiguration>();
+            configuration = ActivitySettings.Parse(structure.Activity.Value, structure.StructureNumber);
         }
         catch (JsonException)
         {
             return Denied("activity_configuration_invalid");
         }
 
-        if (configuration is null)
-            return Denied("activity_configuration_invalid");
+        if (configuration.HasPendingRules())
+            return Denied("activity_rules_not_supported_yet");
 
         if (place is null)
             return Denied("place_not_found");
@@ -43,7 +43,7 @@ public sealed class ActivatePlacePolicy(
         return new ActivatePlaceDecision(
             true,
             ProgramCommandTags.ActivatePlace,
-            configuration.SetActiveOnActivation,
+            !configuration.PreserveStatusOnActivation,
             null);
     }
 

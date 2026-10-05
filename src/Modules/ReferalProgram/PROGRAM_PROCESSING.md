@@ -57,6 +57,43 @@ profile's first paid place in any structure greater than `0` activates its
 structure-0 invite. Once any such place exists, later paid-place creation never
 changes the invite, even if an integration command reset its activation date.
 
+### Activity configuration rollout: stage 1
+
+Legacy activity objects remain supported unchanged, including the default
+`set_active_on_activation = true` and ignored retired `activation_sync` values.
+Missing activity still disables explicit activation. No data migration or setup
+script change is required; CryptoCash retains its existing configuration.
+
+New objects require `type: "invite"` for structure 0 or `type: "marketing"` for
+other structures. `preserve_status_on_activation` defaults to false and is the
+inverse of legacy `set_active_on_activation`. Mixing the two formats is rejected.
+Unknown fields, duplicate keys, incorrect types, and null nested blocks are
+invalid in the new format. Omitted boolean options default to false.
+
+The typed models also define the agreed `when_inactive` options and marketing
+`spillover` options. Their placement, invitation, recipient, and compression
+consumers are **not connected in stage 1**. Do not deploy enabled options yet:
+activation rejects them with `activity_rules_not_supported_yet`, rather than
+silently accepting an unimplemented rule. Other operations still use their
+existing rules. Validation currently occurs on configuration parsing in the
+activation policy, not as a database constraint or a configuration write API.
+
+Equivalent activation examples:
+
+```json
+{ "set_active_on_activation": true }
+```
+
+```json
+{ "type": "marketing", "preserve_status_on_activation": false }
+```
+
+CryptoCash regression coverage reads the actual setup JSON for structures 1–4
+and exercises activation and successive period resets with both formats.
+Reset without a new activation switches the place off; reset after activation
+keeps it active and clears its date. Reset adds no activation-volume event.
+These tests do not execute PostgreSQL or contact TON.
+
 ## Expired first-place task (disabled)
 
 Command `program.structure.deactivate-expired-first-places` and its period/target
