@@ -94,6 +94,48 @@ public sealed partial class ActivityPostgresTests
     }
 
     [DockerPostgresFact]
+    public async Task Mini_activation_receipt_and_clone_belong_to_activated_profile_not_parent()
+    {
+        await using var db = await Database.Create();
+        await db.Reset(null);
+        await db.Sql("""
+            INSERT INTO referal_program(marketing_addr,is_task_processing_enabled)
+            VALUES ('program',true) ON CONFLICT DO NOTHING;
+            INSERT INTO structures SELECT marketing_addr,2,max_places_per_profile,width,height,display_height,prev_required,pos_algo,activity,"group" FROM structures WHERE structure_number=1;
+            INSERT INTO structures SELECT marketing_addr,3,max_places_per_profile,width,height,display_height,prev_required,pos_algo,activity,"group" FROM structures WHERE structure_number=1;
+            UPDATE structures SET "group"='Mini 10', height=1, max_places_per_profile=0,
+                pos_algo='{"v":1,"root":"owner","relation":"relative","groups":[{"id":0,"algo":"trimmed_classic","weight":1,"cut_factor":2}]}'
+                WHERE structure_number BETWEEN 1 AND 3;
+            """);
+        await db.Sql(ReadMiniScript("ReferalProgram/Database/Scripts/set_mini_activity.sql")
+            .Replace("v_marketing_addr text := '';", "v_marketing_addr text := 'program';"));
+        await db.InsertPlace(4, "program", 1, "owner", null, true);
+        await db.InsertPlace(5, "program", 1, "member", 4, false);
+
+        var activation = await db.Activate(1, 1);
+        Assert.True(activation.IsSuccess, string.Join("; ", activation.Errors));
+        Assert.Equal("member", activation.Value.Source.ProfileAddr);
+        Assert.Equal<uint>(1, activation.Value.Source.PlaceNumber);
+        Assert.Equal<uint>(0, activation.Value.Code);
+        Assert.Equal(5L, await db.Scalar("SELECT response_source_place_id FROM marketing_tasks WHERE task_key=1"));
+        Assert.Equal(0L, await db.Scalar("SELECT response_code FROM marketing_tasks WHERE task_key=1"));
+
+        var clone = await db.PlaceCommand(PositionOperation.CreateClone, source: activation.Value.Source, taskKey: 2);
+        Assert.True(clone.IsSuccess, string.Join("; ", clone.Errors));
+        var created = await db.Places.GetPlaceAsync("program", 1, "member", 2, default);
+        Assert.NotNull(created);
+        Assert.Equal(PlaceKinds.Clone, created.Kind);
+        Assert.True(created.IsActive);
+        Assert.NotNull(created.ActivatedAt);
+        Assert.Null(await db.Places.GetPlaceAsync("program", 1, "owner", 2, default));
+        // Clone responses still use the ordinary height-based reward source.
+        Assert.Equal("owner", clone.Value.Source.ProfileAddr);
+        Assert.Equal(2L, await db.Count("marketing_tasks"));
+        Assert.Equal(2L, await db.Scalar("SELECT personal_volume FROM profile_volumes WHERE profile_addr='member' AND structure_number=1"));
+        Assert.Equal(2L, await db.Scalar("SELECT referral_volume FROM profile_volumes WHERE profile_addr='inviter' AND structure_number=1"));
+    }
+
+    [DockerPostgresFact]
     public async Task Mini_invitations_require_marketing_places_regardless_of_invite_status()
     {
         await using var db = await Database.Create();

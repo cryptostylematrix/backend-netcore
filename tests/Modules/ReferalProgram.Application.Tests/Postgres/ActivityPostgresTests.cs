@@ -102,12 +102,35 @@ public sealed partial class ActivityPostgresTests
         foreach (var structure in config.RootElement.EnumerateArray().Skip(1))
         {
             var number = structure.GetProperty("structure_number").GetByte();
-            await db.Sql("INSERT INTO structures SELECT 'program', @number, 1, 2, 0, 2, false, '{}'::jsonb, CAST(@activity AS jsonb), NULL ON CONFLICT (marketing_addr,structure_number) DO UPDATE SET activity=EXCLUDED.activity, height=0",
-                new { number = (short)number, activity = structure.GetProperty("activity").GetRawText() });
+            var height = structure.GetProperty("height").GetByte();
+            Assert.Equal(0, height);
+            await db.Sql("INSERT INTO structures SELECT 'program', @number, 1, 2, @height, 2, false, '{}'::jsonb, CAST(@activity AS jsonb), NULL ON CONFLICT (marketing_addr,structure_number) DO UPDATE SET activity=EXCLUDED.activity, height=EXCLUDED.height",
+                new { number = (short)number, height = (short)height, activity = structure.GetProperty("activity").GetRawText() });
             await db.InsertPlace(20 + number, "program", number, "owner", null, true);
             await db.InsertPlace(10 + number, "program", number, "member", 20 + number, false);
+            var previousResponse = await db.LegacyActivationResponse(number, height);
+            Assert.Equal<uint>(1, previousResponse.Code);
             var result = await db.Activate(number, number);
             Assert.True(result.IsSuccess, string.Join("; ", result.Errors));
+            Assert.Equal<uint>(0, result.Value.Code);
+            Assert.Equal("member", result.Value.Source.ProfileAddr);
+            Assert.Equal(number, result.Value.Source.StructNumber);
+            Assert.Equal(previousResponse.Source.Id, result.Value.Source.Id);
+            Assert.Equal(previousResponse.Source.ProfileAddr, result.Value.Source.ProfileAddr);
+            Assert.Equal(previousResponse.Source.PlaceNumber, result.Value.Source.PlaceNumber);
+            var bonusHandler = new ResolveBonusQueryHandler(db.Places, new RelativePlaceResolver(db.Places, db.Structures));
+            foreach (var level in Enumerable.Range(1, number == 1 ? 6 : 10))
+            {
+                var bonus = await bonusHandler.Handle(new("program", 0xe1319040, number, result.Value.Source.ProfileAddr, 1, (ushort)level), default);
+                Assert.True(bonus.IsSuccess);
+                Assert.Equal("owner", bonus.Value.RecipientProfileAddr);
+                Assert.Equal(result.Value.Source.Id, bonus.Value.Reason.Id);
+            }
+            var referral = await bonusHandler.Handle(new("program", 0xb5ce6bf5, number, result.Value.Source.ProfileAddr, 1, 0), default);
+            Assert.True(referral.IsSuccess);
+            Assert.Equal("owner", referral.Value.RecipientProfileAddr); // inactive inviter is skipped, as before.
+            Assert.Equal(result.Value.Source.Id, referral.Value.Reason.Id);
+            Assert.Equal(10L + number, await db.Scalar("SELECT response_source_place_id FROM marketing_tasks WHERE task_key=@key", new { key = (int)number }));
             var activated = await db.Places.GetPlaceAsync("program", number, "member", 1, default);
             Assert.True(activated!.IsActive);
             Assert.NotNull(activated.ActivatedAt);
@@ -117,13 +140,20 @@ public sealed partial class ActivityPostgresTests
             Assert.False(again.IsSuccess);
             await db.ResetPeriod(number);
             Assert.True((await db.Places.GetPlaceAsync("program", number, "member", 1, default))!.IsActive);
+            var renewed = await db.Activate(number, 200 + number);
+            Assert.True(renewed.IsSuccess, string.Join("; ", renewed.Errors));
+            Assert.Equal<uint>(0, renewed.Value.Code);
+            Assert.Equal("member", renewed.Value.Source.ProfileAddr);
+            await db.ResetPeriod(number);
+            Assert.True((await db.Places.GetPlaceAsync("program", number, "member", 1, default))!.IsActive);
             await db.ResetPeriod(number);
             var expired = await db.Places.GetPlaceAsync("program", number, "member", 1, default);
             Assert.False(expired!.IsActive);
             Assert.Null(expired.ActivatedAt);
         }
-        Assert.Equal(4L, await db.Count("marketing_tasks"));
-        Assert.Equal(8L, await db.Scalar("SELECT sum(personal_volume+referral_volume) FROM profile_volumes"));
+        Assert.Equal(8L, await db.Count("marketing_tasks"));
+        Assert.Equal(16L, await db.Scalar("SELECT sum(personal_volume+referral_volume) FROM profile_volumes"));
+        Assert.Equal(8L, await db.Scalar("SELECT count(*) FROM marketing_tasks WHERE response_source_place_id=place_id AND response_code=0"));
     }
 
     [DockerPostgresFact]
@@ -249,9 +279,19 @@ public sealed partial class ActivityPostgresTests
             await using var scope = provider.CreateAsyncScope();
             var repo = scope.ServiceProvider.GetRequiredService<IPlaceRepository>();
             return await new ActivatePlaceCommandHandler(repo, new ActivatePlacePolicy(Structures, Places, new Commands()),
-                Structures, new SourcePlaceResolver(repo), scope.ServiceProvider.GetRequiredService<DataContext>())
+                scope.ServiceProvider.GetRequiredService<DataContext>())
                 .Handle(new("program", number, "member", 1, key, key, null), default);
         }
+        public async Task<ReferalProgram.Dto.CommandResponse> LegacyActivationResponse(byte number, byte height)
+        {
+            await using var scope = provider.CreateAsyncScope();
+            var repo = scope.ServiceProvider.GetRequiredService<IPlaceRepository>();
+            var place = await repo.GetAsync("program", number, "member", 1, default);
+            var source = await new SourcePlaceResolver(repo).ResolveAsync(place!, height, default);
+            Assert.NotNull(source);
+            return new(source.Code, ReferalProgram.Application.Mappings.PlaceResponseMapper.Map(source.SourcePlace));
+        }
+
         public async Task ResetPeriod(byte number)
         {
             await using var scope = provider.CreateAsyncScope();

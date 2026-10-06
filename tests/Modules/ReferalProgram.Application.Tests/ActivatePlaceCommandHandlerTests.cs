@@ -9,7 +9,7 @@ namespace ReferalProgram.Application.Tests;
 public sealed class ActivatePlaceCommandHandlerTests
 {
     [Fact]
-    public async Task Activates_place_and_returns_resolved_source()
+    public async Task Activates_place_and_returns_itself_with_default_reward_code()
     {
         var repository = new Repository(includeCuratorPlace: true);
         var unitOfWork = new UnitOfWork();
@@ -20,7 +20,8 @@ public sealed class ActivatePlaceCommandHandlerTests
         Assert.True(result.IsSuccess);
         Assert.True(repository.Target.IsActive);
         Assert.NotNull(repository.Target.ActivatedAt);
-        Assert.Equal<uint>(7, result.Value.Code);
+        Assert.Equal<uint>(0, result.Value.Code);
+        Assert.Equal(repository.Target.ProfileAddr, result.Value.Source.ProfileAddr);
         Assert.Equal(1, unitOfWork.SaveCount);
     }
 
@@ -39,14 +40,34 @@ public sealed class ActivatePlaceCommandHandlerTests
         Assert.Equal(1, unitOfWork.SaveCount);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Activation_response_and_receipt_reference_activated_place_even_with_different_parent_and_payer(bool setActive)
+    {
+        var repository = new Repository(includeCuratorPlace: true);
+        repository.Target.ClearDomainEvents();
+        var unitOfWork = new UnitOfWork();
+        var handler = Handler(repository, unitOfWork, setActive);
+
+        var result = await handler.Handle(Command(), default);
+
+        Assert.True(result.IsSuccess, string.Join("; ", result.Errors));
+        Assert.Equal("referral", result.Value.Source.ProfileAddr);
+        Assert.Equal(repository.Target.PlaceNumber, result.Value.Source.PlaceNumber);
+        Assert.Equal<uint>(0, result.Value.Code);
+        var receipt = Assert.Single(repository.Target.DomainEvents.OfType<MarketingCommandProcessedDomainEvent>());
+        Assert.Same(repository.Target, receipt.ResponseSourcePlace);
+        Assert.Equal<uint>(0, receipt.ResponseCode);
+        Assert.Equal(1, unitOfWork.SaveCount);
+    }
+
     private static ActivatePlaceCommandHandler Handler(
         Repository repository,
         UnitOfWork unitOfWork,
         bool setActive) => new(
             repository,
             new Policy(setActive),
-            new Structures(),
-            new SourceResolver(),
             unitOfWork);
 
     private static ActivatePlaceCommand Command() => new(
@@ -73,29 +94,6 @@ public sealed class ActivatePlaceCommandHandlerTests
                 ProgramCommandTags.ActivatePlace,
                 setActive,
                 null));
-    }
-
-    private sealed class Structures : IStructureQueries
-    {
-        public Task<StructureResponse?> GetStructureAsync(
-            string marketingAddr,
-            byte structureNumber,
-            CancellationToken cancellationToken) =>
-            Task.FromResult<StructureResponse?>(new StructureResponse
-            {
-                MarketingAddr = marketingAddr,
-                StructureNumber = structureNumber,
-                Height = 1
-            });
-    }
-
-    private sealed class SourceResolver : ISourcePlaceResolver
-    {
-        public Task<SourcePlaceResolution?> ResolveAsync(
-            Place place,
-            byte structureHeight,
-            CancellationToken cancellationToken) =>
-            Task.FromResult<SourcePlaceResolution?>(new(7, place));
     }
 
     private sealed class Repository : PlaceRepositoryStub

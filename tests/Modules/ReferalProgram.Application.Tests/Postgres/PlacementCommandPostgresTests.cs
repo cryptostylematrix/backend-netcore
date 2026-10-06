@@ -71,7 +71,7 @@ public sealed partial class ActivityPostgresTests
 
     private sealed partial class Database
     {
-        public async Task<Result<CommandResponse>> PlaceCommand(PositionOperation operation, ChildPosition? position = null, ushort relativeLevel = 0)
+        public async Task<Result<CommandResponse>> PlaceCommand(PositionOperation operation, ChildPosition? position = null, ushort relativeLevel = 0, PlaceResponse? source = null, int taskKey = 1)
         {
             await using var scope = provider.CreateAsyncScope();
             var repo = scope.ServiceProvider.GetRequiredService<IPlaceRepository>();
@@ -84,7 +84,7 @@ public sealed partial class ActivityPostgresTests
             if (operation is PositionOperation.CreateClone or PositionOperation.CreateReinvest)
                 return await new CreateSystemCloneCommandHandler(repo, Structures, new RelativePlaceResolver(Places, Structures),
                     next, new ClonePlaceKindPolicy(repo), new SourcePlaceResolver(repo), context)
-                    .Handle(new("program", 1, 0, "member", 1, relativeLevel, 1, 1, operation), default);
+                    .Handle(new("program", 1, source?.StructNumber ?? 0, source?.ProfileAddr ?? "member", source?.PlaceNumber ?? 1, relativeLevel, taskKey, taskKey, operation), default);
             var policy = new BuyPlacePolicy(Structures, Places, locks, next, new PurchaseCommands(), new RequestedPositionResolver(Places));
             return await new BuyPlaceCommandHandler(repo, Structures, policy, new SourcePlaceResolver(repo), context)
                 .Handle(new("program", 1, "member", "member", 1, 1, "payer-is-not-the-child",

@@ -43,8 +43,11 @@ Activation always sets `activated_at`. The extensible activity setting
 when false, activation leaves `is_active` unchanged. A successful activation
 increments the profile's personal volume and its current direct curator's
 referral volume in the activated structure. The curator does not need a place
-in that structure. It resolves its response source exactly like a purchase and
-records the result through the shared Marketing-task idempotency boundary.
+in that structure. Activation always returns the activated place as its response
+source, with code `0` (default reward set), regardless of structure height. Reward levels are
+counted from that place. Purchases and clones retain height-based source
+resolution. The activated source and code are persisted in the shared
+Marketing-task receipt for retries.
 
 Activation changes only the selected place. It emits its volume operation;
 there is no propagation to other places of the profile, structure, group, or
@@ -282,6 +285,12 @@ Structures 1–3 (Mini 10) share this configuration:
   }
 }
 ```
+
+Structure 1 contract activation costs 10 Jetton plus 0.05 TON execution fee and the
+activation default reward creates one clone in structure 1 for the profile that
+activated its place. Apply the updated contract configuration as well as the
+backend settings. CryptoCash activation also uses its own place and default
+reward set; its configured reward levels remain unchanged.
 
 The group's source is the profile's place number 1 in structure 1. Its inactivity
 blocks automatic spillovers for every place of that profile in structures 1–3.

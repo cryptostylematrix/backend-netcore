@@ -29,7 +29,11 @@ runner's test password. Supplying it opts into database creation/deletion.
   inactive clones.
 - CryptoCash structures 1–4 use activity JSON read from its actual setup script.
   Activation persists dates, flags, personal/referral volume and task receipts;
-  repeat activation is rejected; successive period resets do not add volume.
+  repeat activation is rejected; renewal adds one volume operation and successive
+  period resets do not add volume. The former height-based source matches the
+  activated place in all four structures; the current response code is 0 and
+  receipts keep that source/code. Bonus resolution checks the source reason,
+  ancestor fallback and inactive-inviter skipping.
 - Enabled invitation flags distinguish the presence of places in the same program.
 - Enabled fallback affects profile-root selection but not owner-root selection.
 
@@ -116,7 +120,10 @@ checks; deployment still targets their separate databases. Coverage includes
 calendar-month expiry boundaries, null/system/root/additional-place exclusion,
 program/structure isolation, unchanged nonzero volumes, retries, concurrent
 renewal under a row lock, invitation prerequisites and automatic-only spillover
-restrictions on structures 1–3. No existing application database is used.
+restrictions on structures 1–3. Activation checks also pass the returned source
+to the real clone handler and verify that the clone and volumes belong to the
+activated profile, not its parent, and that the activation receipt stores the
+same source and code. No existing application database is used.
 
 ## Shared activity sources
 

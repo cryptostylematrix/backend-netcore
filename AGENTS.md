@@ -206,8 +206,10 @@ source of truth. Important rules include:
 
 Activation targets an existing profiled place whose `activated_at` is null.
 The structure must expose `activate_place` and have non-null activity JSON.
-Activation uses purchase-style source resolution and the centralized Marketing
-task receipt for idempotency.
+Activation always returns the activated place as its source with code 0,
+independent of structure height. Purchases and clones retain height-based source
+resolution. The centralized Marketing task receipt stores the response for
+idempotent retries.
 
 ## Task processor
 
