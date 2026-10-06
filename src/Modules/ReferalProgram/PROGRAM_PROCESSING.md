@@ -341,3 +341,23 @@ purchase, activation, clone, or reinvest currently adds one personal-volume
 unit to the operating profile and one referral-volume unit to its direct
 curator from structure `0`. Terminal clones are included. Structure `0` follows
 the same operation rules. Group volume is stored but is not calculated yet.
+
+### Activity-source activation option
+
+`GET /api/program/{marketing_addr}/structures/{structure_number}/activation-option?profile_addr=...&place_number=...`
+resolves the activation button for the displayed profile place. Missing activity
+settings hide the operation. Legacy settings and `activity_source: place` target
+the displayed place. `group_root` targets that profile's place 1 in the lowest
+numbered structure of the same program and group; `invite` targets its place 1 in
+structure 0. The resolver follows only one source and never falls back to another
+place if the source is missing or unavailable.
+
+The response includes `can_activate`, `command_tag`, `structure_number`,
+`profile_addr`, `place_number`, and `reason`. Eligibility uses the existing
+activation policy against the target structure's settings, contract command and
+activation date. The frontend obtains price, token and fee from that target
+structure, shows the target in confirmation, and sends the existing activation
+command to it. The command's volume and reward semantics are unchanged. Existing
+tree `can_activate` fields continue to describe direct activation of the node.
+Deploy this endpoint before the frontend that consumes it; a failed request must
+not enable activation using a guessed local target.
