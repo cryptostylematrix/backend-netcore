@@ -50,7 +50,7 @@ public sealed partial class ActivityPostgresTests
         await db.InsertPlace(6, "program", 0, "other", 1, false);
         await db.Sql("""
             UPDATE structures SET max_places_per_profile=0,
-              activity='{"type":"marketing","when_inactive":{"check_manual_placement":true},"spillover":{"allow_inactive_place":true,"require_active_invite":true}}',
+              activity='{"type":"marketing","activity_source":"invite","when_inactive":{"check_manual_placement":true}}',
               pos_algo='{"v":1,"root":"owner","relation":"relative","groups":[{"id":0,"algo":"classic","weight":1}]}'
             WHERE structure_number=1
             """);

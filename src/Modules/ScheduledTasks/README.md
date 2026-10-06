@@ -95,7 +95,7 @@ Supported Program command types are:
 - `program.task-processing.disable`
 - `program.task-processing.enable`
 - `program.structure.update-activity`
-- `program.structure.deactivate-expired-first-places` (recognized, temporarily disabled)
+- `program.structure.deactivate-expired-first-places`
 - `program.structure.compress`
 - `program.structure.calculate-referral-volume`
 - `program.structure.reset-referral-volume`
@@ -107,16 +107,13 @@ The scheduler sends commands through MassTransit's request/response transport,
 so it can stop the sequence and mark the task as `error` when a consumer fails.
 UI and other command types can be added without changing the scheduler executor.
 
-## Expired first-place task (disabled)
+## Expired first-place task
 
-`program.structure.deactivate-expired-first-places` is recognized but temporarily
-disabled. Its consumer returns an explicit disabled error; the scheduler marks
-the occurrence as `error` and does not advance it. The service performs no
-place queries or business mutations and writes no processed-command receipt.
-The future target is profiles' first places (`place_number = 1`) in the requested
-structure; its behavior will be defined separately.
-
-The reserved command format is:
+`program.structure.deactivate-expired-first-places` clears `activated_at` and sets
+`is_active=false` for profiled first places older than the requested period.
+Root places, system places, missing dates and dates exactly at the cutoff are
+skipped. Volumes are unchanged. The repository applies the date condition in a
+single UPDATE, so retrying the same occurrence does not reset newer activations.
 
 ```json
 {
@@ -131,11 +128,20 @@ The reserved command format is:
 }
 ```
 
-The request parser accepts a positive integer period with units `years`,
-`months`, `weeks`, `days`, `hours`, or `minutes`. These parameters do not enable
-the disabled service. No task creation or rename script is provided while its
-behavior is on hold. `program.structure.update-activity` retains its existing
-period-reset behavior.
+The period accepts positive integer `years`, `months`, `weeks`, `days`, `hours`
+or `minutes`. Months and years use UTC calendar subtraction. Ordinary
+`program.structure.update-activity` retains its existing period-reset behavior.
+
+For Mini, deploy the backend and apply the Programs DB activity settings first.
+Then use [add_mini_activity_expiration_task.sql](Database/Scripts/add_mini_activity_expiration_task.sql) in the Tasks DB:
+fill the marketing address and first UTC execution time. It creates one daily
+structure-1 group-root expiration task and refuses duplicate tasks for the same target.
+It also rejects an existing structure-0 expiration task for the same program;
+these guards include disabled tasks. Review and explicitly replace any previous
+schedule before adding a new one; the script does not migrate existing tasks.
+Do not replace commands in an active or errored occurrence or run both policies.
+See the [Mini configuration steps](../ReferalProgram/PROGRAM_PROCESSING.md#mini-configuration).
+The script does not reset volumes, compress structures or disable task processing.
 
 ## Correlation IDs and idempotency
 

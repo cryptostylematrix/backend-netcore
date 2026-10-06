@@ -19,12 +19,12 @@ public sealed partial class ActivityPostgresTests
             foreach (byte width in new byte[] { 0, 2, 3 })
             foreach (uint limit in new uint[] { 1, 5, 35 })
             foreach (var locked in new[] { false, true })
-            foreach (var mode in new[] { "legacy", "own", "invite", "combined" })
+            foreach (var mode in new[] { "legacy", "own", "spill", "combined" })
             {
                 var root = (await db.Places.GetPlaceAsync(1000000 + rootNumber, default))!;
                 PlacementActivityRules? rules = mode == "legacy" ? null : new(
                     "p" + (size-1), "p" + (size-1)/2, mode is "own" or "combined",
-                    mode == "combined", mode is "invite" or "combined", false);
+                    mode is "spill" or "combined", false);
                 string[] locks = locked ? [root.Mp + "00000001"] : [];
                 var before = await db.FrontierBefore(root.Mp, width, limit, locks, rules);
                 var after = await db.Places.GetProfileFrontierCandidateAsync("perf",1,root.Mp,width,limit,locks,default,rules);
@@ -73,26 +73,17 @@ public sealed partial class ActivityPostgresTests
             while (directory is not null && !File.Exists(Path.Combine(directory.FullName,relative))) directory=directory.Parent;
             Assert.NotNull(directory);
             var sql = await File.ReadAllTextAsync(Path.Combine(directory.FullName,relative));
-            // Freeze the old correlated filter too: validate both the frontier rewrite
-            // and the new uncorrelated active-invite predicate against prior behavior.
+            // Compare the frozen frontier topology with supported own/spillover permissions.
             if (activity?.ChangesAutomaticEligibility == true)
                 sql = Regex.Replace(sql,@"\b(?:(scoped|level_place)\.)?is_active = true",m =>
                 {
                     var alias = m.Groups[1].Success ? m.Groups[1].Value : "places";
                     var own = $"({alias}.profile_addr IS NOT NULL AND @activityChild IS NOT NULL AND ({alias}.profile_addr=@activityChild OR {alias}.profile_addr=@activityInviter))";
-                    return $"""
-                        (({alias}.is_active=true OR CASE WHEN {own} THEN @allowOwn ELSE @allowSpillover END)
-                         AND (NOT @requireInvite OR {own} OR {alias}.profile_addr IS NULL OR EXISTS (
-                           SELECT 1 FROM public.places activity_invite
-                           WHERE activity_invite.marketing_addr={alias}.marketing_addr
-                             AND activity_invite.structure_number=0 AND activity_invite.place_number=1
-                             AND activity_invite.profile_addr={alias}.profile_addr AND activity_invite.is_active=true)))
-                        """;
+                    return $"({alias}.is_active=true OR CASE WHEN {own} THEN @allowOwn ELSE @allowSpillover END)";
                 });
             var parameters = new DynamicParameters(new { marketingAddr="perf", structureNumber=(short)1,
                 rootMp, mpPrefix=rootMp+"%", width=(long)width, profiledWidthLimit=(long)limit, lockMps=locks,
-                allowOwn=activity?.AllowOwnChildren ?? false, allowSpillover=activity?.AllowInactiveSpillover ?? false,
-                requireInvite=activity?.RequireActiveInvite ?? false });
+                allowOwn=activity?.AllowOwnChildren ?? false, allowSpillover=activity?.AllowInactiveSpillover ?? false });
             parameters.Add("activityChild",activity?.ChildProfileAddr,System.Data.DbType.String);
             parameters.Add("activityInviter",activity?.InviterProfileAddr,System.Data.DbType.String);
             await using var connection = await data.OpenConnectionAsync();

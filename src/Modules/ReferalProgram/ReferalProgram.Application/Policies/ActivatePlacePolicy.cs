@@ -22,6 +22,8 @@ public sealed class ActivatePlacePolicy(
         try
         {
             configuration = ActivitySettings.Parse(structure.Activity.Value, structure.StructureNumber);
+            if (configuration.ActivitySource == "group_root" && string.IsNullOrWhiteSpace(structure.Group))
+                throw new JsonException("group_root activity requires a structure group.");
         }
         catch (JsonException)
         {

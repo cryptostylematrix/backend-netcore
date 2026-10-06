@@ -57,11 +57,10 @@ public sealed class RequestedPositionResolver(IPlaceQueries placeQueries)
         if (activity?.CheckManualPlacement == true)
         {
             var inviteActive = false;
-            if (activity.RequireActiveInvite && parent.ProfileAddr is not null
-                && !activity.IsOwnChild(parent.ProfileAddr))
+            if (activity.ActivityStructureNumber is { } sourceStructure && parent.ProfileAddr is not null)
             {
                 var invite = await placeQueries.GetPlaceAsync(
-                    marketingAddr, 0, parent.ProfileAddr, 1, cancellationToken);
+                    marketingAddr, sourceStructure, parent.ProfileAddr, 1, cancellationToken);
                 inviteActive = invite?.IsActive == true;
             }
             if (!activity.Allows(parent, inviteActive, manual: true))

@@ -48,9 +48,9 @@ records the result through the shared Marketing-task idempotency boundary.
 
 Activation changes only the selected place. It emits its volume operation;
 there is no propagation to other places of the profile, structure, group, or
-program. The nullable text `structures."group"` is an organizational label:
-trimmed, case-sensitive, and empty values become null. It does not control
-activity. Retired `activity.activation_sync` values are ignored.
+program. The nullable text `structures."group"` is a grouping label:
+trimmed, case-sensitive, and empty values become null. With
+`activity_source: "group_root"` it determines the group used for activity checks. Retired `activity.activation_sync` values are ignored.
 
 Paid purchases, clones, and reinvest clones start active and activated. Only a
 profile's first paid place in any structure greater than `0` activates its
@@ -107,13 +107,11 @@ Stage 3 enables marketing placement settings:
 ```json
 {
   "type": "marketing",
+  "activity_source": "place",
   "when_inactive": {
     "allow_own_children": false,
+    "allow_spillover_children": false,
     "check_manual_placement": false
-  },
-  "spillover": {
-    "allow_inactive_place": false,
-    "require_active_invite": false
   }
 }
 ```
@@ -122,14 +120,12 @@ Own children are places belonging to the candidate parent's profile or a profile
 personally invited by it in structure 0 of the same program. Use the placed
 profile, not the payer; the same rule applies to purchases, clones and reinvests.
 Other placements, including system children, are spillover for this eligibility
-check. A system parent has no profile, so it has no own children and is exempt
-from the active-invite requirement; its own activity still matters.
+check. A system parent has no profile, so it has no own children and retains
+its own activity even when a profile source is configured.
 
-Automatic placement requires an active candidate unless its matching own/spillover
-permission permits inactivity. Spillover additionally requires the candidate
-owner's active structure-0 first place when `require_active_invite` is enabled.
-A missing invite does not satisfy this requirement. Own children are exempt from
-this extra invite check. These checks do not mutate dates, flags or volumes.
+Automatic placement requires an active selected source unless its matching
+own/spillover permission permits inactivity. To check an invite, use
+`activity_source: "invite"`. These checks do not mutate dates, flags or volumes.
 
 The filter is applied before pagination, depth-window selection and sorting in
 classic, trimmed_classic, empty_parent, chess, radar, profile_frontier and
@@ -139,9 +135,9 @@ clones, locks and algorithm-specific constraints continue to apply.
 Manual classic placement retains its activity exception unless
 `check_manual_placement` is true. When enabled, it uses the same rules as automatic
 placement. Commands recheck the selected parent, and tree purchase actions use a
-batched active-invite lookup. Tree rendering does not add a query per node.
+batched lookup of the selected activity source. Tree rendering does not add a query per node.
 
-Legacy activity JSON remains irrelevant to placement. With no new permissions,
+Legacy activity JSON remains irrelevant to placement. Without new placement settings,
 the existing candidate eligibility rules are preserved and no child-invite lookup
 is added. Frontier level statistics are aggregated once per level; its previous
 selection behavior is covered by differential PostgreSQL tests.
@@ -202,21 +198,131 @@ CryptoCash regression coverage reads the actual setup JSON for structures 1–4
 and exercises activation and successive period resets with both formats.
 Reset without a new activation switches the place off; reset after activation
 keeps it active and clears its date. Reset adds no activation-volume event.
-These tests do not execute PostgreSQL or contact TON.
+Unit tests cover this behavior without PostgreSQL. The optional
+[PostgreSQL suite](../../../tests/Modules/ReferalProgram.Application.Tests/Postgres/README.md)
+also verifies persisted flags, dates and volumes. Neither suite contacts TON.
 
-## Expired first-place task (disabled)
+## Expired first-place task
 
-Command `program.structure.deactivate-expired-first-places` and its period/target
-format are reserved for a future implementation. Its service is currently a
-stub: it returns an explicit disabled error and does not read or mutate places,
-flags, volumes, or processed-command records. A scheduler invocation fails
-instead of being acknowledged as completed.
+`program.structure.deactivate-expired-first-places` checks profiled first places
+(`place_number=1`) in the requested program and structure. Root places
+(`parent_id IS NULL`), system places and null activation dates are excluded.
+A date strictly before the occurrence time minus the configured period expires:
+`is_active=false`, `activated_at=NULL`. An exact cutoff date does not expire.
+The cutoff uses UTC epoch seconds; `months` means calendar months, not 30 days.
 
-There is no separate place-deactivation operation or immediate-deactivation
-setting. `ResetActivity` keeps its existing behavior: calculate `is_active`
-from the old activation date, then clear that date. It has no volume effect.
-See [Scheduled Tasks](../ScheduledTasks/README.md#expired-first-place-task-disabled)
-for the reserved command format.
+The repository performs one conditional SQL UPDATE, without activation/volume
+events or a separate read-and-save window. Volume rows are not changed. Repeating
+the same occurrence is harmless; a renewed date is checked by the UPDATE itself.
+No whole-structure materialization or per-place queries are needed. Ordinary
+`ResetActivity` remains separate and unchanged.
+
+## Shared activity source
+
+New configuration can set `activity_source` to `place`, `invite`, or `group_root`.
+The selected source replaces the own-place status check for every `when_inactive`
+permission: placement, manual placement (when enabled), bonus/clone/reinvest
+recipient eligibility, invitation, fallback-root eligibility, and compression.
+It reads raw `is_active`, not the activation date, and never follows another
+structure's `activity_source` recursively.
+
+- `place`: the candidate's own status.
+- `invite`: the profile's structure-0 place number 1 in this program.
+- `group_root`: that profile's place number 1 in the lowest-numbered structure
+  of the current structure's group, scoped to the same program. It does not use
+  the first available structure belonging to the profile. A missing source place
+  is inactive; a missing/empty group is a configuration error.
+
+For the new format `when_inactive.allow_spillover_children` replaces the old
+spillover permission. Omitted permission booleans remain false. Explicit
+`activity_source` cannot be combined with the legacy `spillover` block, even if
+its fields are false. The unused `spillover.require_active_invite` option was
+removed and is rejected as unknown (for both true and false). Without
+`activity_source`, own-place activity remains the default; the older
+`spillover.allow_inactive_place` permission remains supported. `allow_spillover_children` requires an explicit
+source. Unknown sources and explicit null are rejected.
+
+System places have no profile source and retain their own activity for placement;
+they are still excluded from recipients and compression. Terminal-clone, width,
+lock and other non-activity restrictions stay independent. Group membership does
+not synchronize stored flags/dates or change which concrete place an activation
+command operates on. Activation volume effects remain unchanged.
+
+Placement resolves the source structure once and filters candidates inside SQL.
+Tree actions and compression use a batch of source statuses. Relative-recipient
+traversal caches source status per encountered profile for that resolution;
+it retains the existing parent-by-parent traversal.
+
+## Mini configuration
+
+Mini sets structure 0 to `type: "invite"` with the top-level option
+`require_marketing_place_to_invite=true`. This optional setting defaults to false
+for other programs. When true, even an active inviter needs at least one place
+in a marketing structure (>0) of this program. Inactive places, clones and
+reinvests count; places in other programs do not. Root invitation is subject to
+the same prerequisite (Mini setup creates its owner's marketing places).
+
+Inactive Mini invites with marketing places may invite, act as fallback roots,
+receive bonuses/clones and survive compression. Those without marketing places
+cannot invite. Mini no longer schedules invite expiration.
+
+Structures 1–3 (Mini 10) share this configuration:
+
+```json
+{
+  "type": "marketing",
+  "activity_source": "group_root",
+  "when_inactive": {
+    "allow_own_children": true,
+    "allow_spillover_children": false,
+    "check_manual_placement": false,
+    "allow_as_bonus_recipient": true,
+    "allow_as_clone_recipient": true,
+    "keep_on_compression": true
+  }
+}
+```
+
+The group's source is the profile's place number 1 in structure 1. Its inactivity
+blocks automatic spillovers for every place of that profile in structures 1–3.
+Own places, personally invited children, manual placement and reward permissions
+are not blocked by this inactivity. Structures 4–17 are unchanged. Expiration
+updates only the concrete source place, never the invite or other group places.
+Reactivating the source restores spillover eligibility without propagating flags.
+
+For an existing Mini program:
+
+1. Deploy the updated backend. The existing group-column migration must already
+   be applied; this activity configuration needs no additional schema migration.
+2. In the **Programs DB**, check that structures 1–3 share `Mini 10` and the
+   lowest structure in that group is 1. If groups have not been configured, fill
+   the address in [set_mini_activation_groups.sql](Database/Scripts/set_mini_activation_groups.sql)
+   and run it; this script configures the group mapping for structures 1–17.
+3. Fill `v_marketing_addr` in
+   [set_mini_activity.sql](Database/Scripts/set_mini_activity.sql) and run it in
+   the **Programs DB**. It replaces the activity JSON for structures 0–3 with
+   the policy above. It does not change existing place statuses, dates or volumes
+   and can be repeated.
+4. In the **Tasks DB**, run
+   [add_mini_activity_expiration_task.sql](../ScheduledTasks/Database/Scripts/add_mini_activity_expiration_task.sql)
+   after filling `v_marketing_address` with the same address and
+   `v_first_execution_at_utc` with the first execution timestamp including a UTC
+   offset. This creates a daily task targeting **structure 1** with
+   `period={"unit":"months","value":1}`.
+5. Ensure the scheduler and Program task processor are running. The API registers
+   these background processors only outside Development; see
+   [Scheduled Tasks](../ScheduledTasks/README.md).
+
+The owner's root place and missing activation dates are excluded from expiration.
+The schedule script refuses duplicate tasks and any old structure-0 expiration
+task for this program, including disabled tasks. If one exists, review and
+explicitly replace the previous schedule; this insertion script does not migrate
+it. Do not replace commands in an active or errored occurrence, and do not run
+both expiration policies.
+
+For a new program, [setup_mini_program.sql](Database/Scripts/setup_mini_program.sql)
+already includes the groups and activity settings. Do not rerun this initialization
+script for an existing program. Add the Tasks DB schedule separately afterward.
 
 ## Profile volume
 

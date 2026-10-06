@@ -231,7 +231,7 @@ structure's existing `pos_algo` value.
 ## Placement activity eligibility
 
 Marketing structures can configure own-child and spillover eligibility in
-`activity`; see [activity configuration](PROGRAM_PROCESSING.md#activity-configuration-rollout-stages-13).
+`activity`; see [activity configuration](PROGRAM_PROCESSING.md#shared-activity-source).
 The candidate filter runs before algorithm ordering, pagination and chess/radar
 depth-window calculation. All seven algorithms share the same rules. Profile
 frontier also applies them when finding the minimum child count among eligible
@@ -244,3 +244,21 @@ of activity settings; differential PostgreSQL tests verify the previous ordering
 Manual classic placement checks activity only when `check_manual_placement` is
 explicitly enabled. The placed profile defines own-child relationships for
 purchases, clones and reinvests; the payer does not define them.
+
+
+### Shared activity source
+
+An explicit `activity_source` selects own-place status (`place`), the profile's
+first invite (`invite`), or its first place in the smallest structure of the same
+program/group (`group_root`). It replaces the candidate's own status for activity
+permissions. `when_inactive.allow_spillover_children` controls spillovers in this
+format; `allow_own_children` and `check_manual_placement` keep their meanings.
+System candidates without a profile retain their own status. Missing profile
+sources are inactive; missing group configuration is an error.
+
+The source structure is resolved once per selection. Candidate SQL checks the
+set of active first-place profiles in that structure before paging or sorting,
+including frontier level minima. No recursive activity-source resolution or
+stored-status synchronization occurs. Configs without `activity_source` use own-place activity. The unused additional
+active-invite filter has been removed; use `activity_source: "invite"` instead.
+The old `spillover` permission block must not be mixed with the new source format. The independent width, lock and terminal-clone rules remain.

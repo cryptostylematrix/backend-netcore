@@ -156,12 +156,13 @@ bash tests/Modules/ReferalProgram.Application.Tests/Postgres/run.sh
 ```
 
 See [coverage and limits](tests/Modules/ReferalProgram.Application.Tests/Postgres/README.md).
-They exercise invitation, root lookup, and activation persistence with domain
-events; they do not connect to existing application databases. Without explicit
+They exercise invitation, placement SQL, shared activity sources, rewards,
+compression, activation persistence and Mini expiration/configuration scripts; they do not connect to existing application databases. Without explicit
 opt-in, these PostgreSQL tests are skipped.
 
-These unit and source-invariant tests do not exercise live PostgreSQL, TON calls,
-or API endpoint discovery. Database cleanup scripts require separate validation
+Ordinary unit and source-invariant tests do not exercise live PostgreSQL.
+The optional PostgreSQL suite does; neither suite covers live TON calls or
+API endpoint discovery. Database cleanup scripts require separate validation
 on a disposable PostgreSQL instance before operational use.
 
 ## Database scripts

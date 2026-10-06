@@ -5,10 +5,12 @@ public sealed record PlacementActivityRules(
     string? InviterProfileAddr,
     bool AllowOwnChildren,
     bool AllowInactiveSpillover,
-    bool RequireActiveInvite,
-    bool CheckManualPlacement)
+    bool CheckManualPlacement,
+    byte? ActivityStructureNumber = null)
 {
-    public bool ChangesAutomaticEligibility => AllowOwnChildren || AllowInactiveSpillover || RequireActiveInvite;
+    public bool ChangesAutomaticEligibility => AllowOwnChildren || AllowInactiveSpillover || ActivityStructureNumber is not null;
+
+    public bool RequiresProfileActivity => ActivityStructureNumber is not null;
 
     public bool IsOwnChild(string? parentProfileAddr) => parentProfileAddr is not null
         && ChildProfileAddr is not null
@@ -19,7 +21,7 @@ public sealed record PlacementActivityRules(
         if (manual && !CheckManualPlacement)
             return true;
         var own = IsOwnChild(parent.ProfileAddr);
-        return (parent.IsActive || (own ? AllowOwnChildren : AllowInactiveSpillover))
-            && (own || !RequireActiveInvite || parent.ProfileAddr is null || inviteActive);
+        var active = ActivityStructureNumber is not null && parent.ProfileAddr is not null ? inviteActive : parent.IsActive;
+        return active || (own ? AllowOwnChildren : AllowInactiveSpillover);
     }
 }

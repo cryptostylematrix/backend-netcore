@@ -12,14 +12,14 @@ public sealed class PlacementActivityRulesTests
     [InlineData(null, false)]
     public void Own_children_are_profile_places_or_personally_invited_profiles(string? parent, bool own)
     {
-        var rules = new PlacementActivityRules("child", "inviter", false, false, false, false);
+        var rules = new PlacementActivityRules("child", "inviter", false, false, false);
         Assert.Equal(own, rules.IsOwnChild(parent));
     }
 
     [Fact]
     public void Own_permission_never_grants_spillover_and_spillover_permission_never_grants_own_children()
     {
-        var ownOnly = new PlacementActivityRules("child", "inviter", true, false, true, true);
+        var ownOnly = new PlacementActivityRules("child", "inviter", true, false, true);
         var spillOnly = ownOnly with { AllowOwnChildren = false, AllowInactiveSpillover = true };
         var own = new PlaceResponse { ProfileAddr = "inviter", IsActive = false };
         var other = new PlaceResponse { ProfileAddr = "other", IsActive = false };
@@ -27,15 +27,16 @@ public sealed class PlacementActivityRulesTests
         Assert.False(ownOnly.Allows(other, true));
         Assert.False(spillOnly.Allows(own, true));
         Assert.True(spillOnly.Allows(other, true));
-        Assert.False(spillOnly.Allows(other, false));
+        Assert.False((spillOnly with { AllowInactiveSpillover = false }).Allows(other, false));
     }
 
     [Fact]
-    public void Inactive_invite_blocks_spillover_even_to_an_active_place_but_not_own_children()
+    public void Inactive_invite_source_obeys_own_and_spillover_permissions()
     {
-        var rules = new PlacementActivityRules("child", "inviter", false, false, true, true);
+        var rules = new PlacementActivityRules("child", "inviter", false, false, true, 0);
         Assert.False(rules.Allows(new PlaceResponse { ProfileAddr = "other", IsActive = true }, false));
-        Assert.True(rules.Allows(new PlaceResponse { ProfileAddr = "inviter", IsActive = true }, false));
+        Assert.False(rules.Allows(new PlaceResponse { ProfileAddr = "inviter", IsActive = true }, false));
+        Assert.True((rules with { AllowOwnChildren = true }).Allows(new PlaceResponse { ProfileAddr = "inviter", IsActive = true }, false));
         Assert.True(rules.Allows(new PlaceResponse { ProfileAddr = null, IsActive = true }, false));
     }
 
@@ -49,8 +50,8 @@ public sealed class PlacementActivityRulesTests
         {
             ViewerRootMp = "root",
             AvailableCommandTags = new HashSet<uint> { ProgramCommandTags.BuyPlace },
-            Activity = new PlacementActivityRules("child", "inviter", false, false, true, true),
-            ActiveInviteProfiles = inviteActive ? new HashSet<string> { "other" } : new HashSet<string>()
+            Activity = new PlacementActivityRules("child", "inviter", false, false, true, 0),
+            ActiveSourceProfiles = inviteActive ? new HashSet<string> { "other" } : new HashSet<string>()
         };
         var parent = new PlaceResponse { ProfileAddr = "other", IsActive = true, Filling = 0 };
         Assert.Equal(expected, policy.EvaluatePosition(decision, parent, "root00000001", 1, false).CanBuy);
@@ -58,11 +59,30 @@ public sealed class PlacementActivityRulesTests
             parent, "root00000001", 1, false).CanBuy);
     }
 
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public void Tree_action_uses_external_source_instead_of_own_status(bool ownActive, bool sourceActive)
+    {
+        var policy = new ReferalProgram.Application.Policies.BuyPlacePolicy(null!, null!, null!, null!, null!, null!);
+        var decision = new BuyPlaceDecision(true, null, null, true, null, null)
+        {
+            ViewerRootMp = "root",
+            AvailableCommandTags = new HashSet<uint> { ProgramCommandTags.BuyPlace },
+            Activity = new("child", null, false, false, true, 1),
+            ActiveSourceProfiles = sourceActive ? new HashSet<string> { "other" } : new HashSet<string>()
+        };
+        var parent = new PlaceResponse { ProfileAddr = "other", IsActive = ownActive, Filling = 0 };
+        Assert.Equal(sourceActive, policy.EvaluatePosition(decision, parent, "root00000001", 1, false).CanBuy);
+    }
+
     [Fact]
     public void Manual_placement_preserves_legacy_exception_until_explicitly_enabled()
     {
         var parent = new PlaceResponse { ProfileAddr = "other", IsActive = false };
-        var rules = new PlacementActivityRules("child", "inviter", false, false, true, false);
+        var rules = new PlacementActivityRules("child", "inviter", false, false, false, 0);
         Assert.True(rules.Allows(parent, false, manual: true));
         Assert.False((rules with { CheckManualPlacement = true }).Allows(parent, false, manual: true));
     }

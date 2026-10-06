@@ -33,7 +33,7 @@ public sealed class BuyPlacePolicy(
 
         if (!decision.RequireNextPosition && decision.Activity is { CheckManualPlacement: true } activity
             && !activity.Allows(parent, parent.ProfileAddr is not null
-                && decision.ActiveInviteProfiles.Contains(parent.ProfileAddr), manual: true))
+                && decision.ActiveSourceProfiles.Contains(parent.ProfileAddr), manual: true))
             return new BuyPositionDecision(false, null);
 
         var command = SelectCommand(

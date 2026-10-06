@@ -11,17 +11,33 @@ public sealed class PlaceQueries(
     [FromKeyedServices("Programs")] NpgsqlDataSource dataSource)
     : IPlaceQueries, IPositionCandidateQueries
 {
-    public async Task<IReadOnlySet<string>> GetActiveInviteProfilesAsync(
-        string marketingAddr, IReadOnlyCollection<string> profileAddrs, CancellationToken cancellationToken)
+    public async Task<byte?> GetGroupRootStructureAsync(string marketingAddr, byte structureNumber,
+        CancellationToken cancellationToken)
     {
-        if (profileAddrs.Count == 0)
-            return new HashSet<string>();
+        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        var number = await connection.QuerySingleAsync<short?>(new CommandDefinition("""
+            SELECT min(member.structure_number)
+            FROM public.structures current_structure
+            JOIN public.structures member ON member.marketing_addr=current_structure.marketing_addr
+                AND btrim(member."group")=btrim(current_structure."group")
+            WHERE current_structure.marketing_addr=@marketingAddr
+                AND current_structure.structure_number=@structureNumber
+                AND NULLIF(btrim(current_structure."group"),'') IS NOT NULL
+            """, new { marketingAddr, structureNumber = (short)structureNumber }, cancellationToken: cancellationToken));
+        return number is null ? null : checked((byte)number.Value);
+    }
+
+    public async Task<IReadOnlySet<string>> GetActiveSourceProfilesAsync(string marketingAddr, byte sourceStructure,
+        IReadOnlyCollection<string> profileAddrs, CancellationToken cancellationToken)
+    {
+        if (profileAddrs.Count == 0) return new HashSet<string>();
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
         var profiles = await connection.QueryAsync<string>(new CommandDefinition("""
             SELECT profile_addr FROM public.places
-            WHERE marketing_addr = @marketingAddr AND structure_number = 0
-              AND place_number = 1 AND is_active = true AND profile_addr = ANY(@profiles)
-            """, new { marketingAddr, profiles = profileAddrs.ToArray() }, cancellationToken: cancellationToken));
+            WHERE marketing_addr=@marketingAddr AND structure_number=@sourceStructure
+                AND place_number=1 AND is_active=true AND profile_addr=ANY(@profiles)
+            """, new { marketingAddr, sourceStructure = (short)sourceStructure, profiles = profileAddrs.ToArray() },
+            cancellationToken: cancellationToken));
         return profiles.ToHashSet(StringComparer.Ordinal);
     }
 
@@ -34,7 +50,7 @@ public sealed class PlaceQueries(
         result.Add("activityInviter", activity.InviterProfileAddr, System.Data.DbType.String);
         result.Add("allowOwn", activity.AllowOwnChildren);
         result.Add("allowSpillover", activity.AllowInactiveSpillover);
-        result.Add("requireInvite", activity.RequireActiveInvite);
+        result.Add("activitySourceStructure", (short)(activity.ActivityStructureNumber ?? 0));
         return result;
     }
 
@@ -49,18 +65,17 @@ public sealed class PlaceQueries(
                 var alias = match.Groups[1].Success ? match.Groups[1].Value : "places";
                 var own = $"({alias}.profile_addr IS NOT NULL AND @activityChild IS NOT NULL "
                     + $"AND ({alias}.profile_addr = @activityChild OR {alias}.profile_addr = @activityInviter))";
-                return $"""
-                    (
-                        ({alias}.is_active = true OR CASE WHEN {own} THEN @allowOwn ELSE @allowSpillover END)
-                        AND (NOT @requireInvite OR {own} OR {alias}.profile_addr IS NULL OR {alias}.profile_addr IN (
-                            SELECT activity_invite.profile_addr FROM public.places activity_invite
-                            WHERE activity_invite.marketing_addr = @marketingAddr
-                              AND activity_invite.structure_number = 0
-                              AND activity_invite.place_number = 1
-                              AND activity_invite.is_active = true
-                        ))
-                    )
-                    """;
+                if (activity.ActivityStructureNumber is not null)
+                    return $"""
+                        ((CASE WHEN {alias}.profile_addr IS NULL THEN {alias}.is_active ELSE
+                            {alias}.profile_addr IN (
+                                SELECT activity_source.profile_addr FROM public.places activity_source
+                                WHERE activity_source.marketing_addr=@marketingAddr
+                                    AND activity_source.structure_number=@activitySourceStructure
+                                    AND activity_source.place_number=1 AND activity_source.is_active=true)
+                          END) OR CASE WHEN {own} THEN @allowOwn ELSE @allowSpillover END)
+                        """;
+                return $"({alias}.is_active = true OR CASE WHEN {own} THEN @allowOwn ELSE @allowSpillover END)";
             });
     }
 

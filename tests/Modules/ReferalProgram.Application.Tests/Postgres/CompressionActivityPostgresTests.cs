@@ -75,7 +75,7 @@ public sealed partial class ActivityPostgresTests
             var context = scope.ServiceProvider.GetRequiredService<DataContext>();
             return await new StructureCompressionService(scope.ServiceProvider.GetRequiredService<IPlaceRepository>(),
                 new PositionLockRepository(context), Structures, new StructureRankQueries(data),
-                new ProfileVolumeQueries(data), new PositionAlgorithmConfigurationParser(), context)
+                new ProfileVolumeQueries(data), new PositionAlgorithmConfigurationParser(), context, Places)
                 .CompressAsync("program", number, default);
         }
     }

@@ -159,16 +159,16 @@ internal sealed class GetTreeQueryHandler(
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
         rowsByMp[selected.Mp] = selected;
 
-        if (buyDecision.Activity is { CheckManualPlacement: true, RequireActiveInvite: true })
+        if (buyDecision.Activity is { CheckManualPlacement: true, RequiresProfileActivity: true } activityRules)
         {
             var profiles = rowsByMp.Values.Append(selectedParent)
                 .Where(place => place?.ProfileAddr is not null)
                 .Select(place => place!.ProfileAddr!).Distinct(StringComparer.Ordinal).ToArray();
-            var activeInvites = await placeQueries.GetActiveInviteProfilesAsync(
-                request.MarketingAddr, profiles, ct);
+            var activeProfiles = await placeQueries.GetActiveSourceProfilesAsync(
+                request.MarketingAddr, activityRules.ActivityStructureNumber!.Value, profiles, ct);
             actionContext = actionContext with
             {
-                BuyDecision = buyDecision with { ActiveInviteProfiles = activeInvites }
+                BuyDecision = buyDecision with { ActiveSourceProfiles = activeProfiles }
             };
         }
 

@@ -18,6 +18,8 @@ public sealed class ProfileRootPlaceResolver(
             ? null
             : profileAddr;
         bool? allowInactiveInviter = null;
+        byte? activityStructure = null;
+        var activityCache = new Dictionary<string, bool>(StringComparer.Ordinal);
         var visitedProfileAddrs = new HashSet<string>(StringComparer.Ordinal);
 
         while (true)
@@ -55,13 +57,14 @@ public sealed class ProfileRootPlaceResolver(
             {
                 var structure = await structureQueries.GetStructureAsync(
                     marketingAddr, InviteStructureNumber, cancellationToken);
+                activityStructure = await ActivitySourceResolver.ResolveAsync(structure, placeQueries, cancellationToken);
                 allowInactiveInviter = structure?.Activity is { } activity
                     && ((InviteActivitySettings)ActivitySettings.Parse(activity, InviteStructureNumber))
                         .WhenInactive.AllowAsFallbackRoot;
             }
 
             var inviter = await FindFirstEligibleInviterAsync(
-                invite, allowInactiveInviter.Value, cancellationToken);
+                invite, allowInactiveInviter.Value, activityStructure, activityCache, cancellationToken);
             if (inviter?.ProfileAddr is not { } inviterProfileAddr
                 || string.IsNullOrWhiteSpace(inviterProfileAddr))
             {
@@ -75,6 +78,8 @@ public sealed class ProfileRootPlaceResolver(
     private async Task<PlaceResponse?> FindFirstEligibleInviterAsync(
         PlaceResponse invite,
         bool allowInactiveInviter,
+        byte? activityStructure,
+        IDictionary<string, bool> activityCache,
         CancellationToken cancellationToken)
     {
         var parentId = invite.ParentId;
@@ -89,7 +94,7 @@ public sealed class ProfileRootPlaceResolver(
             if (inviter is null || !visitedInviteIds.Add(inviter.Id))
                 return null;
 
-            if ((inviter.IsActive || allowInactiveInviter)
+            if ((allowInactiveInviter || await ActivitySourceResolver.IsActiveAsync(inviter, activityStructure, placeQueries, activityCache, cancellationToken))
                 && !string.IsNullOrWhiteSpace(inviter.ProfileAddr))
             {
                 return inviter;

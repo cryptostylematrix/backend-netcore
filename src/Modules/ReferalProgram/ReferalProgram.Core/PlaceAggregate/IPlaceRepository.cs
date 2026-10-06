@@ -4,6 +4,10 @@ namespace ReferalProgram.Core.PlaceAggregate;
 
 public interface IPlaceRepository : IRepository<Place>
 {
+    // One conditional update; repeated execution with the same cutoff is harmless.
+    Task<int> ExpireFirstPlacesAsync(string marketingAddr, byte structureNumber,
+        long cutoffUtc, CancellationToken cancellationToken) => throw new NotSupportedException();
+
     Task<IReadOnlyList<Place>> GetStructurePlacesAsync(
         string marketingAddr,
         byte structureNumber,

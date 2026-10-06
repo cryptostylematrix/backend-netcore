@@ -5,7 +5,8 @@
 -- referal_program and SELECT/UPDATE on structures.
 -- Safe to repeat. Removes retired activation_sync settings from structures 1-17.
 -- Preserves other activity settings and does not mutate places.
--- Groups are organizational labels; structures 1-3 activate immediately.
+-- Groups also identify activity roots when activity_source=group_root.
+-- Structures 1-3 activate immediately; existing source settings are preserved.
 
 BEGIN;
 
@@ -45,8 +46,12 @@ BEGIN
     UPDATE public.structures AS structure
     SET "group" = groups.group_name,
         activity = CASE WHEN structure.structure_number BETWEEN 1 AND 3
-            THEN (COALESCE(structure.activity, '{}'::jsonb) - 'activation_sync')
-                || '{"set_active_on_activation":true}'::jsonb
+            THEN CASE WHEN structure.activity ? 'type'
+                THEN (structure.activity - 'activation_sync' - 'set_active_on_activation')
+                    || '{"preserve_status_on_activation":false}'::jsonb
+                ELSE (COALESCE(structure.activity, '{}'::jsonb) - 'activation_sync')
+                    || '{"set_active_on_activation":true}'::jsonb
+                END
             WHEN jsonb_typeof(structure.activity) = 'object'
                 THEN structure.activity - 'activation_sync'
             ELSE structure.activity

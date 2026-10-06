@@ -2,8 +2,11 @@ namespace ReferalProgram.Application.Abstractions;
 
 public interface IPlaceQueries
 {
-    Task<IReadOnlySet<string>> GetActiveInviteProfilesAsync(
-        string marketingAddr, IReadOnlyCollection<string> profileAddrs, CancellationToken cancellationToken);
+    Task<byte?> GetGroupRootStructureAsync(string marketingAddr, byte structureNumber,
+        CancellationToken cancellationToken) => throw new NotSupportedException();
+
+    Task<IReadOnlySet<string>> GetActiveSourceProfilesAsync(string marketingAddr, byte sourceStructure,
+        IReadOnlyCollection<string> profileAddrs, CancellationToken cancellationToken) => throw new NotSupportedException();
 
     Task<PlaceResponse?> GetFirstPlaceAsync(
         string marketingAddr,

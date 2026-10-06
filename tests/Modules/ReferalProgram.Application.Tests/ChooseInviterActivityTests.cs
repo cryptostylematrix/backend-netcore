@@ -79,6 +79,25 @@ public sealed class ChooseInviterActivityTests
         Assert.Equal(0, uow.Saves);
     }
 
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task Required_marketing_place_applies_to_active_and_inactive_inviters(bool active, bool hasPlaces)
+    {
+        var queries = new Queries(active, hasPlaces);
+        var repository = new Repository();
+        var unit = new UnitOfWork();
+        var json = JsonSerializer.SerializeToElement(new { type = "invite", require_marketing_place_to_invite = true,
+            when_inactive = new { allow_inviting_with_places = true, allow_inviting_without_places = true } });
+        var result = await new ChooseInviterCommandHandler(queries, repository, new Structures(json), new Source(), unit)
+            .Handle(Command(), default);
+        Assert.Equal(hasPlaces, result.IsSuccess);
+        Assert.Equal(hasPlaces ? 1 : 0, unit.Saves);
+        Assert.Equal(1, queries.PresenceChecks);
+    }
+
     private static ChooseInviterCommand Command() => new("marketing", "inviter", "new-profile", 1, 1, null, "new-login");
 
     private sealed class Queries(bool active, bool hasPlaces) : PlaceQueriesStub

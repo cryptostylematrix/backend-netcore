@@ -28,7 +28,9 @@
 --
 -- Requires migration 028_add_group_to_structures.sql.
 -- Structures 1-3 (Mini 10) set active status immediately on activation.
--- Other structures have no activity config. Groups are organizational labels.
+-- Structure 0 permits inactive invites with marketing places; Mini 10 requires
+-- an active group root for automatic spillovers only. Other structures have no activity
+-- config. Add the daily task separately in the Tasks database.
 --
 -- This script is intended for first-time initialization and is not idempotent.
 -- Run it while connected to the correct programs database as its table owner.
@@ -229,8 +231,8 @@ BEGIN
                 WHEN v_structure_number BETWEEN 16 AND 17 THEN 'Mini 7000'
                 ELSE NULL
             END,
-            CASE WHEN v_structure_number BETWEEN 1 AND 3
-                THEN '{"set_active_on_activation":true}'::jsonb
+            CASE WHEN v_structure_number = 0 THEN '{"type":"invite","require_marketing_place_to_invite":true,"when_inactive":{"allow_inviting_without_places":false,"allow_inviting_with_places":true,"allow_as_fallback_root":true,"allow_as_bonus_recipient":true,"allow_as_clone_recipient":true,"keep_on_compression":true}}'::jsonb
+                WHEN v_structure_number BETWEEN 1 AND 3 THEN '{"type":"marketing","activity_source":"group_root","when_inactive":{"allow_own_children":true,"allow_spillover_children":false,"check_manual_placement":false,"allow_as_bonus_recipient":true,"allow_as_clone_recipient":true,"keep_on_compression":true}}'::jsonb
                 ELSE NULL
             END
         );

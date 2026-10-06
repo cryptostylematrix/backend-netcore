@@ -6,6 +6,19 @@ namespace ReferalProgram.Infrastructure.Repositories;
 
 internal sealed class PlaceRepository(DataContext dataContext) : IPlaceRepository
 {
+    public Task<int> ExpireFirstPlacesAsync(string marketingAddr, byte structureNumber,
+        long cutoffUtc, CancellationToken cancellationToken) =>
+        dataContext.Places
+            .Where(place => place.MarketingAddr == marketingAddr
+                && place.StructureNumber == structureNumber
+                && place.PlaceNumber == 1
+                && place.ParentId != null
+                && place.ProfileAddr != null && place.ProfileAddr.Trim() != ""
+                && place.ActivatedAt != null && place.ActivatedAt < cutoffUtc)
+            .ExecuteUpdateAsync(update => update
+                .SetProperty(place => place.IsActive, false)
+                .SetProperty(place => place.ActivatedAt, (long?)null), cancellationToken);
+
     public async Task<IReadOnlyList<Place>> GetStructurePlacesAsync(
         string marketingAddr,
         byte structureNumber,

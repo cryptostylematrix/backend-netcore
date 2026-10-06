@@ -23,6 +23,7 @@ public sealed class RelativePlaceResolver(IPlaceQueries placeQueries, IStructure
             return null;
 
         var structure = await structureQueries.GetStructureAsync(marketingAddr, structureNumber, cancellationToken);
+        var sourceStructure = await ActivitySourceResolver.ResolveAsync(structure, placeQueries, cancellationToken);
         var rules = ActivitySettings.ParseRecipientRules(structure?.Activity, structureNumber);
         var allowInactive = purpose switch
         {
@@ -34,6 +35,7 @@ public sealed class RelativePlaceResolver(IPlaceQueries placeQueries, IStructure
             sourcePlace,
             level,
             allowInactive,
+            sourceStructure,
             cancellationToken);
 
         return relativePlace is null
@@ -45,14 +47,16 @@ public sealed class RelativePlaceResolver(IPlaceQueries placeQueries, IStructure
         PlaceResponse start,
         ushort level,
         bool allowInactive,
+        byte? sourceStructure,
         CancellationToken cancellationToken)
     {
+        var activityCache = new Dictionary<string, bool>(StringComparer.Ordinal);
         PlaceResponse? current = start;
         var eligibleLevel = 0;
 
         while (current is not null)
         {
-            var isEligible = (current.IsActive || allowInactive)
+            var isEligible = (allowInactive || await ActivitySourceResolver.IsActiveAsync(current, sourceStructure, placeQueries, activityCache, cancellationToken))
                 && !string.IsNullOrWhiteSpace(current.ProfileAddr);
 
             if (isEligible)

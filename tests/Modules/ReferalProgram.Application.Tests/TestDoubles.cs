@@ -7,7 +7,6 @@ namespace ReferalProgram.Application.Tests;
 
 internal abstract class PlaceQueriesStub : IPlaceQueries
 {
-    public virtual Task<IReadOnlySet<string>> GetActiveInviteProfilesAsync(string marketingAddr, IReadOnlyCollection<string> profileAddrs, CancellationToken cancellationToken) => throw new NotSupportedException();
 
     public virtual Task<PlaceResponse?> GetFirstPlaceAsync(string marketingAddr, byte structureNumber, string? profileAddr, CancellationToken cancellationToken) => throw new NotSupportedException();
     public virtual Task<PlaceResponse?> GetLastPlaceAsync(string marketingAddr, byte structureNumber, string? profileAddr, CancellationToken cancellationToken) => throw new NotSupportedException();
@@ -31,6 +30,7 @@ internal abstract class PlaceQueriesStub : IPlaceQueries
 
 internal abstract class PlaceRepositoryStub : IPlaceRepository
 {
+    public virtual Task<int> ExpireFirstPlacesAsync(string marketingAddr, byte structureNumber, long cutoffUtc, CancellationToken cancellationToken) => throw new NotSupportedException();
     public virtual Task<IReadOnlyList<Place>> GetStructurePlacesAsync(string marketingAddr, byte structureNumber, CancellationToken cancellationToken) => throw new NotSupportedException();
     public virtual Task<IReadOnlyDictionary<string, string?>> GetInvitersAsync(string marketingAddr, CancellationToken cancellationToken) => throw new NotSupportedException();
     public virtual Task<Place?> GetByIdAsync(int id, CancellationToken cancellationToken) => throw new NotSupportedException();

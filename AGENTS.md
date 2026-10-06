@@ -448,23 +448,27 @@ dotnet test tests/Modules/UI.Infrastructure.Tests/UI.Infrastructure.Tests.csproj
 dotnet test tests/Modules/ScheduledTasks.Application.Tests/ScheduledTasks.Application.Tests.csproj
 ```
 
-These are currently the only automated test projects. A green solution test
+These test projects cover the following areas. A green test
 run verifies Referral Program application behavior plus selected SQL-text
 invariants/setup topologies, UI application behavior, and UI wallet-address
 infrastructure behavior, plus Scheduled Tasks scheduling, command execution,
 dispatch, aggregate, and persistence-mapping behavior. It does **not** establish
 coverage of every project.
 
+Optional disposable PostgreSQL coverage is documented in
+`tests/Modules/ReferalProgram.Application.Tests/Postgres/README.md`. It exercises
+production placement queries, activity persistence, rewards, compression and
+selected Mini setup/configuration scripts; it is skipped without explicit opt-in.
+
 There is currently no automated integration/end-to-end coverage for:
 
 - API startup, middleware, endpoint discovery/filtering, Swagger, or CORS;
 - the background task processor and real transaction-send lifecycle;
 - Contracts parsing, message building, TonCenter resilience, or live TON calls;
-- Referral Program Dapper queries against a real PostgreSQL schema and public
-  FastEndpoints request/response mapping;
+- Referral Program public FastEndpoints request/response mapping;
 - ProgramInviterChanger against real source/destination
   databases;
-- actually executing schema/setup/permission/cleanup SQL; or
+- the full production schema migration chain and permission/cleanup SQL; or
 - frontend and smart-contract behavior, which live in separate repositories.
 
 Do not say "everything is tested" merely because `dotnet test` passes. State

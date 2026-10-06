@@ -11,6 +11,10 @@ public abstract class ActivitySettings
     [JsonPropertyName("preserve_status_on_activation")]
     public bool PreserveStatusOnActivation { get; init; }
 
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [JsonPropertyName("activity_source")]
+    public string? ActivitySource { get; init; }
+
     public static ActivitySettings Parse(JsonElement json, byte structureNumber)
     {
         if (json.ValueKind != JsonValueKind.Object)
@@ -18,7 +22,9 @@ public abstract class ActivitySettings
 
         if (!json.TryGetProperty("type", out var type))
         {
-            if (json.TryGetProperty("preserve_status_on_activation", out _)
+            if (json.TryGetProperty("activity_source", out _)
+                || json.TryGetProperty("require_marketing_place_to_invite", out _)
+                || json.TryGetProperty("preserve_status_on_activation", out _)
                 || json.TryGetProperty("when_inactive", out _)
                 || json.TryGetProperty("spillover", out _))
                 throw new JsonException("New activity settings require a type.");
@@ -35,6 +41,17 @@ public abstract class ActivitySettings
         if (type.ValueKind != JsonValueKind.String || type.GetString() != expectedType)
             throw new JsonException("Activity type does not match the structure.");
 
+        if (json.TryGetProperty("activity_source", out var source))
+        {
+            if (source.ValueKind != JsonValueKind.String || source.GetString() is not ("place" or "invite" or "group_root"))
+                throw new JsonException("activity_source must be place, invite or group_root.");
+            if (json.TryGetProperty("spillover", out _))
+                throw new JsonException("activity_source cannot be mixed with legacy spillover settings.");
+        }
+        else if (json.TryGetProperty("when_inactive", out var inactive)
+            && inactive.TryGetProperty("allow_spillover_children", out _))
+            throw new JsonException("allow_spillover_children requires activity_source.");
+
         return structureNumber == 0
             ? json.Deserialize<InviteActivitySettings>()!
             : json.Deserialize<MarketingActivitySettings>()!;
@@ -44,7 +61,8 @@ public abstract class ActivitySettings
     public static InactiveRecipientSettings? ParseRecipientRules(JsonElement? json, byte structureNumber)
     {
         if (json is not { ValueKind: JsonValueKind.Object } value
-            || !(value.TryGetProperty("type", out _)
+            || !(value.TryGetProperty("activity_source", out _)
+                || value.TryGetProperty("type", out _)
                 || value.TryGetProperty("when_inactive", out _)
                 || value.TryGetProperty("spillover", out _)
                 || value.TryGetProperty("preserve_status_on_activation", out _)))
@@ -78,6 +96,9 @@ public abstract class ActivitySettings
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed class InviteActivitySettings : ActivitySettings
 {
+    [JsonPropertyName("require_marketing_place_to_invite")]
+    public bool RequireMarketingPlaceToInvite { get; init; }
+
     [JsonPropertyName("when_inactive")]
     public InactiveInviteSettings WhenInactive { get; init; } = new();
 }
@@ -120,6 +141,9 @@ public sealed class InactiveInviteSettings : InactiveRecipientSettings
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 public sealed class InactiveMarketingSettings : InactiveRecipientSettings
 {
+    [JsonPropertyName("allow_spillover_children")]
+    public bool AllowSpilloverChildren { get; init; }
+
     [JsonPropertyName("allow_own_children")]
     public bool AllowOwnChildren { get; init; }
 
@@ -133,6 +157,4 @@ public sealed class SpilloverActivitySettings
     [JsonPropertyName("allow_inactive_place")]
     public bool AllowInactivePlace { get; init; }
 
-    [JsonPropertyName("require_active_invite")]
-    public bool RequireActiveInvite { get; init; }
 }

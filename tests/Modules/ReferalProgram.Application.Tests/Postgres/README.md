@@ -38,19 +38,21 @@ event dispatch and transaction saving. Only on-chain command availability is a
 stub. Period reset exercises aggregate reset plus real persistence, without the
 MassTransit transport.
 
-## Baseline comparison performed
+## Recorded stage-2 baseline comparison
 
 The same four legacy tests were run against an isolated archive of commit
-`d6433d4` (before stage 2) and the current working tree. Both passed identical
+`d6433d4` (before stage 2) and the stage-2 working tree. Both passed identical
 assertions against fresh seeded databases. The two `New_` tests run only against
-the current implementation. This is a behavioral regression comparison, not a
+that implementation. This is a historical behavioral regression comparison, not a
 byte-for-byte database dump comparison.
 
 ## Limits
 
 Tables managed by EF are generated using `EnsureCreated`; the query-only
 `structures` table has a minimal explicit fixture schema. This does not validate
-SQL migrations, production constraints/triggers/permissions or production data.
+the full SQL migration chain, production constraints/triggers/permissions or
+production data. Selected setup/configuration scripts are executed by the Mini
+tests described below.
 No real wallets, TON calls, API host, scheduler or background workers are started.
 Stage 3 additionally exercises purchase/clone/reinvest handlers, all seven
 position strategies through real SQL, manual command validation, and activity
@@ -90,11 +92,12 @@ separately. Timings are local single-client measurements, not production latency
 or throughput promises. No existing application database is used.
 
 The index experiment creates a partial active-invite index only in its temporary
-database. The SQL experiment rewrites a captured correlated predicate into an
-uncorrelated membership predicate only in the benchmark, and checks result-set
-equality with EXCEPT ALL before measuring it. Neither experiment changes runtime
+database. The SQL experiment derives a correlated EXISTS alternative from the captured
+production membership predicate and checks result-set equality with EXCEPT ALL
+before measuring both variants. Neither experiment changes runtime
 SQL or deploys an index. See [measurement report](ACTIVITY_QUERY_PERFORMANCE.md).
 
+## Stage 4 rewards and compression
 
 Stage-4 coverage includes real bonus handlers (including referral recipients in
 structure 0), independent clone/reinvest permissions, combined task branch
@@ -102,3 +105,24 @@ selection, and compression committed through EF repositories in both structure
 types. It checks retained inactive chains, parent/depth/matrix filling, unchanged
 activation state, paid-clone volumes and receipts. Compression rank tables are
 minimal test tables; live TON sends and API transport are not covered.
+
+## Mini configuration and expiration
+
+Mini tests execute the setup, existing-program configuration, group update and
+scheduler SQL in disposable PostgreSQL. The fixture adds migration-defined
+column defaults missing from EF EnsureCreated (task-processing flag and matrix
+filling). Programs and Tasks test tables share one disposable database for script
+checks; deployment still targets their separate databases. Coverage includes
+calendar-month expiry boundaries, null/system/root/additional-place exclusion,
+program/structure isolation, unchanged nonzero volumes, retries, concurrent
+renewal under a row lock, invitation prerequisites and automatic-only spillover
+restrictions on structures 1–3. No existing application database is used.
+
+## Shared activity sources
+
+Shared-source coverage exercises all seven algorithms with own/source statuses
+in opposition and each own/spillover permission combination; manual resolution,
+program-scoped group minima, missing source and missing group, reward permissions,
+compression and source reactivation. Mini uses structure 1 as the source for
+structures 1–3 and does not expire invites. The performance harness also measures
+`source_invite` and `source_group` modes (200 combinations total after removing the obsolete additional-invite mode).

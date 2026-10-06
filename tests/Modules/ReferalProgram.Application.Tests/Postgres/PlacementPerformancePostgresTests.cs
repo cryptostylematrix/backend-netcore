@@ -89,11 +89,12 @@ public sealed partial class ActivityPostgresTests
                         await using var connection = await measured.OpenConnectionAsync();
                         var rootMp = await connection.QuerySingleAsync<string>("SELECT mp FROM places WHERE id=@id", new { id = 1000000 + subtree });
                         var scopedCount = await connection.ExecuteScalarAsync<long>("SELECT count(*) FROM places WHERE structure_number=1 AND mp LIKE @prefix", new { prefix = rootMp + "%" });
-                        foreach (var mode in new[] { "legacy", "own", "invite", "combined" })
+                        foreach (var mode in new[] { "legacy", "own", "combined", "source_invite", "source_group" })
                         {
                             PlacementActivityRules? activity = mode == "legacy" ? null : new(
                                 "p" + count, "p" + count / 2, mode is "own" or "combined",
-                                mode == "combined", mode is "invite" or "combined", false);
+                                mode == "combined", false,
+                                mode == "source_invite" ? (byte)0 : mode == "source_group" ? (byte)1 : null);
                             var calls = new Dictionary<string, Func<Task>>
                             {
                                 ["classic"] = async () => { await queries.GetOpenPlacesByMpPrefixAsync("perf",1,rootMp,2,1,50,default,activity); },
@@ -171,7 +172,7 @@ public sealed partial class ActivityPostgresTests
                 {
                     var profiles = Enumerable.Range(1,batch).Select(n => "p" + n*97).ToArray();
                     if (batch == 1) await queries.GetPlaceAsync("perf",0,profiles[0],1,default);
-                    else await queries.GetActiveInviteProfilesAsync("perf",profiles,default);
+                    else await queries.GetActiveSourceProfilesAsync("perf", 0,profiles,default);
                     var sql = capture.CommandText!;
                     var parameters = capture.Parameters!.ToArray();
                     if (batch > 1) parameters[1] = profiles;
@@ -203,7 +204,7 @@ public sealed partial class ActivityPostgresTests
             builder.EnableParameterLogging();
             await using var measured = builder.Build();
             var queries = new PlaceQueries(measured);
-            var rules = new PlacementActivityRules("p100000","p50000",false,false,true,false);
+            var rules = new PlacementActivityRules("p100000","p50000",false,false,false,0);
             var calls = new Dictionary<string,Func<Task>>
             {
                 ["classic"] = async () => { await queries.GetOpenPlacesByMpPrefixAsync("perf",1,"00000001",2,1,50,default,rules); },
@@ -224,17 +225,11 @@ public sealed partial class ActivityPostgresTests
                     await invoke();
                     var sql = capture.CommandText!.TrimEnd().TrimEnd(';');
                     var parameters = capture.Parameters!.ToArray();
-                    var alternative = System.Text.RegularExpressions.Regex.Replace(sql,
-                        @"EXISTS \(\s*SELECT 1 FROM public\.places activity_invite\s*WHERE activity_invite\.marketing_addr = (\w+)\.marketing_addr\s*AND activity_invite\.structure_number = 0\s*AND activity_invite\.place_number = 1\s*AND activity_invite\.profile_addr = \1\.profile_addr\s*AND activity_invite\.is_active = true\s*\)",
-                        m => $"{m.Groups[1].Value}.profile_addr IN (SELECT profile_addr FROM public.places WHERE marketing_addr=$1 AND structure_number=0 AND place_number=1 AND is_active=true)");
-                    if (sql == alternative)
-                    {
-                        // Production now uses membership. Reconstruct the former EXISTS
-                        // only for the diagnostic comparison, keeping the same parameters.
-                        sql = System.Text.RegularExpressions.Regex.Replace(alternative,
-                            @"(\w+)\.profile_addr IN \(\s*SELECT activity_invite\.profile_addr FROM public\.places activity_invite\s*WHERE activity_invite\.marketing_addr = \$1\s*AND activity_invite\.structure_number = 0\s*AND activity_invite\.place_number = 1\s*AND activity_invite\.is_active = true\s*\)",
-                            m => $"EXISTS (SELECT 1 FROM public.places activity_invite WHERE activity_invite.marketing_addr={m.Groups[1].Value}.marketing_addr AND activity_invite.structure_number=0 AND activity_invite.place_number=1 AND activity_invite.profile_addr={m.Groups[1].Value}.profile_addr AND activity_invite.is_active=true)");
-                    }
+                    var alternative = sql;
+                    // Compare the supported external-source IN with an equivalent EXISTS.
+                    sql = System.Text.RegularExpressions.Regex.Replace(alternative,
+                        @"(\w+)\.profile_addr IN \(\s*SELECT activity_source\.profile_addr FROM public\.places activity_source\s*WHERE activity_source\.marketing_addr=(\$\d+)\s*AND activity_source\.structure_number=(\$\d+)\s*AND activity_source\.place_number=1 AND activity_source\.is_active=true\)",
+                        m => $"EXISTS (SELECT 1 FROM public.places activity_source WHERE activity_source.marketing_addr={m.Groups[2].Value} AND activity_source.structure_number={m.Groups[3].Value} AND activity_source.place_number=1 AND activity_source.profile_addr={m.Groups[1].Value}.profile_addr AND activity_source.is_active=true)");
                     Assert.NotEqual(sql,alternative);
                     await using var connection = await measured.OpenConnectionAsync();
                     var compare = $"WITH expected AS ({sql}), alternative AS ({alternative}) SELECT NOT EXISTS ((SELECT * FROM expected EXCEPT ALL SELECT * FROM alternative) UNION ALL (SELECT * FROM alternative EXCEPT ALL SELECT * FROM expected))";

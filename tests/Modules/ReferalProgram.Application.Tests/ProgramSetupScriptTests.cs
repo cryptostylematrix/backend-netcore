@@ -78,7 +78,7 @@ public sealed class ProgramSetupScriptTests
     }
 
     [Fact]
-    public void Mini_setup_configures_groups_and_only_mini_10_immediate_activation()
+    public void Mini_setup_configures_groups_and_invite_spillover_policy()
     {
         var sql = ReadNormalized("setup_mini_program.sql");
         Assert.DoesNotContain("activation_sync", sql, StringComparison.Ordinal);
@@ -94,10 +94,13 @@ public sealed class ProgramSetupScriptTests
             $"WHEN v_structure_number BETWEEN {group.First} AND {group.Last} THEN '{group.Name}'"))
             + " ELSE NULL END";
         Assert.Contains(expectedGroups, sql, StringComparison.Ordinal);
-        Assert.Contains(
-            "CASE WHEN v_structure_number BETWEEN 1 AND 3 "
-            + "THEN '{\"set_active_on_activation\":true}'::jsonb "
-            + "ELSE NULL END", sql, StringComparison.Ordinal);
+        Assert.Contains("CASE WHEN v_structure_number = 0", sql);
+        Assert.Contains("\"require_marketing_place_to_invite\":true", sql);
+        Assert.Contains("\"allow_inviting_without_places\":false", sql);
+        Assert.Contains("\"allow_inviting_with_places\":true", sql);
+        Assert.Contains("\"activity_source\":\"group_root\"", sql);
+        Assert.Contains("\"allow_spillover_children\":false", sql);
+
     }
 
     [Fact]
@@ -106,7 +109,7 @@ public sealed class ProgramSetupScriptTests
         var sql = ReadNormalized("set_mini_activation_groups.sql");
         Assert.Contains("WHERE structure.marketing_addr = v_marketing_addr", sql, StringComparison.Ordinal);
         Assert.Contains("IF v_updated_rows <> 17", sql, StringComparison.Ordinal);
-        Assert.Contains("THEN (COALESCE(structure.activity, '{}'::jsonb) - 'activation_sync')", sql,
+        Assert.Contains("ELSE (COALESCE(structure.activity, '{}'::jsonb) - 'activation_sync')", sql,
             StringComparison.Ordinal);
         Assert.Contains("WHEN jsonb_typeof(structure.activity) = 'object' THEN structure.activity - 'activation_sync' ELSE structure.activity",
             sql, StringComparison.Ordinal);

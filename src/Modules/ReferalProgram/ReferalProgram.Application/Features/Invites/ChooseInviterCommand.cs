@@ -1,4 +1,6 @@
 using Common.Domain;
+using ReferalProgram.Application.Services;
+using System.Text.Json;
 using ReferalProgram.Application.Mappings;
 using ReferalProgram.Core.PlaceAggregate;
 
@@ -58,18 +60,33 @@ internal sealed class ChooseInviterCommandHandler(
             if (existingInvite is not null)
                 return Result<CommandResponse>.Error("Invite is already created.");
 
-            if (!inviter.IsActive)
-            {
-                var settings = structure.Activity is { } activity
+            var sourceStructure = await ActivitySourceResolver.ResolveAsync(structure, placeQueries, cancellationToken);
+            var inviterActive = await ActivitySourceResolver.IsActiveAsync(inviter, sourceStructure,
+                placeQueries, new Dictionary<string, bool>(StringComparer.Ordinal), cancellationToken);
+            InviteActivitySettings? settings = null;
+            if (!inviterActive || (structure.Activity is { ValueKind: JsonValueKind.Object } configured
+                && configured.TryGetProperty("require_marketing_place_to_invite", out _)))
+                settings = structure.Activity is { } activity
                     ? (InviteActivitySettings)ActivitySettings.Parse(activity, StructureNumber)
                     : new InviteActivitySettings();
-                var rules = settings.WhenInactive;
+
+            bool? hasPlaces = null;
+            if (settings?.RequireMarketingPlaceToInvite == true)
+            {
+                hasPlaces = await placeQueries.HasProfilePlacesOutsideInviteStructureAsync(
+                    request.MarketingAddr, request.InviterAddr, cancellationToken);
+                if (!hasPlaces.Value)
+                    return Result<CommandResponse>.Error("Inviter has no marketing places.");
+            }
+            if (!inviterActive)
+            {
+                var rules = settings!.WhenInactive;
                 var canInvite = false;
                 if (rules.AllowInvitingWithPlaces || rules.AllowInvitingWithoutPlaces)
                 {
-                    var hasPlaces = await placeQueries.HasProfilePlacesOutsideInviteStructureAsync(
+                    hasPlaces ??= await placeQueries.HasProfilePlacesOutsideInviteStructureAsync(
                         request.MarketingAddr, request.InviterAddr, cancellationToken);
-                    canInvite = hasPlaces
+                    canInvite = hasPlaces.Value
                         ? rules.AllowInvitingWithPlaces
                         : rules.AllowInvitingWithoutPlaces;
                 }

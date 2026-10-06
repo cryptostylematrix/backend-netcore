@@ -32,6 +32,15 @@ public sealed class ActivitySettingsTests
     }
 
     [Theory]
+    [InlineData("{\"require_marketing_place_to_invite\":true}")]
+    [InlineData("{\"type\":\"marketing\",\"require_marketing_place_to_invite\":true}")]
+    [InlineData("{\"activity_source\":\"place\"}")]
+    [InlineData("{\"type\":\"marketing\",\"activity_source\":null}")]
+    [InlineData("{\"type\":\"marketing\",\"activity_source\":\"other\"}")]
+    [InlineData("{\"type\":\"marketing\",\"activity_source\":\"invite\",\"spillover\":{}}")]
+    [InlineData("{\"type\":\"marketing\",\"when_inactive\":{\"allow_spillover_children\":true}}")]
+    [InlineData("{\"type\":\"marketing\",\"spillover\":{\"require_active_invite\":true}}")]
+    [InlineData("{\"type\":\"marketing\",\"spillover\":{\"require_active_invite\":false}}")]
     [InlineData("null")]
     [InlineData("[]")]
     [InlineData("true")]

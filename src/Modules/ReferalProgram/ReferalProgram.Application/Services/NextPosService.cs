@@ -48,7 +48,8 @@ public sealed class NextPosService(
         PlacementActivityRules? activityRules = null;
         // Legacy activity JSON only governed activation, never placement.
         if (structureNumber > 0 && structure.Activity is { ValueKind: JsonValueKind.Object } activity
-            && (activity.TryGetProperty("type", out _)
+            && (activity.TryGetProperty("activity_source", out _)
+                || activity.TryGetProperty("type", out _)
                 || activity.TryGetProperty("when_inactive", out _)
                 || activity.TryGetProperty("spillover", out _)
                 || activity.TryGetProperty("preserve_status_on_activation", out _)))
@@ -56,14 +57,15 @@ public sealed class NextPosService(
             var settings = (MarketingActivitySettings)ActivitySettings.Parse(activity, structureNumber);
             var rules = settings.WhenInactive;
             var spillover = settings.Spillover;
-            if (rules.AllowOwnChildren || rules.CheckManualPlacement
-                || spillover.AllowInactivePlace || spillover.RequireActiveInvite)
+            var sourceStructure = await ActivitySourceResolver.ResolveAsync(structure, placeQueries, ct);
+            if (settings.ActivitySource is not null || rules.AllowOwnChildren || rules.CheckManualPlacement
+                || spillover.AllowInactivePlace)
             {
                 var invite = string.IsNullOrWhiteSpace(profileAddr) ? null
                     : await placeQueries.GetPlaceAsync(marketingAddr, 0, profileAddr, 1, ct);
                 activityRules = new PlacementActivityRules(profileAddr, invite?.ParentProfileAddr,
-                    rules.AllowOwnChildren, spillover.AllowInactivePlace,
-                    spillover.RequireActiveInvite, rules.CheckManualPlacement);
+                    rules.AllowOwnChildren, settings.ActivitySource is null ? spillover.AllowInactivePlace : rules.AllowSpilloverChildren,
+                    rules.CheckManualPlacement, sourceStructure);
             }
         }
 

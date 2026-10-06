@@ -22,18 +22,17 @@ public sealed partial class ActivityPostgresTests
             foreach (var relationship in new[] { "own", "invited", "spillover", "system" })
             foreach (var own in new[] { false, true })
             foreach (var spill in new[] { false, true })
-            foreach (var requireInvite in new[] { false, true })
+            foreach (var useInviteSource in new[] { false, true })
             {
                 var child = relationship switch { "own" => "inviter", "invited" => "member", "system" => null, _ => "unrelated" };
-                var rules = new PlacementActivityRules(child, relationship == "invited" ? "inviter" : null, own, spill, requireInvite, false);
+                var rules = new PlacementActivityRules(child, relationship == "invited" ? "inviter" : null, own, spill, false, useInviteSource ? (byte)0 : null);
                 var context = new PositionAlgorithmStrategyContext("program", 1, 3, root, 0, true, 1, [], 2, 10, rules);
-                var expected = (active || (relationship is "own" or "invited" ? own : spill))
-                    && (relationship is "own" or "invited" || !requireInvite || inviteActive);
+                var expected = ((useInviteSource ? inviteActive : active) || (relationship is "own" or "invited" ? own : spill));
                 foreach (var algorithm in Algorithms(db.Places))
                 {
                     var position = await algorithm.FindNextAsync(context, default);
                     Assert.True((position is not null) == expected,
-                        $"{algorithm.Name}: {relationship}, active={active}, invite={inviteActive}, own={own}, spill={spill}, require={requireInvite}");
+                        $"{algorithm.Name}: {relationship}, active={active}, invite={inviteActive}, own={own}, spill={spill}, require={useInviteSource}");
                     if (position is not null) Assert.Equal("inviter", position.ProfileAddr);
                 }
             }
@@ -49,7 +48,7 @@ public sealed partial class ActivityPostgresTests
         await db.InsertPlace(4, "program", 1, "owner", null, true);
         await db.InsertPlace(5, "program", 1, "inviter", 4, true);
         var root = (await db.Places.GetPlaceAsync("program", 1, "owner", 1, default))!;
-        var rules = new PlacementActivityRules("unrelated", null, false, false, true, false);
+        var rules = new PlacementActivityRules("unrelated", null, false, false, false, 0);
         var context = new PositionAlgorithmStrategyContext("program", 1, 3, root, 0, true, 1, [], 2, 10, rules);
         foreach (var algorithm in Algorithms(db.Places))
             Assert.Equal("inviter", (await algorithm.FindNextAsync(context, default))?.ProfileAddr);
@@ -68,7 +67,7 @@ public sealed partial class ActivityPostgresTests
         await db.Reset(null);
         await db.InsertPlace(4, "program", 1, "inviter", null, false);
         var root = (await db.Places.GetPlaceAsync("program", 1, "inviter", 1, default))!;
-        var rules = new PlacementActivityRules("member", "inviter", true, true, false, true);
+        var rules = new PlacementActivityRules("member", "inviter", true, true, true);
         var context = new PositionAlgorithmStrategyContext("program", 1, 3, root, 0, true, 1, [], 2, 10, rules);
         foreach (var algorithm in Algorithms(db.Places))
             Assert.Null(await algorithm.FindNextAsync(context with { RootProfileLockMps = [root.Mp + "00000001"] }, default));
@@ -86,13 +85,13 @@ public sealed partial class ActivityPostgresTests
         await db.InsertPlace(4, "program", 1, "inviter", null, false);
         var resolver = new RequestedPositionResolver(db.Places);
         var position = new RequestedPosition(1, "inviter", 1, 1);
-        var rules = new PlacementActivityRules("unrelated", null, false, false, true, false);
+        var rules = new PlacementActivityRules("unrelated", null, false, false, false, 0);
         Assert.True((await resolver.ResolveAsync("program", 1, 3, 0, position, null, [], default, rules)).IsSuccess);
-        rules = rules with { CheckManualPlacement = true, AllowInactiveSpillover = true };
+        rules = rules with { CheckManualPlacement = true };
         Assert.False((await resolver.ResolveAsync("program", 1, 3, 0, position, null, [], default, rules)).IsSuccess);
         await db.Sql("UPDATE places SET is_active=true WHERE id=2");
         Assert.True((await resolver.ResolveAsync("program", 1, 3, 0, position, null, [], default, rules)).IsSuccess);
-        var activeProfiles = await db.Places.GetActiveInviteProfilesAsync("program", ["inviter", "member"], default);
+        var activeProfiles = await db.Places.GetActiveSourceProfilesAsync("program", 0, ["inviter", "member"], default);
         Assert.Contains("inviter", activeProfiles);
         Assert.DoesNotContain("member", activeProfiles);
         Assert.False((await resolver.ResolveAsync("program", 1, 3, 0, position, null, ["00000004"], default, rules)).IsSuccess);

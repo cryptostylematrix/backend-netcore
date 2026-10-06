@@ -37,7 +37,7 @@ public sealed class StructureCompressionServiceTests
                 ["inactive"] = 100
             }),
             new PositionAlgorithmConfigurationParser(),
-            unitOfWork);
+            unitOfWork, new Queries());
 
         var error = await service.CompressAsync("marketing", 1, default);
 
@@ -75,7 +75,7 @@ public sealed class StructureCompressionServiceTests
             new RankQueries(),
             new VolumeQueries(new Dictionary<string, uint>()),
             new PositionAlgorithmConfigurationParser(),
-            new UnitOfWork());
+            new UnitOfWork(), new Queries());
 
         var error = await service.CompressAsync("marketing", 1, default);
 
@@ -103,7 +103,7 @@ public sealed class StructureCompressionServiceTests
             when_inactive = new { keep_on_compression = keep } });
         var service = new StructureCompressionService(repository, new LockRepository(),
             new StructureQueries(activity, width: 1), new RankQueries(),
-            new VolumeQueries(new Dictionary<string, uint>()), new PositionAlgorithmConfigurationParser(), unit);
+            new VolumeQueries(new Dictionary<string, uint>()), new PositionAlgorithmConfigurationParser(), unit, new Queries());
         var error = await service.CompressAsync("marketing", 1, default);
         Assert.Equal(activeRoot || keep, error is null);
         Assert.Equal(activeRoot, root.IsActive);
@@ -137,7 +137,7 @@ public sealed class StructureCompressionServiceTests
         var activity = JsonSerializer.Deserialize<JsonElement>("{\"type\":\"marketing\",\"when_inactive\":{\"keep_on_compression\":true}}");
         var service = new StructureCompressionService(repository, new LockRepository(),
             new StructureQueries(activity, width: 1), new RankQueries(),
-            new VolumeQueries(new Dictionary<string, uint>()), new PositionAlgorithmConfigurationParser(), unit);
+            new VolumeQueries(new Dictionary<string, uint>()), new PositionAlgorithmConfigurationParser(), unit, new Queries());
         var error = await service.CompressAsync("marketing", 1, default);
         Assert.NotNull(error);
         Assert.Contains("found no position", error);
@@ -147,6 +147,8 @@ public sealed class StructureCompressionServiceTests
         Assert.Equal(root.Id, child.ParentId);
         Assert.False(terminal.IsActive);
     }
+
+    private sealed class Queries : PlaceQueriesStub { }
 
     private static Place Place(
         int id,
