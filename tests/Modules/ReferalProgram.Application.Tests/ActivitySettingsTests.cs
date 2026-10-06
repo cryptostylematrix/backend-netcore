@@ -74,13 +74,9 @@ public sealed class ActivitySettingsTests
         Assert.True(Parse($"{{\"type\":\"invite\",\"when_inactive\":{{\"{property}\":true}}}}", 0).HasPendingRules());
 
     [Theory]
-    [InlineData("when_inactive", "allow_own_children")]
-    [InlineData("when_inactive", "check_manual_placement")]
     [InlineData("when_inactive", "allow_as_bonus_recipient")]
     [InlineData("when_inactive", "allow_as_clone_recipient")]
     [InlineData("when_inactive", "keep_on_compression")]
-    [InlineData("spillover", "allow_inactive_place")]
-    [InlineData("spillover", "require_active_invite")]
     public void Recognizes_each_marketing_rule(string block, string property) =>
         Assert.True(Parse($"{{\"type\":\"marketing\",\"{block}\":{{\"{property}\":true}}}}", 1).HasPendingRules());
 

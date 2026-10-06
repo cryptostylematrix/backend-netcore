@@ -22,4 +22,4 @@ port_binding="$(docker port "$container_id" 5432/tcp)"
 export ACTIVITY_TEST_POSTGRES_PORT="${port_binding##*:}"
 cd "$repo_dir"
 dotnet test tests/Modules/ReferalProgram.Application.Tests/ReferalProgram.Application.Tests.csproj \
-  --filter FullyQualifiedName~ActivityPostgresTests "$@"
+  --filter "${ACTIVITY_TEST_FILTER:-FullyQualifiedName~ActivityPostgresTests}" "$@"

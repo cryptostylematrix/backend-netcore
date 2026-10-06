@@ -11,6 +11,59 @@ public sealed class PlaceQueries(
     [FromKeyedServices("Programs")] NpgsqlDataSource dataSource)
     : IPlaceQueries, IPositionCandidateQueries
 {
+    public async Task<IReadOnlySet<string>> GetActiveInviteProfilesAsync(
+        string marketingAddr, IReadOnlyCollection<string> profileAddrs, CancellationToken cancellationToken)
+    {
+        if (profileAddrs.Count == 0)
+            return new HashSet<string>();
+        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        var profiles = await connection.QueryAsync<string>(new CommandDefinition("""
+            SELECT profile_addr FROM public.places
+            WHERE marketing_addr = @marketingAddr AND structure_number = 0
+              AND place_number = 1 AND is_active = true AND profile_addr = ANY(@profiles)
+            """, new { marketingAddr, profiles = profileAddrs.ToArray() }, cancellationToken: cancellationToken));
+        return profiles.ToHashSet(StringComparer.Ordinal);
+    }
+
+    private static DynamicParameters ActivityParameters(object parameters, PlacementActivityRules? activity)
+    {
+        var result = new DynamicParameters(parameters);
+        if (activity?.ChangesAutomaticEligibility != true)
+            return result;
+        result.Add("activityChild", activity.ChildProfileAddr, System.Data.DbType.String);
+        result.Add("activityInviter", activity.InviterProfileAddr, System.Data.DbType.String);
+        result.Add("allowOwn", activity.AllowOwnChildren);
+        result.Add("allowSpillover", activity.AllowInactiveSpillover);
+        result.Add("requireInvite", activity.RequireActiveInvite);
+        return result;
+    }
+
+    private static string ApplyActivityFilter(string sql, PlacementActivityRules? activity)
+    {
+        // Leave the legacy SQL unchanged when no automatic activity rule is enabled.
+        if (activity?.ChangesAutomaticEligibility != true)
+            return sql;
+        return System.Text.RegularExpressions.Regex.Replace(sql,
+            @"\b(?:(scoped|level_place)\.)?is_active = true", match =>
+            {
+                var alias = match.Groups[1].Success ? match.Groups[1].Value : "places";
+                var own = $"({alias}.profile_addr IS NOT NULL AND @activityChild IS NOT NULL "
+                    + $"AND ({alias}.profile_addr = @activityChild OR {alias}.profile_addr = @activityInviter))";
+                return $"""
+                    (
+                        ({alias}.is_active = true OR CASE WHEN {own} THEN @allowOwn ELSE @allowSpillover END)
+                        AND (NOT @requireInvite OR {own} OR {alias}.profile_addr IS NULL OR {alias}.profile_addr IN (
+                            SELECT activity_invite.profile_addr FROM public.places activity_invite
+                            WHERE activity_invite.marketing_addr = @marketingAddr
+                              AND activity_invite.structure_number = 0
+                              AND activity_invite.place_number = 1
+                              AND activity_invite.is_active = true
+                        ))
+                    )
+                    """;
+            });
+    }
+
     private const string PlaceSelectSql = """
         SELECT
             id                    AS "Id",
@@ -402,7 +455,7 @@ public sealed class PlaceQueries(
         byte width,
         uint profiledWidthLimit,
         IReadOnlyCollection<string> lockMps,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, PlacementActivityRules? activity = null)
     {
         var sql = """
             WITH scoped AS MATERIALIZED
@@ -435,54 +488,34 @@ public sealed class PlaceQueries(
                 FROM scoped
                 WHERE scoped.profile_addr IS NOT NULL
             ),
+            level_stats AS MATERIALIZED
+            (
+                SELECT
+                    level_place.deep,
+                    COUNT(*)::bigint AS profiled_count,
+                    MIN(level_place.profiled_child_count) FILTER (
+                        WHERE level_place.is_active = true
+                          AND level_place.kind <> 2
+                          AND (@width = 0 OR level_place.filling < @width)
+                    ) AS minimum_profiled_child_count
+                FROM profiled_scoped level_place
+                GROUP BY level_place.deep
+            ),
             eligible AS
             (
                 SELECT
                     scoped.*,
-                    target_level.profiled_count AS target_level_profiled_count,
-                    current_level.profiled_count AS current_level_profiled_count,
-                    ARRAY(
-                        SELECT
-                        (
-                            SELECT COUNT(*)::bigint
-                            FROM scoped descendant
-                            WHERE descendant.profile_addr IS NOT NULL
-                              AND descendant.mp LIKE
-                                  left(scoped.mp, path_length) || '%'
-                        )
-                        FROM generate_series(
-                            char_length(@rootMp) + 8,
-                            char_length(scoped.mp),
-                            8
-                        ) AS path(path_length)
-                        ORDER BY path_length
-                    ) AS branch_load
+                    COALESCE(target_level.profiled_count, 0) AS target_level_profiled_count,
+                    current_level.profiled_count AS current_level_profiled_count
                 FROM profiled_scoped scoped
-                CROSS JOIN LATERAL
-                (
-                    SELECT
-                        COUNT(*)::bigint AS profiled_count,
-                        MIN(level_place.profiled_child_count) FILTER (
-                            WHERE level_place.is_active = true
-                              AND level_place.kind <> 2
-                              AND (@width = 0 OR level_place.filling < @width)
-                        ) AS minimum_profiled_child_count
-                    FROM profiled_scoped level_place
-                    WHERE level_place.deep = scoped.deep
-                ) current_level
-                CROSS JOIN LATERAL
-                (
-                    SELECT COUNT(*)::bigint AS profiled_count
-                    FROM scoped level_place
-                    WHERE level_place.profile_addr IS NOT NULL
-                      AND level_place.deep = scoped.deep + 1
-                ) target_level
+                JOIN level_stats current_level ON current_level.deep = scoped.deep
+                LEFT JOIN level_stats target_level ON target_level.deep = scoped.deep + 1
                 WHERE scoped.profile_addr IS NOT NULL
                   AND scoped.is_active = true
                   AND scoped.kind <> 2
                   AND (@width = 0 OR scoped.filling < @width)
                   AND (
-                      target_level.profiled_count < GREATEST(
+                      COALESCE(target_level.profiled_count, 0) < GREATEST(
                           @profiledWidthLimit,
                           current_level.profiled_count
                       )
@@ -506,6 +539,8 @@ public sealed class PlaceQueries(
             (
                 SELECT *
                 FROM eligible
+                -- Within each depth, the outside-in horizontal rank is unique.
+                -- Subsequent branch-load calculations cannot break a tie.
                 ORDER BY
                     deep ASC,
                     profiled_child_count ASC,
@@ -514,7 +549,6 @@ public sealed class PlaceQueries(
                             THEN horizontal_index * 2 - 1
                         ELSE (horizontal_count - horizontal_index + 1) * 2
                     END ASC,
-                    branch_load ASC,
                     mp ASC,
                     id ASC
                 LIMIT 1
@@ -524,8 +558,8 @@ public sealed class PlaceQueries(
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
         return await connection.QuerySingleOrDefaultAsync<PlaceResponse>(
             new CommandDefinition(
-                sql,
-                new
+                ApplyActivityFilter(sql, activity),
+                ActivityParameters(new
                 {
                     marketingAddr,
                     structureNumber = (short)structureNumber,
@@ -534,7 +568,7 @@ public sealed class PlaceQueries(
                     width = (long)width,
                     profiledWidthLimit = (long)profiledWidthLimit,
                     lockMps = lockMps.ToArray()
-                },
+                }, activity),
                 cancellationToken: cancellationToken));
     }
 
@@ -544,7 +578,7 @@ public sealed class PlaceQueries(
         string rootMp,
         byte width,
         IReadOnlyCollection<string> lockMps,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, PlacementActivityRules? activity = null)
     {
         var sql = """
             WITH scoped AS MATERIALIZED
@@ -627,15 +661,15 @@ public sealed class PlaceQueries(
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
         return await connection.QuerySingleOrDefaultAsync<PlaceResponse>(
             new CommandDefinition(
-                sql,
-                new
+                ApplyActivityFilter(sql, activity),
+                ActivityParameters(new
                 {
                     marketingAddr,
                     structureNumber = (short)structureNumber,
                     mpPrefix = rootMp + "%",
                     width = (long)width,
                     lockMps = lockMps.ToArray()
-                },
+                }, activity),
                 cancellationToken: cancellationToken));
     }
 
@@ -646,7 +680,7 @@ public sealed class PlaceQueries(
         byte width,
         byte depthSpread,
         IReadOnlyCollection<string> lockMps,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, PlacementActivityRules? activity = null)
     {
         var sql = """
             WITH candidates AS
@@ -702,8 +736,8 @@ public sealed class PlaceQueries(
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
         var places = await connection.QueryAsync<PlaceResponse>(
             new CommandDefinition(
-                sql,
-                new
+                ApplyActivityFilter(sql, activity),
+                ActivityParameters(new
                 {
                     marketingAddr,
                     structureNumber = (short)structureNumber,
@@ -711,7 +745,7 @@ public sealed class PlaceQueries(
                     width = (long)width,
                     depthSpread = (long)depthSpread,
                     lockMps = lockMps.ToArray()
-                },
+                }, activity),
                 cancellationToken: cancellationToken));
 
         return places.AsList();
@@ -725,7 +759,7 @@ public sealed class PlaceQueries(
         bool profiledPlacesPrioritized,
         byte depthSpread,
         IReadOnlyCollection<string> lockMps,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, PlacementActivityRules? activity = null)
     {
         var sql = """
             WITH candidates AS
@@ -770,8 +804,8 @@ public sealed class PlaceQueries(
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
         return await connection.QuerySingleOrDefaultAsync<PlaceResponse>(
             new CommandDefinition(
-                sql,
-                new
+                ApplyActivityFilter(sql, activity),
+                ActivityParameters(new
                 {
                     marketingAddr,
                     structureNumber = (short)structureNumber,
@@ -780,7 +814,7 @@ public sealed class PlaceQueries(
                     profiledPlacesPrioritized,
                     depthSpread = (long)depthSpread,
                     lockMps = lockMps.ToArray()
-                },
+                }, activity),
                 cancellationToken: cancellationToken));
     }
 
@@ -791,7 +825,7 @@ public sealed class PlaceQueries(
         byte width,
         int page,
         int pageSize,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, PlacementActivityRules? activity = null)
     {
         var safePage = page > 0 ? page : 1;
         var safePageSize = pageSize > 0 ? pageSize : 50;
@@ -811,8 +845,8 @@ public sealed class PlaceQueries(
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
         var places = await connection.QueryAsync<PlaceResponse>(
             new CommandDefinition(
-                sql,
-                new
+                ApplyActivityFilter(sql, activity),
+                ActivityParameters(new
                 {
                     marketingAddr,
                     structureNumber = (short)structureNumber,
@@ -820,7 +854,7 @@ public sealed class PlaceQueries(
                     width = (long)width,
                     limit = safePageSize,
                     offset
-                },
+                }, activity),
                 cancellationToken: cancellationToken));
 
         return places.AsList();
@@ -911,13 +945,17 @@ public sealed class PlaceQueries(
             ? null
             : profileAddr;
 
-        const string sql = PlaceSelectSql + "\n" + """
+        var sql = PlaceSelectSql + "\n" + """
             WHERE marketing_addr = @marketingAddr
               AND structure_number = @structureNumber
-              AND profile_addr IS NOT DISTINCT FROM @profileAddr
+              AND /* profile identity */
               AND place_number = @placeNumber
             LIMIT 1;
             """;
+        // Separate null/system identities without preventing an indexed equality lookup.
+        sql = sql.Replace("/* profile identity */", profileAddr is null
+            ? "profile_addr IS NULL"
+            : "profile_addr = @profileAddr");
 
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
 

@@ -24,7 +24,7 @@ public sealed class EmptyParentPositionAlgorithmStrategy(
                 context.Width,
                 page,
                 pageSize,
-                cancellationToken);
+                cancellationToken, context.Activity);
             var parent = candidates
                 .Where(place => place.Filling == 0
                     && !context.IsLocked(place.Mp + "00000001"))

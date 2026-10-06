@@ -159,6 +159,19 @@ internal sealed class GetTreeQueryHandler(
             .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
         rowsByMp[selected.Mp] = selected;
 
+        if (buyDecision.Activity is { CheckManualPlacement: true, RequireActiveInvite: true })
+        {
+            var profiles = rowsByMp.Values.Append(selectedParent)
+                .Where(place => place?.ProfileAddr is not null)
+                .Select(place => place!.ProfileAddr!).Distinct(StringComparer.Ordinal).ToArray();
+            var activeInvites = await placeQueries.GetActiveInviteProfilesAsync(
+                request.MarketingAddr, profiles, ct);
+            actionContext = actionContext with
+            {
+                BuyDecision = buyDecision with { ActiveInviteProfiles = activeInvites }
+            };
+        }
+
         var referralVolumes = await profileVolumeQueries.GetReferralVolumesAsync(
             request.MarketingAddr,
             request.StructureNumber,

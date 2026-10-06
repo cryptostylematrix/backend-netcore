@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace ReferalProgram.Application.Services;
 
 public sealed class NextPosService(
@@ -6,7 +8,8 @@ public sealed class NextPosService(
     IPositionGroupSelector groupSelector,
     IPositionRootResolver positionRootResolver,
     IPositionAlgorithmResolver algorithmResolver,
-    IPositionLockQueries lockQueries) : INextPosService
+    IPositionLockQueries lockQueries,
+    IPlaceQueries placeQueries) : INextPosService
 {
     public async Task<NextPosResponse?> GetNextPosAsync(
         string marketingAddr,
@@ -41,6 +44,28 @@ public sealed class NextPosService(
 
         if (structure is null)
             return null;
+
+        PlacementActivityRules? activityRules = null;
+        // Legacy activity JSON only governed activation, never placement.
+        if (structureNumber > 0 && structure.Activity is { ValueKind: JsonValueKind.Object } activity
+            && (activity.TryGetProperty("type", out _)
+                || activity.TryGetProperty("when_inactive", out _)
+                || activity.TryGetProperty("spillover", out _)
+                || activity.TryGetProperty("preserve_status_on_activation", out _)))
+        {
+            var settings = (MarketingActivitySettings)ActivitySettings.Parse(activity, structureNumber);
+            var rules = settings.WhenInactive;
+            var spillover = settings.Spillover;
+            if (rules.AllowOwnChildren || rules.CheckManualPlacement
+                || spillover.AllowInactivePlace || spillover.RequireActiveInvite)
+            {
+                var invite = string.IsNullOrWhiteSpace(profileAddr) ? null
+                    : await placeQueries.GetPlaceAsync(marketingAddr, 0, profileAddr, 1, ct);
+                activityRules = new PlacementActivityRules(profileAddr, invite?.ParentProfileAddr,
+                    rules.AllowOwnChildren, spillover.AllowInactivePlace,
+                    spillover.RequireActiveInvite, rules.CheckManualPlacement);
+            }
+        }
 
         var config = configurationParser.Parse(structure.PosAlgo, operation);
 
@@ -79,7 +104,8 @@ public sealed class NextPosService(
                 group.DepthSpread,
                 lockMps,
                 group.CutFactor,
-                group.EffectiveProfiledWidthLimit));
+                group.EffectiveProfiledWidthLimit,
+                activityRules));
     }
 
     public Task<NextPosResponse?> FindNextAsync(

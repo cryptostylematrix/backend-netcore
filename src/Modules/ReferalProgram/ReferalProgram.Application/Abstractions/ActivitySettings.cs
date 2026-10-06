@@ -79,10 +79,8 @@ public sealed class MarketingActivitySettings : ActivitySettings
     [JsonPropertyName("spillover")]
     public SpilloverActivitySettings Spillover { get; init; } = new();
 
-    public override bool HasPendingRules() => WhenInactive.AllowOwnChildren
-        || WhenInactive.CheckManualPlacement || WhenInactive.AllowAsBonusRecipient
-        || WhenInactive.AllowAsCloneRecipient || WhenInactive.KeepOnCompression
-        || Spillover.AllowInactivePlace || Spillover.RequireActiveInvite;
+    public override bool HasPendingRules() => WhenInactive.AllowAsBonusRecipient
+        || WhenInactive.AllowAsCloneRecipient || WhenInactive.KeepOnCompression;
 }
 
 public abstract class InactiveRecipientSettings

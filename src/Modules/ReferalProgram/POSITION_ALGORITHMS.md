@@ -174,7 +174,10 @@ Eligible parents are considered in breadth-first order. At the same depth,
 parents with fewer direct profiled children win. Parents with the same number
 of profiled children are selected in chess order across the complete level:
 leftmost, rightmost, second from the left, second from the right, and so on.
-Profiled subtree load and MP order provide deterministic fallback ordering.
+The chess rank is unique within each level because it is derived from
+ROW_NUMBER ordered by MP and ID. Subtree load cannot break any remaining tie
+and is not computed. Level counts and minimum child counts are aggregated once
+per level. MP and ID remain the final deterministic ordering keys.
 This keeps the profiled structure balanced while
 ensuring that a new level never grows beyond its effective width. Profiled
 places are never placed beneath system places. The former
@@ -224,3 +227,20 @@ For an existing structure, the pgAdmin-compatible
 `Database/Scripts/set_structure_profile_frontier_algorithm.sql` script sets
 the profile-frontier and system-gap configuration by completely replacing the
 structure's existing `pos_algo` value.
+
+## Placement activity eligibility
+
+Marketing structures can configure own-child and spillover eligibility in
+`activity`; see [activity configuration](PROGRAM_PROCESSING.md#activity-configuration-rollout-stages-13).
+The candidate filter runs before algorithm ordering, pagination and chess/radar
+depth-window calculation. All seven algorithms share the same rules. Profile
+frontier also applies them when finding the minimum child count among eligible
+parents. Structural counts and horizontal positions continue to include existing
+places regardless of eligibility, preserving the topology.
+
+With no new placement settings, candidate queries retain their existing eligibility
+rules without additional invite checks. The frontier SQL is optimized independently
+of activity settings; differential PostgreSQL tests verify the previous ordering.
+Manual classic placement checks activity only when `check_manual_placement` is
+explicitly enabled. The placed profile defines own-child relationships for
+purchases, clones and reinvests; the payer does not define them.

@@ -13,7 +13,7 @@ public sealed class RequestedPositionResolver(IPlaceQueries placeQueries)
         RequestedPosition requestedPosition,
         string? requiredRootMp,
         IReadOnlyCollection<string> lockMps,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, PlacementActivityRules? activity = null)
     {
         if (requestedPosition.StructureNumber != structureNumber)
             return Denied("position_structure_mismatch");
@@ -52,6 +52,20 @@ public sealed class RequestedPositionResolver(IPlaceQueries placeQueries)
                 requestedMp.StartsWith(lockMp, StringComparison.Ordinal)))
         {
             return Denied("position_is_locked");
+        }
+
+        if (activity?.CheckManualPlacement == true)
+        {
+            var inviteActive = false;
+            if (activity.RequireActiveInvite && parent.ProfileAddr is not null
+                && !activity.IsOwnChild(parent.ProfileAddr))
+            {
+                var invite = await placeQueries.GetPlaceAsync(
+                    marketingAddr, 0, parent.ProfileAddr, 1, cancellationToken);
+                inviteActive = invite?.IsActive == true;
+            }
+            if (!activity.Allows(parent, inviteActive, manual: true))
+                return Denied("parent_activity_disallows_placement");
         }
 
         return new RequestedPositionResolution(

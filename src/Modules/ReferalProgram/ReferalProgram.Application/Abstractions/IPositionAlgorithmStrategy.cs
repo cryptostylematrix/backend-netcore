@@ -10,7 +10,8 @@ public sealed record PositionAlgorithmStrategyContext(
     byte DepthSpread,
     string[] RootProfileLockMps,
     uint? CutFactor = null,
-    uint? ProfiledWidthLimit = null)
+    uint? ProfiledWidthLimit = null,
+    PlacementActivityRules? Activity = null)
 {
     public bool IsLocked(string mp) => RootProfileLockMps.Any(lockMp =>
         mp.StartsWith(lockMp, StringComparison.Ordinal));

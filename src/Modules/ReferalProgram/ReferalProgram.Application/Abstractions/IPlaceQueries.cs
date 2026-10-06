@@ -2,6 +2,9 @@ namespace ReferalProgram.Application.Abstractions;
 
 public interface IPlaceQueries
 {
+    Task<IReadOnlySet<string>> GetActiveInviteProfilesAsync(
+        string marketingAddr, IReadOnlyCollection<string> profileAddrs, CancellationToken cancellationToken);
+
     Task<PlaceResponse?> GetFirstPlaceAsync(
         string marketingAddr,
         byte structureNumber,
@@ -60,7 +63,7 @@ public interface IPlaceQueries
         byte width,
         byte depthSpread,
         IReadOnlyCollection<string> lockMps,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken, PlacementActivityRules? activity = null);
 
     Task<PlaceResponse?> GetFirstActiveUnfilledPlaceAsync(
         string marketingAddr,
@@ -70,7 +73,7 @@ public interface IPlaceQueries
         bool profiledPlacesPrioritized,
         byte depthSpread,
         IReadOnlyCollection<string> lockMps,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken, PlacementActivityRules? activity = null);
 
     Task<IReadOnlyList<PlaceResponse>> GetOpenPlacesByMpPrefixAsync(
         string marketingAddr,
@@ -79,7 +82,7 @@ public interface IPlaceQueries
         byte width,
         int page,
         int pageSize,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken, PlacementActivityRules? activity = null);
 
     Task<Paginated<PlaceResponse>> SearchPlacesAsync(
         string marketingAddr,

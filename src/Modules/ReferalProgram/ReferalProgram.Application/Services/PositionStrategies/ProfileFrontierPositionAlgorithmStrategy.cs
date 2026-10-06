@@ -24,7 +24,7 @@ public sealed class ProfileFrontierPositionAlgorithmStrategy(
             context.Width,
             context.ProfiledWidthLimit.Value,
             context.RootProfileLockMps,
-            cancellationToken);
+            cancellationToken, context.Activity);
 
         return parent is null ? null : BuildPosition(parent, context.PosGroup);
     }

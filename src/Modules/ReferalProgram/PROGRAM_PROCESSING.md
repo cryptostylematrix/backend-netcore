@@ -57,7 +57,7 @@ profile's first paid place in any structure greater than `0` activates its
 structure-0 invite. Once any such place exists, later paid-place creation never
 changes the invite, even if an integration command reset its activation date.
 
-### Activity configuration rollout: stages 1–2
+### Activity configuration rollout: stages 1–3
 
 Legacy activity objects remain supported unchanged, including the default
 `set_active_on_activation = true` and ignored retired `activation_sync` values.
@@ -102,13 +102,57 @@ Example allowing invitations and fallback through inactive invites:
 }
 ```
 
-Placement, spillover, recipient, and compression options remain reserved for
-later stages. Activation rejects enabled pending rules with
-`activity_rules_not_supported_yet`; the three implemented invite rules no longer
-trigger this error. Other operations retain their existing restrictions.
+Stage 3 enables marketing placement settings:
+
+```json
+{
+  "type": "marketing",
+  "when_inactive": {
+    "allow_own_children": false,
+    "check_manual_placement": false
+  },
+  "spillover": {
+    "allow_inactive_place": false,
+    "require_active_invite": false
+  }
+}
+```
+
+Own children are places belonging to the candidate parent's profile or a profile
+personally invited by it in structure 0 of the same program. Use the placed
+profile, not the payer; the same rule applies to purchases, clones and reinvests.
+Other placements, including system children, are spillover for this eligibility
+check. A system parent has no profile, so it has no own children and is exempt
+from the active-invite requirement; its own activity still matters.
+
+Automatic placement requires an active candidate unless its matching own/spillover
+permission permits inactivity. Spillover additionally requires the candidate
+owner's active structure-0 first place when `require_active_invite` is enabled.
+A missing invite does not satisfy this requirement. Own children are exempt from
+this extra invite check. These checks do not mutate dates, flags or volumes.
+
+The filter is applied before pagination, depth-window selection and sorting in
+classic, trimmed_classic, empty_parent, chess, radar, profile_frontier and
+system_gap. A rejected candidate does not hide its descendants. Width, terminal
+clones, locks and algorithm-specific constraints continue to apply.
+
+Manual classic placement retains its activity exception unless
+`check_manual_placement` is true. When enabled, it uses the same rules as automatic
+placement. Commands recheck the selected parent, and tree purchase actions use a
+batched active-invite lookup. Tree rendering does not add a query per node.
+
+Legacy activity JSON remains irrelevant to placement. With no new permissions,
+the existing candidate eligibility rules are preserved and no child-invite lookup
+is added. Frontier level statistics are aggregated once per level; its previous
+selection behavior is covered by differential PostgreSQL tests.
+No existing program data or setup script is changed automatically.
+
+Recipient and compression options remain reserved for later stages. Activation
+rejects enabled pending rules with `activity_rules_not_supported_yet`; implemented
+invite/placement rules no longer trigger this error. Compression retains its old
+in-memory rebuilding behavior and does not use the stage-3 placement permissions.
 Validation occurs when settings are parsed by their consumers, not as a database
-constraint or a configuration write API. No existing program data or setup script
-is changed automatically.
+constraint or a configuration write API.
 
 Equivalent activation examples:
 

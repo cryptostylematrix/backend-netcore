@@ -31,6 +31,11 @@ public sealed class BuyPlacePolicy(
             || parent.Kind == PlaceKinds.TerminalClone)
             return new BuyPositionDecision(false, null);
 
+        if (!decision.RequireNextPosition && decision.Activity is { CheckManualPlacement: true } activity
+            && !activity.Allows(parent, parent.ProfileAddr is not null
+                && decision.ActiveInviteProfiles.Contains(parent.ProfileAddr), manual: true))
+            return new BuyPositionDecision(false, null);
+
         var command = SelectCommand(
             decision.HasPlacesInBuyFirstPlaceStructures,
             decision.AvailableCommandTags);
@@ -149,7 +154,7 @@ public sealed class BuyPlacePolicy(
                 requestedPosition,
                 requiredRootMp: profileRoot.Mp,
                 lockMps,
-                cancellationToken);
+                cancellationToken, selection.Context.Activity);
 
             if (!resolution.IsSuccess)
                 return Denied(resolution.Reason!);
@@ -194,6 +199,7 @@ public sealed class BuyPlacePolicy(
             RequireNextPosition = !canSelectPosition,
             ViewerRootMp = profileRoot?.Mp ?? selection.Context.Root.Mp,
             HasPlacesInBuyFirstPlaceStructures = hasPlacesInBuyFirstPlaceStructures,
+            Activity = selection.Context.Activity,
             AvailableCommandTags = commandTags
         };
     }

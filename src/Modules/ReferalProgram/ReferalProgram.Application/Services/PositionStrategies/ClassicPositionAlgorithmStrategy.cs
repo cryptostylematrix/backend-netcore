@@ -31,7 +31,7 @@ public sealed class ClassicPositionAlgorithmStrategy(
                 context.Width,
                 page,
                 pageSize,
-                cancellationToken);
+                cancellationToken, context.Activity);
 
             if (openPlaces.Count == 0)
                 return null;

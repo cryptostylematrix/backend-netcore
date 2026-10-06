@@ -27,7 +27,7 @@ public sealed class DockerPostgresFactAttribute : FactAttribute
     }
 }
 
-public sealed class ActivityPostgresTests
+public sealed partial class ActivityPostgresTests
 {
     [DockerPostgresFact]
     public async Task Legacy_invitation_rules_persist_children_and_receipts_only_for_active_inviters()
@@ -170,7 +170,7 @@ public sealed class ActivityPostgresTests
         }
     }
 
-    private sealed class Database : IAsyncDisposable
+    private sealed partial class Database : IAsyncDisposable
     {
         private readonly string name = "activity_test_" + Guid.NewGuid().ToString("N");
         private readonly NpgsqlDataSource admin;

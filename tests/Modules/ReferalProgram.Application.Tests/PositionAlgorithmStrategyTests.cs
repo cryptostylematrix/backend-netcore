@@ -241,7 +241,7 @@ public sealed class PositionAlgorithmStrategyTests
         public Task<PlaceResponse?> GetProfileFrontierCandidateAsync(
             string marketingAddr, byte structureNumber, string rootMp, byte width,
             uint profiledWidthLimit, IReadOnlyCollection<string> lockMps,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken, PlacementActivityRules? activity = null)
         {
             LastProfiledWidthLimit = profiledWidthLimit;
             return Task.FromResult(ProfileFrontierCandidate);
@@ -250,13 +250,13 @@ public sealed class PositionAlgorithmStrategyTests
         public Task<PlaceResponse?> GetSystemGapCandidateAsync(
             string marketingAddr, byte structureNumber, string rootMp, byte width,
             IReadOnlyCollection<string> lockMps,
-            CancellationToken cancellationToken) =>
+            CancellationToken cancellationToken, PlacementActivityRules? activity = null) =>
             Task.FromResult(SystemGapCandidate);
 
         public Task<IReadOnlyList<PlaceResponse>> GetUnfilledPlacesInDepthWindowAsync(
             string marketingAddr, byte structureNumber, string rootMp, byte width,
             byte depthSpread, IReadOnlyCollection<string> lockMps,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken, PlacementActivityRules? activity = null)
         {
             LastDepthSpread = depthSpread;
             return Task.FromResult(DepthWindow);
@@ -266,7 +266,7 @@ public sealed class PositionAlgorithmStrategyTests
             string marketingAddr, byte structureNumber, string rootMp, byte width,
             bool profiledPlacesPrioritized, byte depthSpread,
             IReadOnlyCollection<string> lockMps,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken, PlacementActivityRules? activity = null)
         {
             LastDepthSpread = depthSpread;
             return Task.FromResult(DepthWindow.FirstOrDefault(candidate =>
@@ -277,7 +277,7 @@ public sealed class PositionAlgorithmStrategyTests
 
         public Task<IReadOnlyList<PlaceResponse>> GetOpenPlacesByMpPrefixAsync(
             string marketingAddr, byte structureNumber, string mpPrefix, byte width,
-            int page, int pageSize, CancellationToken cancellationToken) =>
+            int page, int pageSize, CancellationToken cancellationToken, PlacementActivityRules? activity = null) =>
             Task.FromResult(page == 1 ? OpenPlaces : (IReadOnlyList<PlaceResponse>)[]);
     }
 

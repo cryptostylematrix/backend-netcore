@@ -14,6 +14,8 @@ public sealed record BuyPlaceDecision(
     NextPosResponse? Position,
     string? Reason)
 {
+    public PlacementActivityRules? Activity { get; init; }
+    public IReadOnlySet<string> ActiveInviteProfiles { get; init; } = new HashSet<string>();
     public bool RequireNextPosition { get; init; }
     public string? ViewerRootMp { get; init; }
     public bool HasPlacesInBuyFirstPlaceStructures { get; init; }

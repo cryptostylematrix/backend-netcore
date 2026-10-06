@@ -278,7 +278,7 @@ public sealed class StructureCompressionService(
             byte width,
             int page,
             int pageSize,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken, PlacementActivityRules? activity = null)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var safePage = page > 0 ? page : 1;
@@ -303,22 +303,22 @@ public sealed class StructureCompressionService(
         public Task<PlaceResponse?> GetProfileFrontierCandidateAsync(
             string marketingAddr, byte structureNumber, string rootMp, byte width,
             uint profiledWidthLimit, IReadOnlyCollection<string> lockMps,
-            CancellationToken cancellationToken) => throw new NotSupportedException();
+            CancellationToken cancellationToken, PlacementActivityRules? activity = null) => throw new NotSupportedException();
 
         public Task<PlaceResponse?> GetSystemGapCandidateAsync(
             string marketingAddr, byte structureNumber, string rootMp, byte width,
             IReadOnlyCollection<string> lockMps,
-            CancellationToken cancellationToken) => throw new NotSupportedException();
+            CancellationToken cancellationToken, PlacementActivityRules? activity = null) => throw new NotSupportedException();
 
         public Task<IReadOnlyList<PlaceResponse>> GetUnfilledPlacesInDepthWindowAsync(
             string marketingAddr, byte structureNumber, string rootMp, byte width,
             byte depthSpread, IReadOnlyCollection<string> lockMps,
-            CancellationToken cancellationToken) => throw new NotSupportedException();
+            CancellationToken cancellationToken, PlacementActivityRules? activity = null) => throw new NotSupportedException();
 
         public Task<PlaceResponse?> GetFirstActiveUnfilledPlaceAsync(
             string marketingAddr, byte structureNumber, string rootMp, byte width,
             bool profiledPlacesPrioritized, byte depthSpread,
             IReadOnlyCollection<string> lockMps,
-            CancellationToken cancellationToken) => throw new NotSupportedException();
+            CancellationToken cancellationToken, PlacementActivityRules? activity = null) => throw new NotSupportedException();
     }
 }

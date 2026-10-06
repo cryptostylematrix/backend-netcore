@@ -17,7 +17,7 @@ public sealed class SystemGapPositionAlgorithmStrategy(
             context.Root.Mp,
             context.Width,
             context.RootProfileLockMps,
-            cancellationToken);
+            cancellationToken, context.Activity);
 
         if (parent is null)
             return null;

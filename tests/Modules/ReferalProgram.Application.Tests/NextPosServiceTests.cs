@@ -26,7 +26,7 @@ public sealed class NextPosServiceTests
             new PositionGroupSelector(),
             new RootResolver(root),
             new AlgorithmResolver(algorithm),
-            locks);
+            locks, new Places());
 
         var result = await service.GetNextPosAsync(
             "marketing", 4, "viewer", operation: null, CancellationToken.None);
@@ -43,6 +43,29 @@ public sealed class NextPosServiceTests
         Assert.Equal("root", locks.ProfileAddr);
     }
 
+    [Theory]
+    [InlineData("null")]
+    [InlineData("{}")]
+    [InlineData("{\"set_active_on_activation\":true}")]
+    [InlineData("{\"set_active_on_activation\":false}")]
+    [InlineData("{\"set_active_on_activation\":null}")]
+    [InlineData("{\"type\":\"marketing\"}")]
+    public async Task Legacy_activity_and_new_defaults_do_not_add_invite_lookups_or_change_selection(string json)
+    {
+        var structure = new StructureResponse
+        {
+            MarketingAddr = "marketing", StructureNumber = 4, Width = 3,
+            PosAlgo = Structure().PosAlgo, Activity = JsonSerializer.Deserialize<JsonElement>(json)
+        };
+        var algorithm = new CapturingAlgorithm();
+        var root = new PlaceResponse { ProfileAddr = "root", Mp = "ROOT" };
+        var service = new NextPosService(new Queries(structure, new Dictionary<byte, long>()),
+            new PositionAlgorithmConfigurationParser(), new PositionGroupSelector(), new RootResolver(root),
+            new AlgorithmResolver(algorithm), new LockQueries(), new Places());
+        Assert.Same(algorithm.Result, await service.GetNextPosAsync("marketing", 4, "viewer", null, default));
+        Assert.Null(algorithm.Context!.Activity);
+    }
+
     [Fact]
     public async Task Orchestrator_returns_null_when_structure_does_not_exist()
     {
@@ -52,13 +75,15 @@ public sealed class NextPosServiceTests
             new PositionGroupSelector(),
             new RootResolver(null),
             new AlgorithmResolver(new CapturingAlgorithm()),
-            new LockQueries());
+            new LockQueries(), new Places());
 
         var result = await service.GetNextPosAsync(
             "marketing", 4, "viewer", operation: null, CancellationToken.None);
 
         Assert.Null(result);
     }
+
+    private sealed class Places : PlaceQueriesStub;
 
     private static StructureResponse Structure()
     {

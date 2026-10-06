@@ -56,13 +56,13 @@ public sealed class InfrastructureQueryInvariantTests
 
         AssertMethodContains(source,
             "GetProfileFrontierCandidateAsync",
-            "level_place.deep = scoped.deep + 1");
+            "target_level.deep = scoped.deep + 1");
         AssertMethodContains(source,
             "GetProfileFrontierCandidateAsync",
-            "level_place.deep = scoped.deep");
+            "current_level.deep = scoped.deep");
         AssertMethodContains(source,
             "GetProfileFrontierCandidateAsync",
-            "target_level.profiled_count < GREATEST(");
+            "COALESCE(target_level.profiled_count, 0) < GREATEST(");
         AssertMethodContains(source,
             "GetProfileFrontierCandidateAsync",
             ")\n                      OR scoped.profiled_child_count = 0");
@@ -98,10 +98,10 @@ public sealed class InfrastructureQueryInvariantTests
             "(horizontal_count - horizontal_index + 1) * 2");
         AssertMethodContains(source,
             "GetProfileFrontierCandidateAsync",
-            "branch_load ASC");
+            "level_stats AS MATERIALIZED");
         AssertMethodContains(source,
             "GetProfileFrontierCandidateAsync",
-            "FROM scoped descendant");
+            "GROUP BY level_place.deep");
         AssertMethodContains(source,
             "GetProfileFrontierCandidateAsync",
             "mpPrefix = rootMp + \"%\",\n                    rootMp,");

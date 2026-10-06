@@ -13,7 +13,7 @@ not a deployment credential. Each test creates a randomly named database and dro
 only that database afterward. No existing tables or databases are cleared.
 The downloaded Docker image remains cached.
 
-Without `ACTIVITY_TEST_POSTGRES_PORT`, these six tests are explicitly skipped in
+Without `ACTIVITY_TEST_POSTGRES_PORT`, these PostgreSQL tests are explicitly skipped in
 ordinary unit-test runs. Set this variable only to the port of this disposable
 container: the fixture assumes database `activity_test`, user `postgres`, and the
 runner's test password. Supplying it opts into database creation/deletion.
@@ -52,5 +52,45 @@ Tables managed by EF are generated using `EnsureCreated`; the query-only
 `structures` table has a minimal explicit fixture schema. This does not validate
 SQL migrations, production constraints/triggers/permissions or production data.
 No real wallets, TON calls, API host, scheduler or background workers are started.
-Purchase/clone/reinvest handlers and complete chess/radar placement flows are not
-covered by these PostgreSQL tests. Existing unit tests remain necessary.
+Stage 3 additionally exercises purchase/clone/reinvest handlers, all seven
+position strategies through real SQL, manual command validation, and activity
+combinations. It does not execute the API or TON task transport. Existing unit
+tests remain necessary.
+
+## Stage 3 placement comparison
+
+`Legacy_placement_snapshots_cover_ordering_depth_locks_and_system_priority`
+executes 168 deterministic combinations across all seven algorithms. It can
+write selected positions (including null results) to `ACTIVITY_TEST_SNAPSHOT_PATH`.
+Run the same test against the pre-stage-3 commit `31ee0f6` and the working tree
+using separately seeded databases, then compare the JSON files. No production
+connection is needed. The test helper uses old-compatible call signatures so it
+can be copied to the baseline alongside the partial `ActivityPostgresTests` fixture.
+
+New placement tests cover 896 algorithm/permission combinations, deeper eligible
+candidates, terminal clones, width, locks, program isolation, manual opt-in,
+beneficiary identity for purchase/clone/reinvest, and committed volume/receipts.
+
+## Opt-in performance measurements
+
+```bash
+ACTIVITY_TEST_PERF=1 \
+ACTIVITY_TEST_FILTER='FullyQualifiedName~Measure_' \
+ACTIVITY_TEST_PERF_OUTPUT=/tmp/cryptostyle-placement-perf \
+bash tests/Modules/ReferalProgram.Application.Tests/Postgres/run.sh --no-restore
+```
+
+This runs three diagnostic benchmarks, not timing assertions. They seed 10,000
+and 100,000 marketing places plus matching invites, capture the actual SQL and
+parameters sent by Npgsql, and save `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON)` plans.
+The main run has a 5-second per-statement limit and records timed-out plans without
+ANALYZE. PostgreSQL execution medians use three warm samples; the initial query's
+wall time also includes transport and Dapper materialization and is recorded
+separately. Timings are local single-client measurements, not production latency
+or throughput promises. No existing application database is used.
+
+The index experiment creates a partial active-invite index only in its temporary
+database. The SQL experiment rewrites a captured correlated predicate into an
+uncorrelated membership predicate only in the benchmark, and checks result-set
+equality with EXCEPT ALL before measuring it. Neither experiment changes runtime
+SQL or deploys an index. See [measurement report](ACTIVITY_QUERY_PERFORMANCE.md).

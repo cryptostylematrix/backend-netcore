@@ -65,7 +65,7 @@ internal sealed class BuySystemPlaceCommandHandler(
                         childPosition.Position),
                     requiredRootMp: null,
                     selection.Context.RootProfileLockMps,
-                    cancellationToken);
+                    cancellationToken, selection.Context.Activity);
 
                 if (!resolution.IsSuccess)
                 {

@@ -22,7 +22,7 @@ public sealed class ChessPositionAlgorithmStrategy(IPositionCandidateQueries pla
             context.Width,
             context.DepthSpread,
             context.RootProfileLockMps,
-            cancellationToken);
+            cancellationToken, context.Activity);
 
         IReadOnlyList<PlaceResponse>[] placeGroups = context.ProfiledPlacesPrioritized
             ?

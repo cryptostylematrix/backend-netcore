@@ -22,7 +22,7 @@ public interface IPositionCandidateQueries
         byte width,
         uint profiledWidthLimit,
         IReadOnlyCollection<string> lockMps,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken, PlacementActivityRules? activity = null);
 
     Task<PlaceResponse?> GetSystemGapCandidateAsync(
         string marketingAddr,
@@ -30,7 +30,7 @@ public interface IPositionCandidateQueries
         string rootMp,
         byte width,
         IReadOnlyCollection<string> lockMps,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken, PlacementActivityRules? activity = null);
 
     Task<IReadOnlyList<PlaceResponse>> GetUnfilledPlacesInDepthWindowAsync(
         string marketingAddr,
@@ -39,7 +39,7 @@ public interface IPositionCandidateQueries
         byte width,
         byte depthSpread,
         IReadOnlyCollection<string> lockMps,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken, PlacementActivityRules? activity = null);
 
     Task<PlaceResponse?> GetFirstActiveUnfilledPlaceAsync(
         string marketingAddr,
@@ -49,7 +49,7 @@ public interface IPositionCandidateQueries
         bool profiledPlacesPrioritized,
         byte depthSpread,
         IReadOnlyCollection<string> lockMps,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken, PlacementActivityRules? activity = null);
 
     Task<IReadOnlyList<PlaceResponse>> GetOpenPlacesByMpPrefixAsync(
         string marketingAddr,
@@ -58,7 +58,7 @@ public interface IPositionCandidateQueries
         byte width,
         int page,
         int pageSize,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken, PlacementActivityRules? activity = null);
 }
 
 public interface IPositionLockQueries

@@ -17,5 +17,5 @@ public interface IRequestedPositionResolver
         RequestedPosition requestedPosition,
         string? requiredRootMp,
         IReadOnlyCollection<string> lockMps,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken, PlacementActivityRules? activity = null);
 }

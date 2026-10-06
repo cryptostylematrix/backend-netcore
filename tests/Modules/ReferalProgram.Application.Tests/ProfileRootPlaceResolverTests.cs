@@ -107,7 +107,7 @@ public sealed class ProfileRootPlaceResolverTests
         var resolver = new ProfileRootPlaceResolver(places, new Structures(true));
         var service = new NextPosService(new PositionQueries(), new PositionAlgorithmConfigurationParser(),
             new PositionGroupSelector(), new PositionRootResolver([new ProfileRootPlaceStrategy(resolver)]),
-            new UnusedAlgorithmResolver(), locks);
+            new UnusedAlgorithmResolver(), locks, places);
         var selection = await service.ResolveSelectionAsync("marketing", 4, "requested", null, default);
         Assert.NotNull(selection);
         Assert.Same(root, selection.Context.Root);
