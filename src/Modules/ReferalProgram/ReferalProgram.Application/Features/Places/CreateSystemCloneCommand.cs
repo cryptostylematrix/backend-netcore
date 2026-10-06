@@ -53,7 +53,8 @@ internal sealed class CreateSystemCloneCommandHandler(
                 request.SourceProfileAddr,
                 request.SourcePlaceNumber,
                 request.RelativeLevel,
-                cancellationToken);
+                cancellationToken,
+                RecipientPurpose.Clone);
 
             if (relative is null)
             {

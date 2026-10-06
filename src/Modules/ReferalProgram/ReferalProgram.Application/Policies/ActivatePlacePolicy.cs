@@ -28,9 +28,6 @@ public sealed class ActivatePlacePolicy(
             return Denied("activity_configuration_invalid");
         }
 
-        if (configuration.HasPendingRules())
-            return Denied("activity_rules_not_supported_yet");
-
         if (place is null)
             return Denied("place_not_found");
 

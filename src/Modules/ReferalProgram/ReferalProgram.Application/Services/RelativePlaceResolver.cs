@@ -1,6 +1,6 @@
 namespace ReferalProgram.Application.Services;
 
-public sealed class RelativePlaceResolver(IPlaceQueries placeQueries)
+public sealed class RelativePlaceResolver(IPlaceQueries placeQueries, IStructureQueries structureQueries)
     : IRelativePlaceResolver
 {
     public async Task<RelativePlaceResolution?> ResolveAsync(
@@ -9,7 +9,8 @@ public sealed class RelativePlaceResolver(IPlaceQueries placeQueries)
         string? profileAddr,
         uint placeNumber,
         ushort level,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        RecipientPurpose purpose = RecipientPurpose.Bonus)
     {
         var sourcePlace = await placeQueries.GetPlaceAsync(
             marketingAddr,
@@ -21,9 +22,18 @@ public sealed class RelativePlaceResolver(IPlaceQueries placeQueries)
         if (sourcePlace is null)
             return null;
 
+        var structure = await structureQueries.GetStructureAsync(marketingAddr, structureNumber, cancellationToken);
+        var rules = ActivitySettings.ParseRecipientRules(structure?.Activity, structureNumber);
+        var allowInactive = purpose switch
+        {
+            RecipientPurpose.Bonus => rules?.AllowAsBonusRecipient == true,
+            RecipientPurpose.Clone => rules?.AllowAsCloneRecipient == true,
+            _ => throw new ArgumentOutOfRangeException(nameof(purpose))
+        };
         var relativePlace = await FindEligiblePlaceAsync(
             sourcePlace,
             level,
+            allowInactive,
             cancellationToken);
 
         return relativePlace is null
@@ -34,6 +44,7 @@ public sealed class RelativePlaceResolver(IPlaceQueries placeQueries)
     private async Task<PlaceResponse?> FindEligiblePlaceAsync(
         PlaceResponse start,
         ushort level,
+        bool allowInactive,
         CancellationToken cancellationToken)
     {
         PlaceResponse? current = start;
@@ -41,7 +52,7 @@ public sealed class RelativePlaceResolver(IPlaceQueries placeQueries)
 
         while (current is not null)
         {
-            var isEligible = current.IsActive
+            var isEligible = (current.IsActive || allowInactive)
                 && !string.IsNullOrWhiteSpace(current.ProfileAddr);
 
             if (isEligible)

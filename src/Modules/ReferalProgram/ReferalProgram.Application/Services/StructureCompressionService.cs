@@ -37,14 +37,17 @@ public sealed class StructureCompressionService(
         if (structure is null)
             return $"Structure {structureNumber} for Referral Program '{marketingAddr}' was not found.";
 
+        var keepInactive = ActivitySettings.ParseRecipientRules(structure.Activity, number)?.KeepOnCompression == true;
         var places = await placeRepository.GetStructurePlacesAsync(
             marketingAddr, number, cancellationToken);
         var root = places.FirstOrDefault(place => place.ParentId is null && place.PlaceNumber == 1);
-        if (root is null || !root.IsActive || string.IsNullOrWhiteSpace(root.ProfileAddr))
-            return "Structure compression requires an active profiled root place.";
+        if (root is null || (!root.IsActive && !keepInactive) || string.IsNullOrWhiteSpace(root.ProfileAddr))
+            return keepInactive
+                ? "Structure compression requires a profiled root place."
+                : "Structure compression requires an active profiled root place.";
 
         var retained = places
-            .Where(place => place.IsActive && !string.IsNullOrWhiteSpace(place.ProfileAddr))
+            .Where(place => (place.IsActive || keepInactive) && !string.IsNullOrWhiteSpace(place.ProfileAddr))
             .ToArray();
         var removed = places.Except(retained).ToArray();
         var ranks = await rankQueries.GetAllAsync(marketingAddr, number, cancellationToken);
@@ -62,7 +65,7 @@ public sealed class StructureCompressionService(
         var rootNode = nodes[root.Id];
         rootNode.PlaceAt(parent: null, RootMp, posGroup: 0, pos: 0);
         var posted = new List<Node> { rootNode };
-        var memoryQueries = new InMemoryCompressionPositionCandidateQueries(posted);
+        var memoryQueries = new InMemoryCompressionPositionCandidateQueries(posted, keepInactive);
         IPositionAlgorithmStrategy classicStrategy =
             new ClassicPositionAlgorithmStrategy(memoryQueries);
         IPositionAlgorithmStrategy emptyParentStrategy =
@@ -269,7 +272,7 @@ public sealed class StructureCompressionService(
     }
 
     private sealed class InMemoryCompressionPositionCandidateQueries(
-        IReadOnlyList<Node> posted) : IPositionCandidateQueries
+        IReadOnlyList<Node> posted, bool keepInactive) : IPositionCandidateQueries
     {
         public Task<IReadOnlyList<PlaceResponse>> GetOpenPlacesByMpPrefixAsync(
             string marketingAddr,
@@ -287,7 +290,7 @@ public sealed class StructureCompressionService(
                 .Where(node => node.Place.MarketingAddr == marketingAddr
                     && node.Place.StructureNumber == structureNumber
                     && node.Mp.StartsWith(mpPrefix, StringComparison.Ordinal)
-                    && node.Place.IsActive
+                    && (node.Place.IsActive || keepInactive)
                     && node.Place.Kind != PlaceKinds.TerminalClone
                     && (width == 0 || node.Filling < width))
                 .OrderBy(node => node.Mp.Length)

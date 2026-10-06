@@ -85,6 +85,69 @@ public sealed class StructureCompressionServiceTests
         Assert.Equal(places[5].Id, places[9].ParentId);
     }
 
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task Keep_on_compression_retains_inactive_parents_without_changing_status(bool keep, bool activeRoot)
+    {
+        var root = Place(1, "root", activeRoot, 1);
+        SetParentId(root, null);
+        var inactive = Place(2, "inactive", false, 2);
+        var child = Place(3, "child", true, 3);
+        var system = Place(4, null, true, 4);
+        var repository = new Repository([root, inactive, child, system]);
+        var unit = new UnitOfWork();
+        var activity = JsonSerializer.SerializeToElement(new { type = "marketing",
+            when_inactive = new { keep_on_compression = keep } });
+        var service = new StructureCompressionService(repository, new LockRepository(),
+            new StructureQueries(activity, width: 1), new RankQueries(),
+            new VolumeQueries(new Dictionary<string, uint>()), new PositionAlgorithmConfigurationParser(), unit);
+        var error = await service.CompressAsync("marketing", 1, default);
+        Assert.Equal(activeRoot || keep, error is null);
+        Assert.Equal(activeRoot, root.IsActive);
+        Assert.False(inactive.IsActive);
+        Assert.Equal(2L, inactive.ActivatedAt);
+        Assert.True(child.IsActive);
+        if (!activeRoot && !keep)
+        {
+            Assert.Equal(0, unit.SaveCount);
+            Assert.Empty(repository.Removed);
+            return;
+        }
+        Assert.Equal(1, unit.SaveCount);
+        Assert.Equal(keep ? inactive.Id : root.Id, child.ParentId);
+        Assert.Equal(keep ? 3 : 2, root.MatrixFilling);
+        Assert.Contains(system, repository.Removed);
+        Assert.Equal(!keep, repository.Removed.Contains(inactive));
+    }
+
+    [Fact]
+    public async Task Retained_inactive_terminal_clone_cannot_become_parent_and_failure_does_not_mutate_places()
+    {
+        var root = Place(1, "root", true, 1);
+        SetParentId(root, null);
+        var terminal = Place(2, "terminal", false, 2);
+        terminal.GetType().GetProperty(nameof(terminal.Kind))!.SetValue(terminal, PlaceKinds.TerminalClone);
+        var child = Place(3, "child", true, 3);
+        var oldMp = root.Mp;
+        var repository = new Repository([root, terminal, child]);
+        var unit = new UnitOfWork();
+        var activity = JsonSerializer.Deserialize<JsonElement>("{\"type\":\"marketing\",\"when_inactive\":{\"keep_on_compression\":true}}");
+        var service = new StructureCompressionService(repository, new LockRepository(),
+            new StructureQueries(activity, width: 1), new RankQueries(),
+            new VolumeQueries(new Dictionary<string, uint>()), new PositionAlgorithmConfigurationParser(), unit);
+        var error = await service.CompressAsync("marketing", 1, default);
+        Assert.NotNull(error);
+        Assert.Contains("found no position", error);
+        Assert.Equal(0, unit.SaveCount);
+        Assert.Empty(repository.Removed);
+        Assert.Equal(oldMp, root.Mp);
+        Assert.Equal(root.Id, child.ParentId);
+        Assert.False(terminal.IsActive);
+    }
+
     private static Place Place(
         int id,
         string? profile,
@@ -121,7 +184,7 @@ public sealed class StructureCompressionServiceTests
             .GetProperty(nameof(ReferalProgram.Core.PlaceAggregate.Place.ParentId), BindingFlags.Instance | BindingFlags.Public)!
             .SetValue(place, parentId);
 
-    private sealed class StructureQueries : IStructureQueries
+    private sealed class StructureQueries(JsonElement? activity = null, byte width = 2) : IStructureQueries
     {
         private static readonly JsonElement Algorithm = JsonDocument.Parse("""
             {"v":1,"root":"owner","groups":[{"id":7,"algo":"radar","weight":3}],"relation":"absolute"}
@@ -135,7 +198,8 @@ public sealed class StructureCompressionServiceTests
             {
                 MarketingAddr = marketingAddr,
                 StructureNumber = structureNumber,
-                Width = 2,
+                Width = width,
+                Activity = activity,
                 Height = 2,
                 PosAlgo = Algorithm
             });

@@ -57,7 +57,7 @@ profile's first paid place in any structure greater than `0` activates its
 structure-0 invite. Once any such place exists, later paid-place creation never
 changes the invite, even if an integration command reset its activation date.
 
-### Activity configuration rollout: stages 1–3
+### Activity configuration rollout: stages 1–4
 
 Legacy activity objects remain supported unchanged, including the default
 `set_active_on_activation = true` and ignored retired `activation_sync` values.
@@ -147,12 +147,46 @@ is added. Frontier level statistics are aggregated once per level; its previous
 selection behavior is covered by differential PostgreSQL tests.
 No existing program data or setup script is changed automatically.
 
-Recipient and compression options remain reserved for later stages. Activation
-rejects enabled pending rules with `activity_rules_not_supported_yet`; implemented
-invite/placement rules no longer trigger this error. Compression retains its old
-in-memory rebuilding behavior and does not use the stage-3 placement permissions.
-Validation occurs when settings are parsed by their consumers, not as a database
-constraint or a configuration write API.
+Stage 4 enables the following `when_inactive` options for both activity types:
+
+```json
+{
+  "allow_as_bonus_recipient": false,
+  "allow_as_clone_recipient": false,
+  "keep_on_compression": false
+}
+```
+
+Recipient resolution reads settings from the structure being traversed, once per
+resolution rather than once per ancestor. Bonus queries use the bonus permission;
+clones and reinvests use the clone permission. Referral bonuses resolve the
+initial relative place under its own structure's bonus rules, then the inviter
+under structure-0 bonus rules. System places remain ineligible. Relative levels
+count eligible profiled places, including permitted inactive ones. Root fallback
+and the original source/reason place are preserved. Date, status and volumes are
+not changed by resolution; creating a paid clone still has its normal volume and
+first-paid-place invite-activation effects.
+
+Combined move-or-structure-bonus tasks first resolve the clone recipient. If that
+profile has no place in the target structure, the clone branch is selected.
+Otherwise, or if no clone recipient exists, the bonus branch independently
+resolves under bonus rules and can select another profile. A missing bonus
+recipient rejects that branch. With omitted/false rules both searches retain the
+old active-profile selection.
+
+Compression defaults to removing inactive and system places and requiring an
+active profiled root. `keep_on_compression=true` retains inactive profiled places
+and permits them, including an inactive root, to receive children while rebuilding.
+It does not activate them or change dates/volumes. System places are still removed;
+terminal clones cannot become parents. Width, ordering, locks, rank/volume
+priority and matrix-filling recalculation remain in effect. This administrative
+rebuild uses its own classic/empty-parent rules, not the ordinary placement
+permissions introduced in stage 3.
+
+All declared activity rules now have consumers; the temporary activation error
+`activity_rules_not_supported_yet` is retired. Validation occurs when settings are
+parsed by their consumers, not as a database constraint or configuration write API.
+Legacy activation-only JSON does not affect recipient/compression eligibility.
 
 Equivalent activation examples:
 

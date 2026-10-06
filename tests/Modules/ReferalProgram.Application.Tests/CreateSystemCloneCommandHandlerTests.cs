@@ -130,7 +130,8 @@ public sealed class CreateSystemCloneCommandHandlerTests
             string? profileAddr,
             uint placeNumber,
             ushort level,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            RecipientPurpose purpose = RecipientPurpose.Bonus)
         {
             var place = new PlaceResponse
             {

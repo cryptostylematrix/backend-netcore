@@ -94,8 +94,7 @@ public sealed class ActivatePlacePolicyTests
     [Theory]
     [InlineData("null", "activity_configuration_invalid")]
     [InlineData("{\"type\":\"marketing\"}", "activity_configuration_invalid")]
-    [InlineData("{\"type\":\"invite\",\"when_inactive\":{\"allow_as_bonus_recipient\":true}}", "activity_rules_not_supported_yet")]
-    public void Invalid_or_not_yet_implemented_rules_return_a_business_error(string json, string reason)
+    public void Invalid_rules_return_a_business_error(string json, string reason)
     {
         var result = Policy().Evaluate(Structure(json),
             new HashSet<uint> { ProgramCommandTags.ActivatePlace }, Place());
@@ -107,6 +106,9 @@ public sealed class ActivatePlacePolicyTests
     [InlineData("allow_inviting_without_places")]
     [InlineData("allow_inviting_with_places")]
     [InlineData("allow_as_fallback_root")]
+    [InlineData("allow_as_bonus_recipient")]
+    [InlineData("allow_as_clone_recipient")]
+    [InlineData("keep_on_compression")]
     public void Implemented_invite_rules_do_not_block_activation(string rule)
     {
         var result = Policy().Evaluate(

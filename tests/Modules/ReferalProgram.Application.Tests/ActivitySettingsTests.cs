@@ -14,7 +14,6 @@ public sealed class ActivitySettingsTests
         var settings = Parse($"{{\"type\":\"{type}\"}}", number);
         Assert.Equal(type, settings.Type);
         Assert.False(settings.PreserveStatusOnActivation);
-        Assert.False(settings.HasPendingRules());
     }
 
     [Theory]
@@ -29,7 +28,6 @@ public sealed class ActivitySettingsTests
         {
             var settings = Parse(json, number);
             Assert.Equal(preserve, settings.PreserveStatusOnActivation);
-            Assert.False(settings.HasPendingRules());
         }
     }
 
@@ -71,14 +69,21 @@ public sealed class ActivitySettingsTests
     [InlineData("allow_as_clone_recipient")]
     [InlineData("keep_on_compression")]
     public void Recognizes_each_invite_rule(string property) =>
-        Assert.True(Parse($"{{\"type\":\"invite\",\"when_inactive\":{{\"{property}\":true}}}}", 0).HasPendingRules());
+        AssertRule(property, ActivitySettings.ParseRecipientRules(JsonSerializer.Deserialize<JsonElement>($"{{\"type\":\"invite\",\"when_inactive\":{{\"{property}\":true}}}}"), 0)!);
 
     [Theory]
     [InlineData("when_inactive", "allow_as_bonus_recipient")]
     [InlineData("when_inactive", "allow_as_clone_recipient")]
     [InlineData("when_inactive", "keep_on_compression")]
     public void Recognizes_each_marketing_rule(string block, string property) =>
-        Assert.True(Parse($"{{\"type\":\"marketing\",\"{block}\":{{\"{property}\":true}}}}", 1).HasPendingRules());
+        AssertRule(property, ActivitySettings.ParseRecipientRules(JsonSerializer.Deserialize<JsonElement>($"{{\"type\":\"marketing\",\"{block}\":{{\"{property}\":true}}}}"), 1)!);
+
+    private static void AssertRule(string property, InactiveRecipientSettings rules)
+    {
+        Assert.Equal(property == "allow_as_bonus_recipient", rules.AllowAsBonusRecipient);
+        Assert.Equal(property == "allow_as_clone_recipient", rules.AllowAsCloneRecipient);
+        Assert.Equal(property == "keep_on_compression", rules.KeepOnCompression);
+    }
 
     private static ActivitySettings Parse(string json, byte number) =>
         ActivitySettings.Parse(JsonSerializer.Deserialize<JsonElement>(json), number);

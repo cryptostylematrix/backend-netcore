@@ -25,22 +25,34 @@ internal sealed class ResolveMoveOrStructBonusQueryHandler(
             request.SourceProfileAddr,
             request.SourcePlaceNumber,
             request.RelativeLevel,
-            cancellationToken);
+            cancellationToken,
+            RecipientPurpose.Clone);
 
-        if (relative?.RelativePlace.ProfileAddr is not { } profileAddr
-            || string.IsNullOrWhiteSpace(profileAddr))
+        if (relative?.RelativePlace.ProfileAddr is { } profileAddr
+            && !string.IsNullOrWhiteSpace(profileAddr))
         {
-            return Result<MoveOrStructBonusDecision>.Error(
-                "An eligible relative profile place was not found.");
+            var placesCount = await placeQueries.GetPlacesCountAsync(
+                request.MarketingAddr,
+                request.TargetStructureNumber,
+                profileAddr,
+                cancellationToken);
+
+            if (placesCount == 0)
+                return Result.Success(new MoveOrStructBonusDecision(CreateClone: true));
         }
 
-        var placesCount = await placeQueries.GetPlacesCountAsync(
+        // The bonus branch may legitimately resolve a different recipient.
+        var bonus = await relativePlaceResolver.ResolveAsync(
             request.MarketingAddr,
-            request.TargetStructureNumber,
-            profileAddr,
-            cancellationToken);
+            request.SourceStructureNumber,
+            request.SourceProfileAddr,
+            request.SourcePlaceNumber,
+            request.RelativeLevel,
+            cancellationToken,
+            RecipientPurpose.Bonus);
+        if (string.IsNullOrWhiteSpace(bonus?.RelativePlace.ProfileAddr))
+            return Result<MoveOrStructBonusDecision>.Error("An eligible relative profile place was not found.");
 
-        return Result.Success(new MoveOrStructBonusDecision(
-            CreateClone: placesCount == 0));
+        return Result.Success(new MoveOrStructBonusDecision(CreateClone: false));
     }
 }

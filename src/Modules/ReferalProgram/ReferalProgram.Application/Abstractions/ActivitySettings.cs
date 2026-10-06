@@ -11,9 +11,6 @@ public abstract class ActivitySettings
     [JsonPropertyName("preserve_status_on_activation")]
     public bool PreserveStatusOnActivation { get; init; }
 
-    // Enabled restrictions are rejected until their consumers are implemented.
-    public abstract bool HasPendingRules();
-
     public static ActivitySettings Parse(JsonElement json, byte structureNumber)
     {
         if (json.ValueKind != JsonValueKind.Object)
@@ -43,6 +40,24 @@ public abstract class ActivitySettings
             : json.Deserialize<MarketingActivitySettings>()!;
     }
 
+    // Legacy JSON never governed recipient eligibility or compression.
+    public static InactiveRecipientSettings? ParseRecipientRules(JsonElement? json, byte structureNumber)
+    {
+        if (json is not { ValueKind: JsonValueKind.Object } value
+            || !(value.TryGetProperty("type", out _)
+                || value.TryGetProperty("when_inactive", out _)
+                || value.TryGetProperty("spillover", out _)
+                || value.TryGetProperty("preserve_status_on_activation", out _)))
+            return null;
+
+        return Parse(value, structureNumber) switch
+        {
+            InviteActivitySettings invite => invite.WhenInactive,
+            MarketingActivitySettings marketing => marketing.WhenInactive,
+            _ => throw new InvalidOperationException("Unknown activity settings type.")
+        };
+    }
+
     private static void ValidateObject(JsonElement json)
     {
         var names = new HashSet<string>(StringComparer.Ordinal);
@@ -65,9 +80,6 @@ public sealed class InviteActivitySettings : ActivitySettings
 {
     [JsonPropertyName("when_inactive")]
     public InactiveInviteSettings WhenInactive { get; init; } = new();
-
-    public override bool HasPendingRules() => WhenInactive.AllowAsBonusRecipient || WhenInactive.AllowAsCloneRecipient
-        || WhenInactive.KeepOnCompression;
 }
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
@@ -78,9 +90,6 @@ public sealed class MarketingActivitySettings : ActivitySettings
 
     [JsonPropertyName("spillover")]
     public SpilloverActivitySettings Spillover { get; init; } = new();
-
-    public override bool HasPendingRules() => WhenInactive.AllowAsBonusRecipient
-        || WhenInactive.AllowAsCloneRecipient || WhenInactive.KeepOnCompression;
 }
 
 public abstract class InactiveRecipientSettings

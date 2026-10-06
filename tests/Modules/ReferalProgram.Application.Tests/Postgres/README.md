@@ -94,3 +94,11 @@ database. The SQL experiment rewrites a captured correlated predicate into an
 uncorrelated membership predicate only in the benchmark, and checks result-set
 equality with EXCEPT ALL before measuring it. Neither experiment changes runtime
 SQL or deploys an index. See [measurement report](ACTIVITY_QUERY_PERFORMANCE.md).
+
+
+Stage-4 coverage includes real bonus handlers (including referral recipients in
+structure 0), independent clone/reinvest permissions, combined task branch
+selection, and compression committed through EF repositories in both structure
+types. It checks retained inactive chains, parent/depth/matrix filling, unchanged
+activation state, paid-clone volumes and receipts. Compression rank tables are
+minimal test tables; live TON sends and API transport are not covered.
