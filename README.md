@@ -36,6 +36,9 @@ name is intentionally preserved in paths and namespaces.
 - [Referral Program processing invariants](src/Modules/ReferalProgram/PROGRAM_PROCESSING.md)
   explains purchase prerequisites, command selection, source-place responses,
   and the current activation status.
+- [Activity and activation](src/Modules/ReferalProgram/PROGRAM_PROCESSING.md#activity-and-activation)
+  defines place, group and program activation levels, activity sources,
+  inactive-place permissions, reset/expiration behavior and frontend targeting.
 - [Position algorithms](src/Modules/ReferalProgram/POSITION_ALGORITHMS.md)
   documents configuration versions, operation overrides, classic, chess,
   radar, and trimmed-classic placement.
@@ -130,7 +133,7 @@ used. The default HTTP address is `http://localhost:5004`, with Swagger at
 The Referral Program and Scheduled Tasks processors are disabled in Development. In other
 environments the Referral Program processor runs at the configured
 `TaskProcessor__IntervalSeconds` interval. `activate_place` is processed for configured profiled places; see the
-[processing invariants](src/Modules/ReferalProgram/PROGRAM_PROCESSING.md#activation).
+[processing invariants](src/Modules/ReferalProgram/PROGRAM_PROCESSING.md#activity-and-activation).
 
 ## Tests
 

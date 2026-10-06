@@ -22,15 +22,106 @@ check, but still validate the requested classic position and its locks.
 
 ## Source-place response
 
-After creating or activating a place, the processor walks upward by the configured
+After creating a place through a purchase, clone or reinvest, the processor walks upward by the configured
 structure height. If that height cannot be reached, it uses the last parent reached,
 or the affected place when it has no parent. If the required height was not
 reached, the response code is `0`; otherwise the code is the number of places
 at the created place's level below the resolved source.
 
 For a height-zero structure, the affected place is its own source.
+Activation always returns the activated place with response code `0`; see
+[Activity and activation](#activity-and-activation).
 
-## Activation
+## Activity and activation
+
+This subsection groups the activation operation, activity sources, inactive-place
+permissions, expiration/reset behavior, frontend targeting and Mini setup.
+
+### Activation date and activity status
+
+`activated_at` records an activation date. `is_active` is the activity status used
+by eligibility checks. They are independent: a place may be active without an
+activation date, or retain its status when an operation changes its date.
+Explicit activation requires the target's date to be absent, even when its
+status is already active. An inactive place with an existing date cannot be
+activated again until that date is cleared by the applicable reset/expiration
+operation.
+
+`activity_source` selects whose raw `is_active` is checked. `when_inactive`
+selects the permissions that apply when that source is inactive. Neither setting
+synchronizes the stored dates or statuses of other places.
+
+### Three activation levels
+
+The UI supports three logical levels of activation **for one profile within one
+program**. They all use the same `activate_place` command against one concrete
+place; there are no separate group-wide or program-wide mutation commands.
+
+| Activation level | `activity_source` | Concrete activation target | Scope of the activity status |
+| --- | --- | --- | --- |
+| Place | `place` (also the default when omitted) | The selected place in the selected structure | That place's eligibility under the structure's inactive-place rules. |
+| Group | `group_root` | The profile's place **number 1** in the **lowest-numbered structure of the group** within the same program | All places of that profile in group structures configured to use `group_root`. |
+| Entire program | `invite` | The profile's invite: place **number 1 in structure 0** of that program | All places of that profile in structures configured to use `invite`. |
+
+“Entire program” refers to the profile's shared program activation, not activation
+of other profiles. It is implemented through the profile's own invite, not its
+curator's invite. Every structure that should depend on this program-level source
+must explicitly use `activity_source: "invite"`; other structures keep their own
+configured source. Likewise, a group label alone does not enable group-level
+activity for its member structures.
+
+For group activation, determine the minimum structure number from the program's
+group membership, not from structures in which the profile happens to own places.
+If its place number 1 is missing there, do not use another structure or another
+place as a fallback. Source resolution is direct, not recursive.
+
+Example: Mini 10 contains structures 1, 2 and 3. Activating the group while viewing
+place 7 in structure 3 targets that same profile's place 1 in structure 1. Its
+updated status is then used for the configured checks in structures 1–3. Dates
+and statuses on place 7 and the profile's other group places are unchanged.
+
+The activation target's command, price, token, execution fee and activation
+settings apply. Volume changes occur only in the target structure; the activated
+place is the source of activation rewards. Group/program activation does not
+multiply the activation charge or volume effect by the number of dependent places.
+
+### Shared activity source
+
+New configuration can set `activity_source` to `place`, `invite`, or `group_root`.
+The selected source replaces the own-place status check for every `when_inactive`
+permission: placement, manual placement (when enabled), bonus/clone/reinvest
+recipient eligibility, invitation, fallback-root eligibility, and compression.
+It reads raw `is_active`, not the activation date, and never follows another
+structure's `activity_source` recursively.
+
+- `place`: the candidate's own status.
+- `invite`: the profile's structure-0 place number 1 in this program.
+- `group_root`: that profile's place number 1 in the lowest-numbered structure
+  of the current structure's group, scoped to the same program. It does not use
+  the first available structure belonging to the profile. A missing source place
+  is inactive; a missing/empty group is a configuration error.
+
+For the new format `when_inactive.allow_spillover_children` replaces the old
+spillover permission. Omitted permission booleans remain false. Explicit
+`activity_source` cannot be combined with the legacy `spillover` block, even if
+its fields are false. The unused `spillover.require_active_invite` option was
+removed and is rejected as unknown (for both true and false). Without
+`activity_source`, own-place activity remains the default; the older
+`spillover.allow_inactive_place` permission remains supported. `allow_spillover_children` requires an explicit
+source. Unknown sources and explicit null are rejected.
+
+System places have no profile source and retain their own activity for placement;
+they are still excluded from recipients and compression. Terminal-clone, width,
+lock and other non-activity restrictions stay independent. Group membership does
+not synchronize stored flags/dates or change which concrete place an activation
+command operates on. Activation volume effects remain unchanged.
+
+Placement resolves the source structure once and filters candidates inside SQL.
+Tree actions and compression use a batch of source statuses. Relative-recipient
+traversal caches source status per encountered profile for that resolution;
+it retains the existing parent-by-parent traversal.
+
+### Activation operation
 
 `activate_place` targets one existing profiled place. Its payload is exactly the
 place number as `uint32`; the task structure and profile identify the rest of
@@ -60,7 +151,7 @@ profile's first paid place in any structure greater than `0` activates its
 structure-0 invite. Once any such place exists, later paid-place creation never
 changes the invite, even if an integration command reset its activation date.
 
-### Activity configuration rollout: stages 1–4
+### Configuration formats and defaults
 
 Legacy activity objects remain supported unchanged, including the default
 `set_active_on_activation = true` and ignored retired `activation_sync` values.
@@ -73,7 +164,9 @@ inverse of legacy `set_active_on_activation`. Mixing the two formats is rejected
 Unknown fields, duplicate keys, incorrect types, and null nested blocks are
 invalid in the new format. Omitted boolean options default to false.
 
-Stage 2 enables three structure-0 `when_inactive` options:
+### Invitations and fallback roots
+
+Structure 0 supports three `when_inactive` options:
 
 - `allow_inviting_without_places`: an inactive inviter can invite if its profile
   has no places in structures greater than 0 in this program.
@@ -105,7 +198,9 @@ Example allowing invitations and fallback through inactive invites:
 }
 ```
 
-Stage 3 enables marketing placement settings:
+### Placement permissions
+
+Marketing structures support these placement settings:
 
 ```json
 {
@@ -146,7 +241,9 @@ is added. Frontier level statistics are aggregated once per level; its previous
 selection behavior is covered by differential PostgreSQL tests.
 No existing program data or setup script is changed automatically.
 
-Stage 4 enables the following `when_inactive` options for both activity types:
+### Reward recipients and compression
+
+Both activity types support these `when_inactive` options:
 
 ```json
 {
@@ -180,12 +277,13 @@ It does not activate them or change dates/volumes. System places are still remov
 terminal clones cannot become parents. Width, ordering, locks, rank/volume
 priority and matrix-filling recalculation remain in effect. This administrative
 rebuild uses its own classic/empty-parent rules, not the ordinary placement
-permissions introduced in stage 3.
+permissions described under [Placement permissions](#placement-permissions).
 
-All declared activity rules now have consumers; the temporary activation error
-`activity_rules_not_supported_yet` is retired. Validation occurs when settings are
-parsed by their consumers, not as a database constraint or configuration write API.
+Validation occurs when settings are parsed by their consumers, not as a
+database constraint or configuration write API.
 Legacy activation-only JSON does not affect recipient/compression eligibility.
+
+### ResetActivity and CryptoCash compatibility
 
 Equivalent activation examples:
 
@@ -205,7 +303,7 @@ Unit tests cover this behavior without PostgreSQL. The optional
 [PostgreSQL suite](../../../tests/Modules/ReferalProgram.Application.Tests/Postgres/README.md)
 also verifies persisted flags, dates and volumes. Neither suite contacts TON.
 
-## Expired first-place task
+### Expired first-place task
 
 `program.structure.deactivate-expired-first-places` checks profiled first places
 (`place_number=1`) in the requested program and structure. Root places
@@ -220,43 +318,27 @@ the same occurrence is harmless; a renewed date is checked by the UPDATE itself.
 No whole-structure materialization or per-place queries are needed. Ordinary
 `ResetActivity` remains separate and unchanged.
 
-## Shared activity source
+### Activity-source activation option
 
-New configuration can set `activity_source` to `place`, `invite`, or `group_root`.
-The selected source replaces the own-place status check for every `when_inactive`
-permission: placement, manual placement (when enabled), bonus/clone/reinvest
-recipient eligibility, invitation, fallback-root eligibility, and compression.
-It reads raw `is_active`, not the activation date, and never follows another
-structure's `activity_source` recursively.
+`GET /api/program/{marketing_addr}/structures/{structure_number}/activation-option?profile_addr=...&place_number=...`
+resolves the activation button for the displayed profile place. Missing activity
+settings hide the operation. Legacy settings and `activity_source: place` target
+the displayed place. `group_root` targets that profile's place 1 in the lowest
+numbered structure of the same program and group; `invite` targets its place 1 in
+structure 0. The resolver follows only one source and never falls back to another
+place if the source is missing or unavailable.
 
-- `place`: the candidate's own status.
-- `invite`: the profile's structure-0 place number 1 in this program.
-- `group_root`: that profile's place number 1 in the lowest-numbered structure
-  of the current structure's group, scoped to the same program. It does not use
-  the first available structure belonging to the profile. A missing source place
-  is inactive; a missing/empty group is a configuration error.
+The response includes `can_activate`, `command_tag`, `structure_number`,
+`profile_addr`, `place_number`, and `reason`. Eligibility uses the existing
+activation policy against the target structure's settings, contract command and
+activation date. The frontend obtains price, token and fee from that target
+structure, shows the target in confirmation, and sends the existing activation
+command to it. The command's volume and reward semantics are unchanged. Existing
+tree `can_activate` fields continue to describe direct activation of the node.
+Deploy this endpoint before the frontend that consumes it; a failed request must
+not enable activation using a guessed local target.
 
-For the new format `when_inactive.allow_spillover_children` replaces the old
-spillover permission. Omitted permission booleans remain false. Explicit
-`activity_source` cannot be combined with the legacy `spillover` block, even if
-its fields are false. The unused `spillover.require_active_invite` option was
-removed and is rejected as unknown (for both true and false). Without
-`activity_source`, own-place activity remains the default; the older
-`spillover.allow_inactive_place` permission remains supported. `allow_spillover_children` requires an explicit
-source. Unknown sources and explicit null are rejected.
-
-System places have no profile source and retain their own activity for placement;
-they are still excluded from recipients and compression. Terminal-clone, width,
-lock and other non-activity restrictions stay independent. Group membership does
-not synchronize stored flags/dates or change which concrete place an activation
-command operates on. Activation volume effects remain unchanged.
-
-Placement resolves the source structure once and filters candidates inside SQL.
-Tree actions and compression use a batch of source statuses. Relative-recipient
-traversal caches source status per encountered profile for that resolution;
-it retains the existing parent-by-parent traversal.
-
-## Mini configuration
+### Mini configuration
 
 Mini sets structure 0 to `type: "invite"` with the top-level option
 `require_marketing_place_to_invite=true`. This optional setting defaults to false
@@ -341,23 +423,3 @@ purchase, activation, clone, or reinvest currently adds one personal-volume
 unit to the operating profile and one referral-volume unit to its direct
 curator from structure `0`. Terminal clones are included. Structure `0` follows
 the same operation rules. Group volume is stored but is not calculated yet.
-
-### Activity-source activation option
-
-`GET /api/program/{marketing_addr}/structures/{structure_number}/activation-option?profile_addr=...&place_number=...`
-resolves the activation button for the displayed profile place. Missing activity
-settings hide the operation. Legacy settings and `activity_source: place` target
-the displayed place. `group_root` targets that profile's place 1 in the lowest
-numbered structure of the same program and group; `invite` targets its place 1 in
-structure 0. The resolver follows only one source and never falls back to another
-place if the source is missing or unavailable.
-
-The response includes `can_activate`, `command_tag`, `structure_number`,
-`profile_addr`, `place_number`, and `reason`. Eligibility uses the existing
-activation policy against the target structure's settings, contract command and
-activation date. The frontend obtains price, token and fee from that target
-structure, shows the target in confirmation, and sends the existing activation
-command to it. The command's volume and reward semantics are unchanged. Existing
-tree `can_activate` fields continue to describe direct activation of the node.
-Deploy this endpoint before the frontend that consumes it; a failed request must
-not enable activation using a guessed local target.
