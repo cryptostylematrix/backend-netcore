@@ -220,8 +220,8 @@ per-wallet isolation and unchanged timestamps for identical selections.
 
 ## UI report
 
-The frontend route `/ui-report` (under the `/frontend` deployment base) displays
-four sections from the UI database. Its navigation item is shown only for wallets
+The frontend route `/administration/usage` (under the `/frontend` deployment base) displays
+four sections from the UI database. Its Administration menu item is shown only for wallets
 on the test-program allowlist. The route and backend API are public; menu
 visibility is a frontend presentation rule, not server authorization.
 
@@ -271,7 +271,7 @@ Response sections: `generated_at`, `profiles`, `ton_connect`, `activity`,
 `items`. Pie sections contain `total` and `groups` with `count` and `percentage`.
 Responses use `Cache-Control: no-store`. Opening the page, changing filters or
 pages, and pressing Refresh fetch current data without a confirmation step.
-Only frontend `VITE_AVAILABLE_TEST_PROGRAM_WALLETS` controls menu visibility;
+Only frontend `VITE_AVAILABLE_TEST_PROGRAM_WALLETS` controls Administration menu visibility;
 there is no backend report allowlist, authentication configuration or session.
 
 Apply [007](Database/Scripts/007_add_ui_report_indexes.sql) after existing schema
