@@ -70,11 +70,7 @@ public sealed class ActivityReportEndpoint(ISender sender) : Endpoint<ActivityRe
     }
 }
 
-public sealed class PreferencesReportRequest
-{
-
-}
-public sealed class PreferencesReportEndpoint(ISender sender) : Endpoint<PreferencesReportRequest, UiReportSectionResponse<PreferenceReport>>
+public sealed class PreferencesReportEndpoint(ISender sender) : EndpointWithoutRequest<UiReportSectionResponse<PreferenceReport>>
 {
     public override void Configure()
     {
@@ -82,7 +78,7 @@ public sealed class PreferencesReportEndpoint(ISender sender) : Endpoint<Prefere
         AllowAnonymous();
         Tags("UI Reports");
     }
-    public override async Task HandleAsync(PreferencesReportRequest request, CancellationToken ct)
+    public override async Task HandleAsync(CancellationToken ct)
     {
         HttpContext.Response.Headers.CacheControl = "no-store";
         var result = await sender.Send(new GetPreferencesReportQuery(), ct);
