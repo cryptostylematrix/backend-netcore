@@ -1,6 +1,7 @@
 using Common.Domain;
 using Microsoft.EntityFrameworkCore;
 using UI.Core.ProfileAggregate;
+using UI.Core.TonConnectionAggregate;
 using UI.Core.WalletProfileIntentAggregate;
 using UI.Application.Abstractions;
 
@@ -18,6 +19,7 @@ public sealed class DataContext : DbContext, IUiUnitOfWork
         _domainEventDispatcher = domainEventDispatcher;
     }
 
+    public DbSet<TonConnection> TonConnections => Set<TonConnection>();
     public DbSet<CachedProfile> Profiles => Set<CachedProfile>();
     public DbSet<WalletProfileIntent> WalletProfileIntents => Set<WalletProfileIntent>();
     public DbSet<WalletProfileIntentEvent> WalletProfileIntentEvents =>

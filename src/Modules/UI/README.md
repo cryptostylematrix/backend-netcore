@@ -93,6 +93,65 @@ current relationship change.
 An `added` event is emitted only when the display intent is first created.
 Later ownership changes never emit another `added` event.
 
+## TON connection metadata
+
+`ton_connections` stores one latest snapshot per canonical wallet address,
+independently of profiles. It is not a connection history or an authenticated session.
+
+- `wallet_addr`: primary key, normalized using the same rules as profile intents.
+- `contract_version`: recognized standard code revision (`v1r1` through `v5r1`,
+  including `v4r1` and `v4r2`); unrecognized code or absent StateInit is
+  `unknown version`.
+- `wallet_name`: TON Connect wallet display name, falling back to `device.appName`.
+- `app_version`: `device.appVersion`, separate from the contract version.
+- `platform`: `device.platform` reported by the wallet, not the browser user agent.
+- `created_at`, `updated_at`: UTC timestamps; `updated_at` changes only when metadata changes.
+- `last_connected_at`: server UTC time of the latest accepted connection snapshot,
+  including restored sessions after a page reload. Also refreshed on metadata-change
+  notifications; ordinary React renders do not send snapshots. Existing rows remain
+  NULL until the first snapshot after migration 004 (no historical time is guessed).
+  This is receipt time, not the original time at which the wallet session was established.
+
+```http
+PUT /api/ui/wallets/{wallet_addr}/ton-connection
+Content-Type: application/json
+
+{
+  "wallet_state_init": "<base64 StateInit BOC from account.walletStateInit>",
+  "wallet_name": "Tonkeeper",
+  "app_version": "5.0.0",
+  "platform": "android"
+}
+```
+
+Returns `{ "success": true, "errors": [] }`; validation failures return
+`success: false` with `err_invalid_wallet_address`, `err_invalid_ton_connection`,
+or `err_invalid_wallet_state_init`. Names/version/platform are required, trimmed,
+control-character-free strings limited to 128/64/32 characters respectively.
+StateInit is optional and limited to 65,536 Base64 characters. If supplied, it
+must be valid and hash to the wallet address. The server identifies the code
+using the [standard wallet hashes](https://docs.ton.org/contracts/standard/wallets/history).
+The StateInit itself is not persisted. This identifies initial code supplied by
+TON Connect, not a fresh read of current on-chain code after a contract upgrade.
+
+The repository uses a single atomic PostgreSQL upsert; duplicate connections
+cannot create duplicate rows. Identical metadata preserves `updated_at` but refreshes
+`last_connected_at`; concurrent requests cannot move that timestamp backwards. The latest
+processed changed snapshot replaces all four metadata fields while preserving
+`created_at`. Different apps/devices for one address share that same record.
+As with profile intents, this anonymous endpoint stores client-reported metadata;
+it is not proof of wallet ownership.
+
+The frontend syncs both existing/restored sessions and connection status events,
+without waiting for a selected profile. Saves are serialized and temporary
+failures are retried up to three attempts; failures do not interrupt wallet use.
+A page reload or a later status event can retry a failed snapshot.
+
+Deployment: apply `Database/Scripts/003_create_ton_connections.sql` to the
+configured UI database (or Programs fallback), setting its API role variable,
+apply `Database/Scripts/004_add_last_connected_at.sql`, then deploy the API and frontend. The API does not apply this migration itself.
+New installations need the numbered UI schema scripts in order.
+
 ## Contract lookup
 
 Profile resolution uses the Contracts module through MediatR request/response
@@ -316,3 +375,20 @@ Existing NFT image URLs remain valid. External indexers may retain an older
 rasterized preview after deployment; the API cannot purge their caches. Refresh
 through the indexer when available, or update the NFT image URL with a new
 version query parameter using the normal wallet-approved profile update.
+
+
+## TON connection PostgreSQL regression test
+
+From the backend repository root:
+
+```bash
+bash tests/Modules/UI.Infrastructure.Tests/Postgres/run.sh --no-restore -m:1 /nodeReuse:false
+```
+
+The runner creates a disposable PostgreSQL 17 Docker container on a random
+loopback port, applies migrations 003 and 004, and exercises the actual
+`TonConnectionRepository` under a restricted application role. It checks legacy
+NULL timestamps, initial insertion, reconnection with unchanged metadata,
+metadata changes, concurrent inserts, and monotonic `last_connected_at`.
+The container is removed on exit; application database configuration is not used.
+The test is skipped in ordinary test runs without the runner's explicit port.

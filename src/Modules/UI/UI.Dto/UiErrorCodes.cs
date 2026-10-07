@@ -4,6 +4,8 @@ public static class UiErrorCodes
 {
     public const string WalletRequired = "err_wallet_not_connected";
     public const string InvalidWalletAddress = "err_invalid_wallet_address";
+    public const string InvalidTonConnection = "err_invalid_ton_connection";
+    public const string InvalidWalletStateInit = "err_invalid_wallet_state_init";
     public const string InvalidLogin = "err_invalid_login";
     public const string InvalidProfileMode = "err_invalid_profile_mode";
     public const string ProfileNotFound = "err_profile_not_found";

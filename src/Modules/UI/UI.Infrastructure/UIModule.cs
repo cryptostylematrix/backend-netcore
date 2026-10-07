@@ -6,6 +6,7 @@ using Npgsql;
 using UI.Application;
 using UI.Application.Abstractions;
 using UI.Core.ProfileAggregate;
+using UI.Core.TonConnectionAggregate;
 using UI.Core.WalletProfileIntentAggregate;
 using UI.Infrastructure.Persistence;
 using UI.Infrastructure.Queries;
@@ -45,6 +46,8 @@ public static class UIModule
                 WalletProfileIntentEventRepository>();
             services.AddScoped<IWalletProfileQueries, WalletProfileQueries>();
             services.AddSingleton<IWalletAddressService, WalletAddressService>();
+            services.AddSingleton<IWalletContractVersionResolver, WalletContractVersionResolver>();
+            services.AddScoped<ITonConnectionRepository, TonConnectionRepository>();
             services.AddSingleton(TimeProvider.System);
 
             return services;

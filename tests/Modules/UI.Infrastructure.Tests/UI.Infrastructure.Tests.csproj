@@ -22,4 +22,8 @@
     <ProjectReference Include="..\..\..\src\Modules\UI\UI.Infrastructure\UI.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Fixtures/wallet-state-init.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
