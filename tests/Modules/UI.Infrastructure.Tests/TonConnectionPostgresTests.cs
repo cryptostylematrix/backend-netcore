@@ -31,6 +31,9 @@ public sealed class TonConnectionPostgresTests
         await Execute(admin, File.ReadAllText(Path.Combine(scripts, "005_create_wallet_preferences.sql"))
             .Replace("v_database_username text := '';", "v_database_username text := 'ton_connection_app';"));
         await Execute(admin, File.ReadAllText(Path.Combine(scripts, "006_allow_extensible_language_tags.sql")));
+        await Execute(admin, File.ReadAllText(Path.Combine(scripts, "001_create_ui_profile_intents.sql"))
+            .Replace("v_database_username text := '';", "v_database_username text := 'ton_connection_app';"));
+        await Execute(admin, File.ReadAllText(Path.Combine(scripts, "007_add_ui_report_indexes.sql")));
         var appString = adminString.Replace("Username=postgres", "Username=ton_connection_app");
         DataContext Context() => new(new DbContextOptionsBuilder<DataContext>().UseNpgsql(appString).Options);
         var start = new DateTime(2026, 10, 7, 12, 0, 0, DateTimeKind.Utc);
@@ -103,6 +106,7 @@ public sealed class TonConnectionPostgresTests
         Assert.Equal("uk", preference.Language);
         Assert.Equal(start.AddMinutes(2), preference.UpdatedAtUtc);
         Assert.Equal("fr", (await final.WalletPreferences.SingleAsync(x => x.WalletAddr == "B")).Language);
+        await UiReportPostgresAssertions.Verify(admin, appString, start);
     }
 
     private sealed class PostgresFactAttribute : FactAttribute

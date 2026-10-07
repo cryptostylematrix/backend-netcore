@@ -218,6 +218,66 @@ automatic production migration. The [Docker regression runner](#ui-persistence-p
 005/006 and checks initialization races, database precedence, explicit updates,
 per-wallet isolation and unchanged timestamps for identical selections.
 
+## UI report
+
+The frontend route `/ui-report` (under the `/frontend` deployment base) displays
+four sections from the UI database. Its navigation item is shown only for wallets
+on the test-program allowlist. The route and backend API are public; menu
+visibility is a frontend presentation rule, not server authorization.
+
+### Definitions and calculations
+
+- **Wallets and profiles:** use current `wallet_profile_intents`, including owner
+  and preview modes. Each profile counts exactly once, for its latest saved
+  relationship ordered by `created_at DESC, id DESC`. Ownership refreshes change
+  `updated_at` and do not move this assignment. Removing the latest relationship
+  makes the next remaining relationship eligible. Cached profiles without a
+  current relationship and removed history records are excluded. Totals count
+  distinct assigned profiles and wallets with at least one assigned profile.
+  Percentage = wallet profile count / total assigned profiles × 100. Sort by
+  count descending, then wallet address; 20 records per page, totals shown first.
+- **TonConnect:** one record per wallet's latest saved metadata. The four
+  independent grouping flags select contract version, wallet name, app version,
+  and platform. Select both wallet name and app version to group their pair. Multiple flags create combined tuples, such as
+  `v5r1 · Tonkeeper 5.0 · android`; no flags creates one all-wallets slice. Unknown
+  contract versions remain a group. The population includes legacy connections
+  without a last connection date and wallets without profiles.
+- **Active wallets:** use `last_connected_at`, not metadata `updated_at`.
+  Inclusive range `[from, to]`, ordered newest first and then wallet address;
+  20 per page. `hour` means the previous hour, `today` starts at UTC midnight,
+  `week` means 7 days; `month`, `three_months`, `six_months`, and `year` subtract
+  calendar months/years from the current UTC instant. Null and future dates
+  are excluded. This is the latest recorded connection (including restored
+  sessions), not a connection history or proof that the user is still online.
+- **Preferences:** one saved language per wallet, including tags not yet present
+  in the frontend language catalog. No fixed language whitelist. Wallets with
+  no saved preference are excluded. The current grouping selector is language.
+
+Both pie charts show their own total and every group's absolute count and
+percentage. Their populations can differ from the profile and activity totals.
+Percentages are returned unrounded; display rounds to two decimals, so displayed
+slices may add up to slightly more or less than 100%. All report queries share a
+read-only repeatable-read snapshot. Out-of-range pages clamp to the last page;
+empty tables report page 1. Separate page requests use fresh snapshots.
+
+### Report API
+
+`GET /api/ui/reports` is anonymous and requires no wallet signature or token.
+Query parameters: `profile_page=1`, `activity_page=1`, `period=week`,
+`group_contract=true`, `group_wallet_name=false`, `group_app_version=false`,
+`group_platform=false`. Invalid pages or periods return 400.
+Response sections: `generated_at`, `profiles`, `ton_connect`, `activity`,
+`preferences`; table sections include `page`, fixed `page_size: 20`, totals and
+`items`. Pie sections contain `total` and `groups` with `count` and `percentage`.
+Responses use `Cache-Control: no-store`. Opening the page, changing filters or
+pages, and pressing Refresh fetch current data without a confirmation step.
+Only frontend `VITE_AVAILABLE_TEST_PROGRAM_WALLETS` controls menu visibility;
+there is no backend report allowlist, authentication configuration or session.
+
+Apply [007](Database/Scripts/007_add_ui_report_indexes.sql) after existing schema
+migrations to add the latest-profile and last-connection indexes. It does not
+rewrite stored data or add tables. Production migrations are manual.
+
 ## Contract lookup
 
 Profile resolution uses the Contracts module through MediatR request/response
@@ -382,10 +442,12 @@ Apply schema scripts in order, only when not already present in the target datab
 | [004](Database/Scripts/004_add_last_connected_at.sql) | Nullable last connection timestamp; no invented historical backfill |
 | [005](Database/Scripts/005_create_wallet_preferences.sql) | Per-wallet language preferences |
 | [006](Database/Scripts/006_allow_extensible_language_tags.sql) | Remove the fixed language list and allow tags up to 63 characters |
+| [007](Database/Scripts/007_add_ui_report_indexes.sql) | Index latest profile links and last connections for reports |
 
 Set `v_database_username` to the API role in scripts 001, 003, and 005.
 For an existing database with 001–004, apply 005 and 006 for the language change; if 005 is already applied, apply only 006.
-For a fresh installation, apply all six. These scripts are not an automatic
+For reporting, apply 007 after the existing migrations.
+For a fresh installation, apply all seven. These scripts are not an automatic
 migration runner and must not be blindly replayed. Deploy schema changes first,
 then the backend, then the frontend.
 
@@ -429,9 +491,9 @@ is not required to save connection information or load the wallet's language.
 
 ## Authentication limitation
 
-The endpoints currently follow the rest of the API and are anonymous. A caller
+The profile, TonConnection and preference write endpoints remain anonymous. A caller
 can therefore submit another wallet's address. The data represents a claimed
-wallet intention until wallet-signature authentication is added. Do not use it
+wallet intention. Report read access is also anonymous. Do not use it
 as cryptographic evidence of wallet behavior or ownership.
 
 ## Generated profile avatars
@@ -478,7 +540,7 @@ bash tests/Modules/UI.Infrastructure.Tests/Postgres/run.sh --no-restore -m:1 /no
 ```
 
 The runner creates a disposable PostgreSQL 17 Docker container on a random
-loopback port, applies migrations 003–006, and exercises the actual
+loopback port, applies migrations 001 and 003–007, and exercises the actual
 `TonConnectionRepository` and `WalletPreferencesRepository` under a restricted
 application role. It checks legacy
 NULL timestamps, initial insertion, reconnection with unchanged metadata,
@@ -502,3 +564,9 @@ An older frontend that does not support a saved tag resolves the closest availab
 parent language or displays English, without saving that fallback over the database
 preference. Only an explicit selection replaces the preference. Regional and script
 subtags are retained in persistence; i18next loads the catalog's exact code.
+
+
+Report regressions also cover empty datasets, latest-link assignment and timestamp
+ties, orphan-profile exclusion, stable pagination, all sixteen grouping combinations,
+activity boundaries, and future language tags using the runtime database role.
+Unit tests cover filter validation and all time presets including leap months.

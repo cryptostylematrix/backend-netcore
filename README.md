@@ -44,7 +44,7 @@ name is intentionally preserved in paths and namespaces.
   radar, and trimmed-classic placement.
 - [UI module](src/Modules/UI/README.md) documents all five persisted tables,
   profile and language migration from browser storage, TonConnect timestamps,
-  API endpoints, synchronization triggers, and schema scripts 001–006.
+  API endpoints, synchronization triggers, wallet analytics, and schema scripts 001–007.
 - [Scheduled Tasks module](src/Modules/ScheduledTasks/README.md) covers task JSON,
   recurrence, deterministic correlation IDs, retries, and database setup.
 - [Program Matrix Filling Recalculator](src/ProgramMatrixFillingRecalculator/README.md)
@@ -152,7 +152,7 @@ source resolution, clone kinds, setup-script topology, and infrastructure query
 invariants. UI tests cover profile intents, contract adapters, and wallet address
 handling, wallet contract identification, and language validation. The optional
 [UI PostgreSQL test](src/Modules/UI/README.md#ui-persistence-postgresql-regression-test)
-checks connection and preference persistence using migrations 003–006 in Docker.
+checks connection/preference persistence and report aggregation using migrations 001 and 003–007 in Docker.
 Scheduled Tasks tests cover schedules, command parsing/execution,
 correlation IDs, dispatch, aggregates, and persistence mappings.
 

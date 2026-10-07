@@ -50,6 +50,7 @@ public static class UIModule
             services.AddSingleton<IWalletContractVersionResolver, WalletContractVersionResolver>();
             services.AddScoped<ITonConnectionRepository, TonConnectionRepository>();
             services.AddScoped<IWalletPreferencesRepository, WalletPreferencesRepository>();
+            services.AddScoped<IUiReportQueries, UiReportQueries>();
             services.AddSingleton(TimeProvider.System);
 
             return services;

@@ -12,6 +12,8 @@ grant the runtime role SELECT/INSERT/UPDATE on it, and separately verify its
 row count and contents before cutover. Do not treat script 04's five output rows
 as verification of these additional tables. Script 05 leaves them in the source.
 Do not recreate a table using a schema script if it was already restored.
+For reports, also retain or apply the indexes from schema migration 007; do not
+recreate them if they were included in the restore.
 
 For a new installation or an upgrade within the existing UI database, use the
 [ordered schema migrations](../../README.md#database-setup), not this database-copy
