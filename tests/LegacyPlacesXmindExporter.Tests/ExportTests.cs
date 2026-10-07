@@ -136,7 +136,7 @@ public sealed class ExportTests
     {
         using var prompt = new StringWriter();
         var filename = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.xmind");
-        var options = ExportOptions.Parse(["--env-file", "settings.env"], new StringReader(value + "\n" + filename + "\n"), prompt);
+        var options = ExportOptions.Parse(["--env-file", "settings.env"], new StringReader(value + "\n\n" + filename + "\n"), prompt);
         Assert.Equal(expected, options.Structure);
         Assert.Equal(filename, options.Output);
         Assert.Equal("settings.env", options.EnvFile);
@@ -149,7 +149,7 @@ public sealed class ExportTests
     {
         var filename = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.xmind");
         using var prompt = new StringWriter();
-        var options = ExportOptions.Parse([], new StringReader("abc\n32768\n5\nbad.zip\n" + filename + "\n"), prompt);
+        var options = ExportOptions.Parse([], new StringReader("abc\n32768\n5\n\nbad.zip\n" + filename + "\n"), prompt);
         Assert.Equal((short)5, options.Structure);
         Assert.Equal(filename, options.Output);
         Assert.Contains("Введите целое число", prompt.ToString());
@@ -239,6 +239,27 @@ public sealed class ExportTests
             Assert.Equal(hour, place.CreatedAt.Hour);
         }
         finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public void SubtreePromptRetriesInvalidIdAndUsesRootInDefaultFilename()
+    {
+        using var prompt = new StringWriter();
+        var options = ExportOptions.Parse([], new StringReader("5\ninvalid\n9223372036854775808\n12345\n\n"), prompt);
+        Assert.Equal(12345L, options.RootPlaceId);
+        Assert.EndsWith("places-5-from-12345.xmind", options.Output);
+    }
+
+    [Fact]
+    public void SubtreeRootMayHaveParentOutsideExportButCyclesAreRejected()
+    {
+        var roots = PlaceHierarchy.Build([Make(20, 10), Make(22, 20, 1), Make(21, 20, 0)], rootPlaceId: 20);
+        Assert.Equal(20, Assert.Single(roots).Place.Id);
+        Assert.Equal(new long[] { 21, 22 }, roots[0].Children.Select(n => n.Place.Id));
+        Assert.Equal(20, Assert.Single(PlaceHierarchy.Build([Make(20, 10)], rootPlaceId: 20)).Place.Id);
+        Assert.Throws<InvalidDataException>(() => PlaceHierarchy.Build([Make(20, 21), Make(21, 20)], rootPlaceId: 20));
+        Assert.Throws<InvalidDataException>(() => PlaceHierarchy.Build([Make(20, 20)], rootPlaceId: 20));
+        Assert.Throws<InvalidDataException>(() => PlaceHierarchy.Build([Make(20)], rootPlaceId: 99));
     }
 
 }

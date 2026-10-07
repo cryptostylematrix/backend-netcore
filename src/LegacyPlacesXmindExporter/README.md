@@ -30,19 +30,21 @@ of using a file. Environment variables take precedence over `.env` values.
 The file is loaded only when explicitly specified with `--env-file`.
 The connection string is not logged.
 
-The application always asks for the structure number and output filename at
-startup. `--structure` and `--output` arguments are no longer accepted.
-The current console prompts are in Russian and mean “Structure number” and
-“Output filename”:
+The application asks for the structure number, an optional starting place ID,
+and the output filename at startup. `--structure` and `--output` arguments are no longer accepted.
+The current console prompts are in Russian:
 
 ```text
 Номер структуры: 5
-Имя выходного файла [places-5.xmind]: places-5.xmind
+ID начального места [Enter — вся структура]: 12345
+Имя выходного файла [places-5-from-12345.xmind]:
 ```
 
 Enter a structure number in the PostgreSQL `smallint` range (-32768 to 32767),
-then a path ending in `.xmind`. Press Enter at the filename prompt to use
-`places-<structure>.xmind` in the current directory. Invalid answers prompt
+then optionally enter a `place_id` in the PostgreSQL `bigint` range. Leave it
+blank to export the entire structure. Finally, enter a path ending in `.xmind`.
+Press Enter at the filename prompt to use `places-<structure>.xmind` for a full
+structure or `places-<structure>-from-<place_id>.xmind` for a subtree. Invalid answers prompt
 for another attempt. End of input without an answer causes an error.
 The destination directory must exist. Existing files are not overwritten.
 `--help` displays usage without prompting or connecting to the database.
@@ -54,6 +56,22 @@ To run without the source tree, publish the application:
 dotnet publish src/LegacyPlacesXmindExporter -c Release -o artifacts/legacy-places-exporter
 dotnet artifacts/legacy-places-exporter/LegacyPlacesXmindExporter.dll
 ```
+
+## Exporting a subtree
+
+The starting place must belong to the selected structure. The exporter reads
+that place and all descendants reachable through `parent_id` within the same
+structure. Its ancestors, siblings, and unrelated branches are excluded.
+The selected place becomes the map root even when it has a parent in the database;
+no database links are changed. A leaf produces a single-topic map. An unknown
+ID or an ID from another structure produces an error.
+
+Selection runs in PostgreSQL with a parameterized recursive CTE, so unrelated
+places are not loaded into application memory. Recursion deduplicates place IDs
+to terminate on corrupt cycles; validation rejects cycles rather than masking
+them by treating the selected place as a root. No path arrays are accumulated
+for deep chains. Full-structure mode retains its existing query and validation.
+Child order, topic contents, styling, and progress reporting are preserved.
 
 ## Map contents
 

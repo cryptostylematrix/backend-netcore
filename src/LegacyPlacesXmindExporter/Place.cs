@@ -10,7 +10,7 @@ public sealed class PlaceNode(Place place)
 
 public static class PlaceHierarchy
 {
-    public static IReadOnlyList<PlaceNode> Build(IReadOnlyList<Place> places, CancellationToken cancellationToken = default, ExportProgress? progress = null)
+    public static IReadOnlyList<PlaceNode> Build(IReadOnlyList<Place> places, CancellationToken cancellationToken = default, ExportProgress? progress = null, long? rootPlaceId = null)
     {
         if (places.Count == 0)
             throw new InvalidDataException("В выбранной структуре нет мест.");
@@ -28,13 +28,22 @@ public static class PlaceHierarchy
             progress?.Advance();
         }
 
+        if (rootPlaceId is { } selectedId)
+        {
+            if (!nodes.TryGetValue(selectedId, out var selected))
+                throw new InvalidDataException($"Начальное место {selectedId} отсутствует в выгрузке.");
+            // In a descendant-only result, the root's parent can be present only in a cycle.
+            if (selected.Place.ParentId is { } parentId && nodes.ContainsKey(parentId))
+                throw new InvalidDataException($"Обнаружен цикл parent_id через начальное место {selectedId}.");
+        }
+
         var roots = new List<PlaceNode>();
         progress?.Complete();
         progress?.Start("Построение связей", places.Count);
         foreach (var node in nodes.Values)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (node.Place.ParentId is not { } parentId)
+            if (node.Place.Id == rootPlaceId || node.Place.ParentId is not { } parentId)
                 roots.Add(node);
             else
             {

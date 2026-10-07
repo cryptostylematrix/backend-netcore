@@ -24,9 +24,11 @@ try
     using var cancellation = new CancellationTokenSource();
     Console.CancelKeyPress += (_, e) => { e.Cancel = true; cancellation.Cancel(); };
     Console.WriteLine("Чтение мест структуры {0}...", options.Structure);
+    if (options.RootPlaceId is { } rootId)
+        Console.WriteLine("Начальное место: {0} (включая всех потомков в выбранной структуре).", rootId);
     using var progress = new ExportProgress(Console.Out);
-    var places = await PlaceReader.ReadAsync(connectionString, options.Structure, cancellation.Token, progress);
-    var roots = PlaceHierarchy.Build(places, cancellation.Token, progress);
+    var places = await PlaceReader.ReadAsync(connectionString, options.Structure, cancellation.Token, progress, options.RootPlaceId);
+    var roots = PlaceHierarchy.Build(places, cancellation.Token, progress, options.RootPlaceId);
     var placeCount = places.Count;
     places.Clear(); // The tree owns the records now; release the redundant references.
     XmindWriter.Write(output, roots, cancellation.Token, progress, placeCount);

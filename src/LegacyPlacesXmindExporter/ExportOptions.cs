@@ -2,11 +2,11 @@ using System.Globalization;
 
 namespace LegacyPlacesXmindExporter;
 
-public sealed record ExportOptions(short Structure, string Output, string? EnvFile)
+public sealed record ExportOptions(short Structure, string Output, string? EnvFile, long? RootPlaceId = null)
 {
     public const string Usage = """
         Экспорт public.places старой PostgreSQL-базы в XMind.
-        Номер структуры и имя файла запрашиваются при запуске.
+        Номер структуры, начальное место (необязательно) и имя файла запрашиваются при запуске.
         --env-file <path>       Загрузить указанный .env файл.
         --help                 Показать справку.
         Подключение: переменная LEGACY_PLACES_CONNECTION_STRING.
@@ -40,7 +40,25 @@ public sealed record ExportOptions(short Structure, string Output, string? EnvFi
             prompt.WriteLine("Введите целое число от -32768 до 32767.");
         }
 
-        var defaultName = $"places-{structure}.xmind";
+        long? rootPlaceId = null;
+        while (true)
+        {
+            prompt.Write("ID начального места [Enter — вся структура]: ");
+            prompt.Flush();
+            var value = input.ReadLine() ?? throw new ArgumentException("Не получен ответ о начальном месте: ввод завершён.");
+            if (string.IsNullOrWhiteSpace(value))
+                break;
+            if (long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var id))
+            {
+                rootPlaceId = id;
+                break;
+            }
+            prompt.WriteLine("Введите целый place_id в диапазоне bigint или оставьте ответ пустым.");
+        }
+
+        var defaultName = rootPlaceId is { } rootId
+            ? $"places-{structure}-from-{rootId}.xmind"
+            : $"places-{structure}.xmind";
         while (true)
         {
             prompt.Write($"Имя выходного файла [{defaultName}]: ");
@@ -49,7 +67,7 @@ public sealed record ExportOptions(short Structure, string Output, string? EnvFi
             try
             {
                 var output = ValidateOutput(string.IsNullOrWhiteSpace(filename) ? defaultName : filename.Trim());
-                return new ExportOptions(structure, output, values.GetValueOrDefault("--env-file"));
+                return new ExportOptions(structure, output, values.GetValueOrDefault("--env-file"), rootPlaceId);
             }
             catch (ArgumentException exception)
             {
