@@ -13,7 +13,7 @@ public sealed class ProfileReport
     [JsonPropertyName("total_wallets")] public long TotalWallets { get; init; }
     [JsonPropertyName("total_profiles")] public long TotalProfiles { get; init; }
     [JsonPropertyName("page")] public int Page { get; init; }
-    [JsonPropertyName("page_size")] public int PageSize => 20;
+    [JsonPropertyName("page_size")] public int PageSize => 10;
     [JsonPropertyName("items")] public IReadOnlyList<ProfileReportRow> Items { get; init; } = [];
 }
 public sealed class ProfileReportRow
@@ -42,7 +42,7 @@ public sealed class ActivityReport
     [JsonPropertyName("to")] public DateTime To { get; init; }
     [JsonPropertyName("total")] public long Total { get; init; }
     [JsonPropertyName("page")] public int Page { get; init; }
-    [JsonPropertyName("page_size")] public int PageSize => 20;
+    [JsonPropertyName("page_size")] public int PageSize => 10;
     [JsonPropertyName("items")] public IReadOnlyList<ActivityReportRow> Items { get; init; } = [];
 }
 public sealed class ActivityReportRow

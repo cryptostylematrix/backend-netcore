@@ -33,8 +33,8 @@ internal sealed class UiReportQueries([FromKeyedServices("UI")] NpgsqlDataSource
             SELECT wallet_addr AS "WalletAddr", profile_count AS "ProfileCount",
                 100.0 * profile_count / NULLIF(@total, 0) AS "Percentage"
             FROM grouped ORDER BY profile_count DESC, wallet_addr
-            LIMIT 20 OFFSET @offset;
-            """, new { total = totals.Profiles, offset = (profilePage - 1) * 20 }))).ToArray();
+            LIMIT 10 OFFSET @offset;
+            """, new { total = totals.Profiles, offset = (profilePage - 1) * 10 }))).ToArray();
         var groups = (await connection.QueryAsync<ConnectionReportGroup>(Command("""
             WITH grouped AS (
                 SELECT CASE WHEN @GroupContract THEN contract_version END AS contract_version,
@@ -57,8 +57,8 @@ internal sealed class UiReportQueries([FromKeyedServices("UI")] NpgsqlDataSource
         var active = (await connection.QueryAsync<ActivityReportRow>(Command("""
             SELECT wallet_addr AS "WalletAddr", last_connected_at AS "LastConnectedAt"
             FROM public.ton_connections WHERE last_connected_at >= @From AND last_connected_at <= @To
-            ORDER BY last_connected_at DESC, wallet_addr LIMIT 20 OFFSET @offset;
-            """, new { filter.From, filter.To, offset = (activityPage - 1) * 20 }))).ToArray();
+            ORDER BY last_connected_at DESC, wallet_addr LIMIT 10 OFFSET @offset;
+            """, new { filter.From, filter.To, offset = (activityPage - 1) * 10 }))).ToArray();
         var preferences = (await connection.QueryAsync<PreferenceReportGroup>(Command("""
             SELECT language AS "Language", COUNT(*) AS "Count",
                 100.0 * COUNT(*) / NULLIF(SUM(COUNT(*)) OVER (), 0) AS "Percentage"
@@ -77,7 +77,7 @@ internal sealed class UiReportQueries([FromKeyedServices("UI")] NpgsqlDataSource
         };
     }
     private static int ClampPage(int requested, long total) =>
-        (int)Math.Min(Math.Max(1, requested), Math.Max(1, (total + 19) / 20));
+        (int)Math.Min(Math.Max(1, requested), Math.Max(1, (total + 9) / 10));
     private sealed class ProfileTotals
     {
         public long Wallets { get; init; }

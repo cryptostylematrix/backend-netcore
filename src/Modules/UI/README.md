@@ -235,7 +235,7 @@ visibility is a frontend presentation rule, not server authorization.
   current relationship and removed history records are excluded. Totals count
   distinct assigned profiles and wallets with at least one assigned profile.
   Percentage = wallet profile count / total assigned profiles × 100. Sort by
-  count descending, then wallet address; 20 records per page, totals shown first.
+  count descending, then wallet address; 10 records per page, totals shown first.
 - **TonConnect:** one record per wallet's latest saved metadata. The four
   independent grouping flags select contract version, wallet name, app version,
   and platform. Select both wallet name and app version to group their pair. Multiple flags create combined tuples, such as
@@ -244,7 +244,7 @@ visibility is a frontend presentation rule, not server authorization.
   without a last connection date and wallets without profiles.
 - **Active wallets:** use `last_connected_at`, not metadata `updated_at`.
   Inclusive range `[from, to]`, ordered newest first and then wallet address;
-  20 per page. `hour` means the previous hour, `today` starts at UTC midnight,
+  10 per page. `hour` means the previous hour, `today` starts at UTC midnight,
   `week` means 7 days; `month`, `three_months`, `six_months`, and `year` subtract
   calendar months/years from the current UTC instant. Null and future dates
   are excluded. This is the latest recorded connection (including restored
@@ -267,7 +267,7 @@ Query parameters: `profile_page=1`, `activity_page=1`, `period=week`,
 `group_contract=true`, `group_wallet_name=false`, `group_app_version=false`,
 `group_platform=false`. Invalid pages or periods return 400.
 Response sections: `generated_at`, `profiles`, `ton_connect`, `activity`,
-`preferences`; table sections include `page`, fixed `page_size: 20`, totals and
+`preferences`; table sections include `page`, fixed `page_size: 10`, totals and
 `items`. Pie sections contain `total` and `groups` with `count` and `percentage`.
 Responses use `Cache-Control: no-store`. Opening the page, changing filters or
 pages, and pressing Refresh fetch current data without a confirmation step.

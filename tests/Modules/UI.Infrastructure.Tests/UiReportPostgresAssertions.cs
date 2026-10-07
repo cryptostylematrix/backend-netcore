@@ -48,7 +48,7 @@ internal static class UiReportPostgresAssertions
         var first = await queries.GetAsync(filter, default);
         Assert.Equal(40, first.Profiles.TotalWallets);
         Assert.Equal(42, first.Profiles.TotalProfiles);
-        Assert.Equal(20, first.Profiles.Items.Count);
+        Assert.Equal(10, first.Profiles.Items.Count);
         Assert.Equal("w02", first.Profiles.Items[0].WalletAddr);
         Assert.Equal(2, first.Profiles.Items[0].ProfileCount);
         Assert.Equal("w03", first.Profiles.Items[1].WalletAddr); // id breaks equal created_at.
@@ -56,7 +56,7 @@ internal static class UiReportPostgresAssertions
         Assert.InRange(first.Profiles.Items[0].Percentage, 4.7619m, 4.762m);
         Assert.DoesNotContain(first.Profiles.Items, x => x.WalletAddr == "w01");
         Assert.Equal(42, first.Activity.Total);
-        Assert.Equal(20, first.Activity.Items.Count);
+        Assert.Equal(10, first.Activity.Items.Count);
         Assert.Equal("w01", first.Activity.Items[0].WalletAddr);
         Assert.Equal(now.AddMinutes(-1), first.Activity.Items[0].LastConnectedAt);
         Assert.Equal(45, first.TonConnect.Total);
@@ -65,12 +65,18 @@ internal static class UiReportPostgresAssertions
         Assert.Equal(2, first.Preferences.Groups.Single(x => x.Language == "en").Count);
         Assert.Contains(first.Preferences.Groups, x => x.Language == "zh-hant");
         var second = await queries.GetAsync(filter with { ProfilePage = 2, ActivityPage = 2 }, default);
-        Assert.Equal(20, second.Profiles.Items.Count);
+        Assert.Equal(10, second.Profiles.Items.Count);
         Assert.Empty(first.Profiles.Items.Select(x => x.WalletAddr).Intersect(second.Profiles.Items.Select(x => x.WalletAddr)));
-        Assert.InRange(first.Profiles.Items.Concat(second.Profiles.Items).Sum(x => x.Percentage), 99.999m, 100.001m);
+        Assert.Equal(10, first.Profiles.PageSize);
+        Assert.Equal(10, first.Activity.PageSize);
+        var third = await queries.GetAsync(filter with { ProfilePage = 3 }, default);
+        var fourth = await queries.GetAsync(filter with { ProfilePage = 4 }, default);
+        var all = first.Profiles.Items.Concat(second.Profiles.Items).Concat(third.Profiles.Items).Concat(fourth.Profiles.Items).ToArray();
+        Assert.Equal(40, all.Select(x => x.WalletAddr).Distinct().Count());
+        Assert.InRange(all.Sum(x => x.Percentage), 99.999m, 100.001m);
         var last = await queries.GetAsync(filter with { ProfilePage = 999, ActivityPage = 999 }, default);
-        Assert.Equal(2, last.Profiles.Page);
-        Assert.Equal(3, last.Activity.Page);
+        Assert.Equal(4, last.Profiles.Page);
+        Assert.Equal(5, last.Activity.Page);
         Assert.Equal(2, last.Activity.Items.Count);
         Assert.Equal("boundary", last.Activity.Items[^1].WalletAddr);
         for (var flags = 0; flags < 16; flags++)
