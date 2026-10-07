@@ -20,8 +20,11 @@ internal sealed class GetInviteInfoQueryHandler(IPlaceQueries placeQueries)
             placeNumber: RootPlaceNumber,
             cancellationToken);
 
-        return place is null
-            ? Result<InviteDataResponse>.NotFound()
-            : Result.Success(place.ToInviteData());
+        if (place is null) return Result<InviteDataResponse>.NotFound();
+
+        var structures = await placeQueries.GetProfileStructureNumbersAsync(
+            request.MarketingAddr, place.ProfileAddr is { } profile ? [profile] : [], cancellationToken);
+        return Result.Success(place.ToInviteData(
+            place.ProfileAddr is { } address && structures.TryGetValue(address, out var numbers) ? numbers : []));
     }
 }

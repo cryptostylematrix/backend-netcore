@@ -25,6 +25,9 @@ public sealed class InviteDataResponse
     [JsonPropertyName("filling")]
     public uint Filling { get; init; }
 
+    [JsonPropertyName("structure_numbers")]
+    public IReadOnlyList<byte> StructureNumbers { get; init; } = [];
+
     [JsonPropertyName("ative")]
     public bool IsActive { get; init; }
 }

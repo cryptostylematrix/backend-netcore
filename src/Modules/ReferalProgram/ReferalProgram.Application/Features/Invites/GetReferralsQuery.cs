@@ -25,9 +25,16 @@ internal sealed class GetReferralsQueryHandler(IPlaceQueries placeQueries)
             pageSize: request.PageSize,
             cancellationToken);
 
+        var items = places.Items.ToArray();
+        var structures = await placeQueries.GetProfileStructureNumbersAsync(
+            request.MarketingAddr,
+            items.Select(place => place.ProfileAddr).OfType<string>().Distinct().ToArray(),
+            cancellationToken);
+
         return Result.Success(new Paginated<InviteDataResponse>
         {
-            Items = places.Items.Select(place => place.ToInviteData()),
+            Items = items.Select(place => place.ToInviteData(
+                place.ProfileAddr is { } address && structures.TryGetValue(address, out var numbers) ? numbers : [])),
             Page = places.Page,
             TotalPages = places.TotalPages
         });

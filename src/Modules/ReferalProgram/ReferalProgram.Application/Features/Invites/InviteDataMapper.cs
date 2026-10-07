@@ -2,7 +2,7 @@ namespace ReferalProgram.Application.Features.Invites;
 
 internal static class InviteDataMapper
 {
-    public static InviteDataResponse ToInviteData(this PlaceResponse place) => new()
+    public static InviteDataResponse ToInviteData(this PlaceResponse place, IReadOnlyList<byte> structureNumbers) => new()
     {
         ProfileAddr = place.ProfileAddr!,
         ProfileLogin = place.ProfileLogin ?? string.Empty,
@@ -11,6 +11,7 @@ internal static class InviteDataMapper
         CreatedAt = place.CreatedAt,
         ActivatedAt = place.ActivatedAt,
         Filling = place.Filling,
+        StructureNumbers = structureNumbers,
         IsActive = place.IsActive
     };
 }

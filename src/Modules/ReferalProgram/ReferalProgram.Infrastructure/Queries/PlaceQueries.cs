@@ -11,6 +11,28 @@ public sealed class PlaceQueries(
     [FromKeyedServices("Programs")] NpgsqlDataSource dataSource)
     : IPlaceQueries, IPositionCandidateQueries
 {
+    public async Task<IReadOnlyDictionary<string, byte[]>> GetProfileStructureNumbersAsync(
+        string marketingAddr, IReadOnlyCollection<string> profileAddrs,
+        CancellationToken cancellationToken)
+    {
+        if (profileAddrs.Count == 0) return new Dictionary<string, byte[]>();
+        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        var rows = await connection.QueryAsync<(string ProfileAddr, short StructureNumber)>(
+            new CommandDefinition("""
+                SELECT DISTINCT profile_addr, structure_number
+                FROM public.places
+                WHERE marketing_addr = @marketingAddr
+                    AND profile_addr = ANY(@profiles)
+                    AND structure_number <> 0
+                ORDER BY profile_addr, structure_number
+                """, new { marketingAddr, profiles = profileAddrs.ToArray() },
+                cancellationToken: cancellationToken));
+        return rows.GroupBy(row => row.ProfileAddr).ToDictionary(
+            group => group.Key,
+            group => group.Select(row => checked((byte)row.StructureNumber)).ToArray(),
+            StringComparer.Ordinal);
+    }
+
     public async Task<byte?> GetGroupRootStructureAsync(string marketingAddr, byte structureNumber,
         CancellationToken cancellationToken)
     {
