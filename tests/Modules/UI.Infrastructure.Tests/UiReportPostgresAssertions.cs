@@ -93,5 +93,14 @@ internal static class UiReportPostgresAssertions
                 Assert.Equal((flags & 8) == 0, x.Platform is null);
             });
         }
+        // Deny unrelated tables to prove section queries do not rebuild the whole report.
+        await admin.ExecuteAsync("REVOKE SELECT ON ton_connections, wallet_preferences FROM ton_connection_app");
+        Assert.Equal(first.Profiles.TotalProfiles, (await queries.GetProfilesAsync(filter, default)).TotalProfiles);
+        await admin.ExecuteAsync("GRANT SELECT ON ton_connections TO ton_connection_app; REVOKE SELECT ON wallet_profile_intents FROM ton_connection_app");
+        Assert.Equal(first.TonConnect.Total, (await queries.GetTonConnectAsync(filter, default)).Total);
+        Assert.Equal(first.Activity.Total, (await queries.GetActivityAsync(filter, default)).Total);
+        await admin.ExecuteAsync("GRANT SELECT ON wallet_preferences TO ton_connection_app; REVOKE SELECT ON ton_connections FROM ton_connection_app");
+        Assert.Equal(first.Preferences.Total, (await queries.GetPreferencesAsync(filter, default)).Total);
+        await admin.ExecuteAsync("GRANT SELECT ON ton_connections, wallet_profile_intents TO ton_connection_app");
     }
 }

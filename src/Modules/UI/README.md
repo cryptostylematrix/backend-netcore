@@ -256,23 +256,42 @@ visibility is a frontend presentation rule, not server authorization.
 Both pie charts show their own total and every group's absolute count and
 percentage. Their populations can differ from the profile and activity totals.
 Percentages are returned unrounded; display rounds to two decimals, so displayed
-slices may add up to slightly more or less than 100%. All report queries share a
-read-only repeatable-read snapshot. Out-of-range pages clamp to the last page;
+slices may add up to slightly more or less than 100%. Each section request uses its own read-only repeatable-read snapshot.
+The legacy combined endpoint still reads all sections in one snapshot. Out-of-range pages clamp to the last page;
 empty tables report page 1. Separate page requests use fresh snapshots.
 
 ### Report API
 
-`GET /api/ui/reports` is anonymous and requires no wallet signature or token.
-Query parameters: `profile_page=1`, `activity_page=1`, `period=week`,
-`group_contract=true`, `group_wallet_name=false`, `group_app_version=false`,
-`group_platform=false`. Invalid pages or periods return 400.
-Response sections: `generated_at`, `profiles`, `ton_connect`, `activity`,
-`preferences`; table sections include `page`, fixed `page_size: 10`, totals and
-`items`. Pie sections contain `total` and `groups` with `count` and `percentage`.
-Responses use `Cache-Control: no-store`. Opening the page, changing filters or
-pages, and pressing Refresh fetch current data without a confirmation step.
-Only frontend `VITE_AVAILABLE_TEST_PROGRAM_WALLETS` controls Administration menu visibility;
-there is no backend report allowlist, authentication configuration or session.
+Report endpoints are anonymous and require no wallet signature or token:
+
+| Endpoint | Query parameters | Response `data` |
+| --- | --- | --- |
+| `GET /api/ui/reports/profiles` | `page=1` | Profile totals, `page`, `page_size: 10`, `items` |
+| `GET /api/ui/reports/ton-connect` | `group_contract=true`, `group_wallet_name=false`, `group_app_version=false`, `group_platform=false` | Connection `total` and `groups` |
+| `GET /api/ui/reports/activity` | `page=1`, `period=week` | Activity range, total, page, page size and items |
+| `GET /api/ui/reports/preferences` | None | Preference `total` and `groups` |
+
+Each response is `{ "generated_at": "<UTC timestamp>", "data": { ... } }`.
+Invalid pages or periods return 400. All responses use `Cache-Control: no-store`.
+Each endpoint reads only its own section's tables and aggregates. No schema
+migration is required for this split.
+
+The frontend displays a submenu and loads only the selected section. Switching
+sections preserves filters and pagination, aborts the previous request, and loads
+the selected section. Grouping and period changes reload only that section;
+changing the activity period resets its page to 1. Refresh reloads only the
+selected section. Existing results remain visible while reloading, errors remain
+local, and superseded responses are ignored. The displayed update date belongs
+to the selected section.
+
+The original `GET /api/ui/reports` remains compatible for existing clients. It
+accepts `profile_page`, `activity_page`, `period` and the four grouping flags and
+returns the combined `generated_at`, `profiles`, `ton_connect`, `activity`, and
+`preferences` object. The report page uses the new section endpoints.
+
+Only frontend `VITE_AVAILABLE_TEST_PROGRAM_WALLETS` controls Administration menu
+visibility; there is no backend report allowlist or authentication configuration.
+Deploy the backend section endpoints before the updated frontend.
 
 Apply [007](Database/Scripts/007_add_ui_report_indexes.sql) after existing schema
 migrations to add the latest-profile and last-connection indexes. It does not

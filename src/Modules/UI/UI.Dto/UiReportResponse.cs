@@ -61,3 +61,9 @@ public sealed class PreferenceReportGroup
     [JsonPropertyName("count")] public long Count { get; init; }
     [JsonPropertyName("percentage")] public decimal Percentage { get; init; }
 }
+
+public sealed class UiReportSectionResponse<T>
+{
+    [JsonPropertyName("generated_at")] public DateTime GeneratedAt { get; init; }
+    [JsonPropertyName("data")] public required T Data { get; init; }
+}

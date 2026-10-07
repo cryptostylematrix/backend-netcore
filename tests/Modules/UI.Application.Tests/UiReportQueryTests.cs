@@ -10,6 +10,11 @@ public sealed class UiReportQueryTests
     private sealed class Queries : IUiReportQueries
     {
         public UiReportFilter? Received;
+        public Task<ProfileReport> GetProfilesAsync(UiReportFilter filter, CancellationToken ct) => throw new NotSupportedException();
+        public Task<ConnectionReport> GetTonConnectAsync(UiReportFilter filter, CancellationToken ct) => throw new NotSupportedException();
+        public Task<ActivityReport> GetActivityAsync(UiReportFilter filter, CancellationToken ct) => throw new NotSupportedException();
+        public Task<PreferenceReport> GetPreferencesAsync(UiReportFilter filter, CancellationToken ct) => throw new NotSupportedException();
+
         public Task<UiReportResponse> GetAsync(UiReportFilter filter, CancellationToken ct)
         { Received = filter; return Task.FromResult(new UiReportResponse()); }
     }
