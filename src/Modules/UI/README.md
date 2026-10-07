@@ -1,7 +1,11 @@
 # UI module
 
-The UI module stores the profiles a wallet intends to display in the frontend.
-It replaces the browser-only profile list previously kept in local storage.
+The UI module persists wallet-specific frontend state: saved profile intents,
+TON Connect metadata and the last connection time, and the selected interface
+language. It also caches profile content and records profile-intent history.
+The database is the source of truth for saved profiles and connected-wallet
+language preferences; browser storage is retained only for migration, guest
+language, pending language saves, and the current profile selection.
 
 The stored relationship is an **intent**, not proof that a wallet owns a
 profile. On-chain ownership is checked separately and stored in the `owned`
@@ -9,7 +13,7 @@ field as the latest known state.
 
 ## Projects
 
-- `UI.Core` contains the profile and wallet-profile intent domain models.
+- `UI.Core` contains profile, wallet-profile intent, TonConnection, and wallet-preference domain models.
 - `UI.Application` contains commands, queries, contract synchronization, and
   domain-event handlers.
 - `UI.Dto` contains API response models, modes, and stable error codes.
@@ -18,6 +22,19 @@ field as the latest known state.
 - `UI.Presentation` contains the FastEndpoints API endpoints.
 
 ## Data model
+
+| Table | Identity | Stored data | Update policy |
+| --- | --- | --- | --- |
+| `profiles` | Profile NFT address | Login and cached content | On add/check when contract content changes |
+| `wallet_profile_intents` | Wallet + profile address | Display mode and last checked ownership | Add/remove and ownership checks |
+| `wallet_profile_intent_events` | Event ID | Profile relationship history | Append-only domain events |
+| `ton_connections` | Wallet address | Contract/app versions, app name, platform, connection timestamps | Latest accepted connection snapshot |
+| `wallet_preferences` | Wallet address | Selected language and change time | Initialize if absent; replace only on explicit selection |
+
+Wallet addresses use the same canonical non-bounceable, non-test-only, URL-safe
+representation across all wallet-keyed tables. TonConnection and preferences do
+not require a saved profile and have no foreign key to each other. Their records
+survive disconnecting a wallet or removing its profile intents.
 
 ```text
 profiles
@@ -152,6 +169,55 @@ configured UI database (or Programs fallback), setting its API role variable,
 apply `Database/Scripts/004_add_last_connected_at.sql`, then deploy the API and frontend. The API does not apply this migration itself.
 New installations need the numbered UI schema scripts in order.
 
+## Wallet language preferences
+
+`wallet_preferences` stores one preference per canonical wallet address,
+independently of profiles and TonConnection telemetry. Fields are `wallet_addr`
+(primary key), `language`, and `updated_at` (UTC, changed only when language changes).
+The database and backend validate language-tag syntax, not the frontend catalog.
+Tags are lowercased, at most 63 characters, with a 2–8-letter primary subtag and
+optional hyphen-separated 1–8-character alphanumeric subtags. Examples include
+`ja`, `pt-br`, `zh-hant`, and `sr-latn-rs`. This is a bounded syntax check, not
+validation against an external language registry.
+
+- `POST /api/ui/wallets/{wallet_addr}/language/resolve` with
+  `{ "language": "ru" }` loads the database value or atomically initializes an
+  absent preference from the supplied fallback. It never replaces an existing
+  preference, including during concurrent initialization from other devices.
+- `PUT /api/ui/wallets/{wallet_addr}/language` with the same body saves an
+  explicit user choice, creating the row if needed.
+
+Both return `{ "success": true, "language": "ru", "errors": [] }`.
+Invalid addresses/languages return `success: false` with
+`err_invalid_wallet_address` or `err_invalid_language`. Input is trimmed and
+lowercased; the API retains regional/script subtags and accepts future language tags.
+These endpoints follow the module's existing anonymous, client-reported wallet
+identity semantics. Preferences are not authentication or proof of ownership.
+
+Frontend migration preserves the old detector's precedence: `i18nextLng` in
+localStorage, then the `i18next` cookie, then a supported browser language.
+The legacy value is only an initialization fallback: saved database values win.
+After a successful resolve/save for the active wallet, legacy storage is removed.
+Failures retain migration data. Language changes are explicitly saved rather than
+subscribing to every i18next change, so loading a database value cannot trigger
+an accidental write back.
+
+Connected wallets reload their language on connection/session restoration or
+wallet switches. Requests are serialized and late responses from previous wallets
+or superseded selections cannot change the active language. Failed explicit
+selections are retained in a per-wallet pending outbox in localStorage until
+acknowledged; this is retry data, not the source of saved preferences. Requests
+have a timeout and up to three attempts; reconnecting, reloading or going online
+retries pending changes. Without a wallet, guest selections remain browser-local
+until migration on connection.
+
+Apply `Database/Scripts/005_create_wallet_preferences.sql` and then
+`Database/Scripts/006_allow_extensible_language_tags.sql` to the configured UI
+database (skip already applied scripts), then deploy the backend and frontend. There is no
+automatic production migration. The [Docker regression runner](#ui-persistence-postgresql-regression-test) also applies
+005/006 and checks initialization races, database precedence, explicit updates,
+per-wallet isolation and unchanged timestamps for identical selections.
+
 ## Contract lookup
 
 Profile resolution uses the Contracts module through MediatR request/response
@@ -164,7 +230,7 @@ queries:
 
 The UI module does not directly call Contracts infrastructure.
 
-## API
+## Profile API
 
 Business failures for add, remove, and check are returned in the response body
 using `success: false` and stable error codes. This lets the frontend map each
@@ -287,6 +353,9 @@ content information is required.
 | --- | --- |
 | `err_wallet_not_connected` | Wallet address was not provided. |
 | `err_invalid_wallet_address` | Wallet address is not a valid TON address. |
+| `err_invalid_ton_connection` | Wallet name, app version, platform, or StateInit size is invalid. |
+| `err_invalid_wallet_state_init` | Supplied StateInit is malformed or does not match the address. |
+| `err_invalid_language` | The language tag is empty, malformed, or longer than 63 characters. |
 | `err_invalid_login` | Login is empty. |
 | `err_invalid_profile_mode` | Add mode is missing or invalid. |
 | `err_profile_not_found` | A valid deployed profile could not be found. |
@@ -294,23 +363,35 @@ content information is required.
 | `err_contract_doesnot_belong_to_the_wallet` | Owner mode was requested by a non-owner wallet. |
 | `err_profile_relationship_not_found` | The requested current intent does not exist. |
 
-These constants are defined in `UI.Dto/UiErrorCodes.cs` and should be mirrored
-in the frontend error-code map.
+These constants are defined in `UI.Dto/UiErrorCodes.cs`. Profile flows map
+business errors to localized messages; background connection/language sync logs
+failures and retries without interrupting wallet use.
 
 ## Database setup
 
 For production migration through pgAdmin, use the
 [pgAdmin scripts and walkthrough](Database/PgAdmin/README.md).
 
-For a fresh installation with no existing UI tables, run:
+Apply schema scripts in order, only when not already present in the target database:
 
-```text
-src/Modules/UI/Database/Scripts/001_create_ui_profile_intents.sql
-```
+| Script | Change |
+| --- | --- |
+| [001](Database/Scripts/001_create_ui_profile_intents.sql) | Profile cache, intents, and event history |
+| [002](Database/Scripts/002_add_ownership_gained_event.sql) | Allow ownership-gained history events |
+| [003](Database/Scripts/003_create_ton_connections.sql) | Connection metadata and initial timestamps |
+| [004](Database/Scripts/004_add_last_connected_at.sql) | Nullable last connection timestamp; no invented historical backfill |
+| [005](Database/Scripts/005_create_wallet_preferences.sql) | Per-wallet language preferences |
+| [006](Database/Scripts/006_allow_extensible_language_tags.sql) | Remove the fixed language list and allow tags up to 63 characters |
 
-Before execution, set `v_database_username` inside the script to the database
-role used by the API. When migrating existing data, follow the pgAdmin guide
-instead; restoring its backup also creates the tables.
+Set `v_database_username` to the API role in scripts 001, 003, and 005.
+For an existing database with 001–004, apply 005 and 006 for the language change; if 005 is already applied, apply only 006.
+For a fresh installation, apply all six. These scripts are not an automatic
+migration runner and must not be blindly replayed. Deploy schema changes first,
+then the backend, then the frontend.
+
+The pgAdmin copy guide predates the connection/preference tables; its original
+copy/grant/verification scripts cover profile data only. See its scope note
+before relocating a database that already contains tables from 003–005.
 
 The preferred configuration is a dedicated connection:
 
@@ -322,18 +403,29 @@ If `ConnectionStrings__UI` is empty or absent, the module uses
 `ConnectionStrings__Programs`. Run the schema script in whichever database is
 selected.
 
-## Frontend migration
+## Frontend synchronization and migration
 
-The frontend can replace its browser profile storage with this sequence:
+| Event | Profile state | TonConnection | Language |
+| --- | --- | --- | --- |
+| Wallet connection or session restoration | Migrate legacy profiles, then check server profiles | Save snapshot and refresh last connection time | Resolve saved preference; initialize only if absent |
+| Switch to another wallet | Load/check that wallet's profiles | Save the new wallet's snapshot | Load the new wallet's language |
+| Explicit language selection | No change | No change | Save via PUT |
+| TonConnect metadata notification | No profile request solely for metadata | Save changed snapshot | No language request solely for metadata |
+| Ordinary React render | No request solely for rendering | No request solely for rendering | No request solely for rendering |
+| Wallet disconnect | Clear active frontend profile state | Keep database record | Use guest language; keep database preference |
 
-1. On wallet connection, call the list endpoint.
-2. Call check when fresh contract state is needed.
-3. Use the add endpoint for owner or preview selection.
-4. If owner mode fails and `available_modes` contains `preview`, show the
-   localized ownership warning and allow the user to retry in preview mode.
-5. Use the remove endpoint instead of deleting only local storage.
-6. Treat `mode` as user intent and `owned` as the verified status when choosing
-   warnings and UI capabilities.
+Profile migration reads legacy cookie/localStorage entries and submits each
+through the add endpoint. Rejected owner intents may be retried as preview when
+that mode is offered. Successfully migrated entries are removed locally; failed
+entries remain for retry. The frontend then calls `profiles/check` even if the
+browser has no profiles, using its returned list without an extra list request.
+Late responses for an old wallet do not replace the active wallet's profile list.
+The selected profile login remains a browser-local preference.
+
+For language migration, database precedence, pending saves, and guest behavior,
+see [Wallet language preferences](#wallet-language-preferences). Profile,
+connection, and language synchronization are independent: selecting a profile
+is not required to save connection information or load the wallet's language.
 
 ## Authentication limitation
 
@@ -377,7 +469,7 @@ through the indexer when available, or update the NFT image URL with a new
 version query parameter using the normal wallet-approved profile update.
 
 
-## TON connection PostgreSQL regression test
+## UI persistence PostgreSQL regression test
 
 From the backend repository root:
 
@@ -386,9 +478,27 @@ bash tests/Modules/UI.Infrastructure.Tests/Postgres/run.sh --no-restore -m:1 /no
 ```
 
 The runner creates a disposable PostgreSQL 17 Docker container on a random
-loopback port, applies migrations 003 and 004, and exercises the actual
-`TonConnectionRepository` under a restricted application role. It checks legacy
+loopback port, applies migrations 003–006, and exercises the actual
+`TonConnectionRepository` and `WalletPreferencesRepository` under a restricted
+application role. It checks legacy
 NULL timestamps, initial insertion, reconnection with unchanged metadata,
-metadata changes, concurrent inserts, and monotonic `last_connected_at`.
+metadata changes, concurrent inserts, monotonic `last_connected_at`, per-wallet
+language isolation, initialization races, and protection of existing language
+preferences from stale migration data.
 The container is removed on exit; application database configuration is not used.
 The test is skipped in ordinary test runs without the runner's explicit port.
+
+
+### Adding a frontend language
+
+`frontend/src/languages.ts` is the shared catalog for the selector, i18next,
+and browser-language resolution. Add the language code and native label there,
+and supply `public/locales/<code>/translation.json`. Use lowercase hyphenated
+codes and matching directory names. No backend code change or further database
+migration is needed for tags matching the syntax above.
+
+The API client accepts stored tags independently of the bundled translations.
+An older frontend that does not support a saved tag resolves the closest available
+parent language or displays English, without saving that fallback over the database
+preference. Only an explicit selection replaces the preference. Regional and script
+subtags are retained in persistence; i18next loads the catalog's exact code.

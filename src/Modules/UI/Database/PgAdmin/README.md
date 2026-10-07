@@ -2,6 +2,24 @@
 
 These are plain SQL files for pgAdmin's Query Tool.
 
+## Scope of these scripts
+
+This procedure and scripts 03–05 were written for the original three profile
+tables and their two identity sequences. They do not grant, verify, or remove
+`ton_connections` (schema migrations 003/004) or `wallet_preferences` (005).
+When either table exists in the source, include it in the backup and restore,
+grant the runtime role SELECT/INSERT/UPDATE on it, and separately verify its
+row count and contents before cutover. Do not treat script 04's five output rows
+as verification of these additional tables. Script 05 leaves them in the source.
+Do not recreate a table using a schema script if it was already restored.
+
+For a new installation or an upgrade within the existing UI database, use the
+[ordered schema migrations](../../README.md#database-setup), not this database-copy
+procedure. The current data model and synchronization behavior are documented in
+the [UI module README](../../README.md).
+
+## Copy the original profile data
+
 The source is `cs_programs`; the destination is `cs_ui` on the same PostgreSQL
 server, with runtime login `cs_ui_app`. Use an administrator for creation,
 backup, restore, grants and verification. Use `cs_ui_app` only for the runtime

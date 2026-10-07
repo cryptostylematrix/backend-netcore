@@ -2,7 +2,7 @@
 
 ASP.NET Core backend for CryptoStyle Matrix. The API combines TON contract
 access, the current Referral Program domain,
-and UI profile-intent persistence.
+and UI wallet-state persistence.
 
 The codebase targets **.NET 10** and uses FastEndpoints, PostgreSQL, Dapper,
 Entity Framework Core, MediatR, and the included TON SDK projects.
@@ -14,7 +14,7 @@ Entity Framework Core, MediatR, and the included TON SDK projects.
 | `src/API/CryptoStyle.Api` | HTTP API, Swagger, dependency composition, logging, CORS, and the background task processor. |
 | `src/Modules/Contracts` | TON contract queries, message construction, transaction sending, caching, and TonCenter integration. |
 | `src/Modules/ReferalProgram` | Current referral-program domain, placement policies, APIs, persistence, and database scripts. |
-| `src/Modules/UI` | Wallet profile-display intents, cached profile data, ownership checks, and history. |
+| `src/Modules/UI` | Wallet profile intents, cached profiles, ownership history, TonConnect metadata, and language preferences. |
 | `src/Modules/ScheduledTasks` | System-wide UTC task scheduling, sequential in-process command execution, and marketing coordination. |
 | `src/ProgramMatrixFillingRecalculator` | Dry-run-first maintenance tool for recalculating persisted matrix filling in all existing programs or one selected program. |
 | `src/ProgramVolumeRecalculator` | Dry-run-first maintenance tool for rebuilding one profile-volume type in one program structure. |
@@ -42,8 +42,9 @@ name is intentionally preserved in paths and namespaces.
 - [Position algorithms](src/Modules/ReferalProgram/POSITION_ALGORITHMS.md)
   documents configuration versions, operation overrides, classic, chess,
   radar, and trimmed-classic placement.
-- [UI module](src/Modules/UI/README.md) covers its intent-based data model,
-  ownership synchronization, endpoints, errors, and database setup.
+- [UI module](src/Modules/UI/README.md) documents all five persisted tables,
+  profile and language migration from browser storage, TonConnect timestamps,
+  API endpoints, synchronization triggers, and schema scripts 001–006.
 - [Scheduled Tasks module](src/Modules/ScheduledTasks/README.md) covers task JSON,
   recurrence, deterministic correlation IDs, retries, and database setup.
 - [Program Matrix Filling Recalculator](src/ProgramMatrixFillingRecalculator/README.md)
@@ -56,7 +57,7 @@ name is intentionally preserved in paths and namespaces.
   contain schema changes, permissions, cleanup utilities, and program setup
   scripts.
 - [UI database scripts](src/Modules/UI/Database/Scripts) create and update the
-  profile-intent schema.
+  profile, connection, and preference tables.
 
 Swagger is available at `/swagger` while the API is running in Development.
 Legacy `/api/matrix/*` and `/api/marketing/*` routes are intentionally not
@@ -149,7 +150,10 @@ dotnet test tests/Modules/ScheduledTasks.Application.Tests/ScheduledTasks.Applic
 Referral Program tests include placement strategies, purchase policies,
 source resolution, clone kinds, setup-script topology, and infrastructure query
 invariants. UI tests cover profile intents, contract adapters, and wallet address
-handling. Scheduled Tasks tests cover schedules, command parsing/execution,
+handling, wallet contract identification, and language validation. The optional
+[UI PostgreSQL test](src/Modules/UI/README.md#ui-persistence-postgresql-regression-test)
+checks connection and preference persistence using migrations 003–006 in Docker.
+Scheduled Tasks tests cover schedules, command parsing/execution,
 correlation IDs, dispatch, aggregates, and persistence mappings.
 
 Optional activity regression tests use a disposable local Docker PostgreSQL:
