@@ -36,7 +36,24 @@ public sealed class ProgramStatisticsQueries(
               AND parent_profile_addr = @profileAddr
               AND profile_addr IS NOT NULL;
 
-            WITH direct_referrals AS
+            -- Membership follows the invite tree, not placement in paid structures.
+            WITH descendant_profiles AS
+            (
+                SELECT DISTINCT descendant.profile_addr
+                FROM public.places root
+                JOIN public.places descendant
+                  ON descendant.marketing_addr = root.marketing_addr
+                 AND descendant.structure_number = 0
+                 AND descendant.mp LIKE root.mp || '%'
+                 AND descendant.id <> root.id
+                WHERE root.marketing_addr = @marketingAddr
+                  AND root.structure_number = 0
+                  AND root.profile_addr = @profileAddr
+                  AND root.place_number = 1
+                  AND descendant.profile_addr IS NOT NULL
+                  AND descendant.profile_addr <> @profileAddr
+            ),
+            direct_referrals AS
             (
                 SELECT DISTINCT profile_addr
                 FROM public.places
@@ -66,6 +83,7 @@ public sealed class ProgramStatisticsQueries(
                         )::bigint AS activated_profiles
                 FROM public.places
                 WHERE marketing_addr = @marketingAddr
+                  AND profile_addr IN (SELECT profile_addr FROM descendant_profiles)
                 GROUP BY structure_number
             ),
             referral_places AS

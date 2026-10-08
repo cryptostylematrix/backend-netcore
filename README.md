@@ -229,3 +229,15 @@ Each module owns its endpoint and database reads. The frontend composes the
 specification; the schedule read path uses a shared public-target descriptor contract instead of
 querying structures from ScheduledTasks.
 The old combined `/specification` endpoint is removed.
+
+## Program statistics
+
+`GET /api/program/{marketing_addr}/statistics?profile_addr={profile_addr}`
+returns totals for all descendant profiles of the requested profile’s structure-0
+invite, excluding the requested profile itself. Membership follows the invite MP
+subtree at any depth; each structure counts those profiles and all their places
+regardless of placement in that structure. System places have no profile and are
+excluded. Direct-referral statistics remain limited to immediately invited profiles.
+All configured structures remain in the response, including empty ones. Active
+(`is_active`) and ever activated (`activated_at`) counts remain distinct.
+No schema migration or stored-data recalculation is required.

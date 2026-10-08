@@ -133,3 +133,29 @@ program-scoped group minima, missing source and missing group, reward permission
 compression and source reactivation. Mini uses structure 1 as the source for
 structures 1–3 and does not expire invites. The performance harness also measures
 `source_invite` and `source_group` modes (200 combinations total after removing the obsolete additional-invite mode).
+
+## Statistics subtree benchmark
+
+```bash
+ACTIVITY_TEST_PERF=1 \
+ACTIVITY_TEST_FILTER='FullyQualifiedName~Measure_statistics_invite_subtrees' \
+ACTIVITY_TEST_PERF_OUTPUT=/tmp/cryptostyle-statistics-perf \
+bash tests/Modules/ReferalProgram.Application.Tests/Postgres/run.sh --no-restore -m:1 /nodeReuse:false
+```
+
+Uses a disposable PostgreSQL 17 database with 100,000, 1,000,000 and 3,000,000
+place rows. Each profile has one invite and three places in each of eight paid
+structures. Invites form a balanced binary tree; paid placement is independent.
+The benchmark checks exact profile/place totals for a leaf, small branch, large
+branch and root, then measures the production `ProgramStatisticsQueries.GetAsync`
+call (including connection acquisition, transport and result materialization).
+It records the first call, two warmups and ten measured samples per case; the
+reported p95 is the maximum of these ten samples and is only a rough estimate.
+The first call is not a controlled cold-cache measurement.
+
+`results.json` contains timings and per-case JSON plans contain all three SQL
+statements with `EXPLAIN (ANALYZE, BUFFERS)`. The benchmark uses EF-created tables
+and indexes with definitions available in migrations 010, 012, 020 and 029;
+legacy indexes only mentioned by rename scripts are not reconstructed. Verify
+actual deployed indexes before comparing to production. These are sequential,
+local, single-client measurements, not concurrent load or HTTP latency tests.
