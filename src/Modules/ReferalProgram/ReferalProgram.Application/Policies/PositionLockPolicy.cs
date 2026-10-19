@@ -54,9 +54,6 @@ public sealed class PositionLockPolicy : IPositionLockPolicy
         var directLocks = context.ViewerLockMps
             .Where(lockMp => IsDirectChild(parent.Mp, lockMp))
             .ToArray();
-        if (directLocks.Any(lockMp => !string.Equals(lockMp, mp, StringComparison.Ordinal)))
-            return Decision(isLocked, isLock, canUnlock, "sibling_position_is_already_locked");
-
         if (context.Width > 0 && (long)context.Width - directLocks.Length <= 1)
             return Decision(isLocked, isLock, canUnlock, "final_available_position_cannot_be_locked");
 

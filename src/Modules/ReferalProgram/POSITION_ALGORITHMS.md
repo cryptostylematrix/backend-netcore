@@ -262,3 +262,8 @@ including frontier level minima. No recursive activity-source resolution or
 stored-status synchronization occurs. Configs without `activity_source` use own-place activity. The unused additional
 active-invite filter has been removed; use `activity_source: "invite"` instead.
 The old `spillover` permission block must not be mixed with the new source format. The independent width, lock and terminal-clone rules remain.
+
+For a finite structure width `X`, a viewer may lock up to `X - 1` direct
+positions under each parent; at least one position must remain unlocked.
+Locks below other parents do not count toward this limit. Width `0` is unlimited
+and has no lock-count limit. Other lock authorization rules still apply.

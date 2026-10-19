@@ -74,7 +74,7 @@ public sealed class PositionNodeActionPolicyTests
     }
 
     [Fact]
-    public void Position_cannot_be_locked_when_a_sibling_is_already_locked()
+    public void Final_available_position_cannot_be_locked()
     {
         var context = Context(
             nextMp: "other",
@@ -84,6 +84,23 @@ public sealed class PositionNodeActionPolicyTests
         var actions = policy.Evaluate(context, Parent(filling: 1), "ROOT00000002", 2);
 
         Assert.False(actions.CanLock);
+    }
+
+    [Theory]
+    [InlineData(1, true)]
+    [InlineData(2, true)]
+    [InlineData(3, false)]
+    public void Tree_lock_action_respects_width_four(int lockCount, bool expectedCanLock)
+    {
+        var locks = Enumerable.Range(1, lockCount)
+            .Select(position => $"ROOT{position:X8}")
+            .ToArray();
+        var context = Context(nextMp: "other", width: 4, locks: locks);
+        var nextPosition = (uint)lockCount + 1;
+
+        var actions = policy.Evaluate(context, Parent(), $"ROOT{nextPosition:X8}", nextPosition);
+
+        Assert.Equal(expectedCanLock, actions.CanLock);
     }
 
     [Fact]

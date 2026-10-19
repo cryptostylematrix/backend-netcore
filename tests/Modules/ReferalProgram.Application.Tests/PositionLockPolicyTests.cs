@@ -38,16 +38,56 @@ public sealed class PositionLockPolicyTests
     }
 
     [Fact]
-    public void Existing_sibling_lock_is_rejected_before_the_final_position_rule()
+    public void Final_available_position_cannot_be_locked()
     {
         var result = _policy.Evaluate(
-            Context(["ROOT00000009"], width: 2),
+            Context(["ROOT00000001"], width: 2),
             Parent(filling: 1),
             "ROOT00000002",
             2);
 
         Assert.False(result.CanLock);
-        Assert.Equal("sibling_position_is_already_locked", result.Reason);
+        Assert.Equal("final_available_position_cannot_be_locked", result.Reason);
+    }
+
+    [Theory]
+    [InlineData(0, 0, true)]
+    [InlineData(0, 3, true)]
+    [InlineData(1, 0, false)]
+    [InlineData(2, 0, true)]
+    [InlineData(2, 1, false)]
+    [InlineData(4, 0, true)]
+    [InlineData(4, 1, true)]
+    [InlineData(4, 2, true)]
+    [InlineData(4, 3, false)]
+    public void Width_limits_direct_locks_to_width_minus_one(
+        byte width, int lockCount, bool expectedCanLock)
+    {
+        var locks = Enumerable.Range(1, lockCount)
+            .Select(position => $"ROOT{position:X8}")
+            .ToArray();
+        var nextPosition = (uint)lockCount + 1;
+
+        var result = _policy.Evaluate(
+            Context(locks, width: width),
+            Parent(),
+            $"ROOT{nextPosition:X8}",
+            nextPosition);
+
+        Assert.Equal(expectedCanLock, result.CanLock);
+        Assert.Equal(expectedCanLock ? null : "final_available_position_cannot_be_locked", result.Reason);
+    }
+
+    [Fact]
+    public void Locks_under_other_parents_do_not_reduce_available_width()
+    {
+        var result = _policy.Evaluate(
+            Context(["ROOT0000000100000001", "OTHER00000001"], width: 2),
+            Parent(),
+            "ROOT00000002",
+            2);
+
+        Assert.True(result.CanLock);
     }
 
     [Fact]
