@@ -24,7 +24,18 @@ Run only the lock-branch regressions:
 ACTIVITY_TEST_FILTER='FullyQualifiedName~ActivityPostgresTests.Lock_' bash tests/Modules/ReferalProgram.Application.Tests/Postgres/run.sh
 ```
 
+Run only the manual-purchase branch regressions:
+
+```bash
+ACTIVITY_TEST_FILTER='FullyQualifiedName~ActivityPostgresTests.Manual_buy_branches' bash tests/Modules/ReferalProgram.Application.Tests/Postgres/run.sh
+```
+
 ## Coverage
+
+- Classic manual purchases accept positions in a second owned branch, reject
+  foreign, locked and stale positions without partial receipts, and persist the
+  chosen physical parent. Manual tree actions remain available when the first
+  branch is full; automatic placement does not switch to the second branch.
 
 - Lock branch SQL returns only topmost owned places, preserving MP case and
   program/structure boundaries. Lock/unlock handlers persist changes in either

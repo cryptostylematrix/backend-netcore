@@ -19,8 +19,7 @@ public sealed class BuyPlacePolicy(
     {
         var positionAllowed = decision.RequireNextPosition
             ? string.Equals(mp, decision.Position?.Mp, StringComparison.Ordinal)
-            : decision.ViewerRootMp is not null
-              && mp.StartsWith(decision.ViewerRootMp, StringComparison.Ordinal)
+            : decision.ViewerRootMps.Any(rootMp => mp.StartsWith(rootMp, StringComparison.Ordinal))
               && parent is not null
               && position == checked(parent.Filling + 1);
 
@@ -125,20 +124,20 @@ public sealed class BuyPlacePolicy(
         var isClassic = selection.Algorithm.Equals(
             "classic",
             StringComparison.OrdinalIgnoreCase);
-        var profileRoot = isClassic
-            ? await placeQueries.GetFirstPlaceAsync(
+        IReadOnlyList<string> profileRootMps = isClassic
+            ? await placeQueries.GetProfileBranchRootMpsAsync(
                 marketingAddr,
                 structureNumber,
                 profileAddr,
                 cancellationToken)
-            : null;
-        var canSelectPosition = isClassic && profileRoot is not null;
+            : [];
+        var canSelectPosition = isClassic && profileRootMps.Count > 0;
 
         NextPosResponse? selectedPosition;
 
         if (requestedPosition is not null && isClassic)
         {
-            if (profileRoot is null)
+            if (profileRootMps.Count == 0)
                 return Denied("profile_root_not_found_for_selected_position");
 
             var lockMps = await lockQueries.GetAllLockMpsAsync(
@@ -152,7 +151,7 @@ public sealed class BuyPlacePolicy(
                 structure.Width,
                 selection.Context.PosGroup,
                 requestedPosition,
-                requiredRootMp: profileRoot.Mp,
+                requiredRootMps: profileRootMps,
                 lockMps,
                 cancellationToken, selection.Context.Activity);
 
@@ -170,23 +169,28 @@ public sealed class BuyPlacePolicy(
                 cancellationToken);
         }
 
-        if (selectedPosition is null)
+        if (selectedPosition is null && !canSelectPosition)
             return Denied("no_available_position");
 
-        if (selectedPosition.Pos == 0)
-            return Denied("calculated_position_is_invalid");
+        // Classic manual selection remains available in another owned branch
+        // even when the automatic search under the first place has no candidate.
+        if (selectedPosition is not null)
+        {
+            if (selectedPosition.Pos == 0)
+                return Denied("calculated_position_is_invalid");
 
-        var parent = await placeQueries.GetPlaceAsync(
-            marketingAddr,
-            structureNumber,
-            selectedPosition.ProfileAddr,
-            selectedPosition.PlaceNumber,
-            cancellationToken);
-        if (parent is null)
-            return Denied("parent_place_not_found");
+            var parent = await placeQueries.GetPlaceAsync(
+                marketingAddr,
+                structureNumber,
+                selectedPosition.ProfileAddr,
+                selectedPosition.PlaceNumber,
+                cancellationToken);
+            if (parent is null)
+                return Denied("parent_place_not_found");
 
-        if (parent.Kind == PlaceKinds.TerminalClone)
-            return Denied("terminal_clone_cannot_have_children");
+            if (parent.Kind == PlaceKinds.TerminalClone)
+                return Denied("terminal_clone_cannot_have_children");
+        }
 
         return new BuyPlaceDecision(
             CanBuy: true,
@@ -197,7 +201,7 @@ public sealed class BuyPlacePolicy(
             Reason: null)
         {
             RequireNextPosition = !canSelectPosition,
-            ViewerRootMp = profileRoot?.Mp ?? selection.Context.Root.Mp,
+            ViewerRootMps = profileRootMps,
             HasPlacesInBuyFirstPlaceStructures = hasPlacesInBuyFirstPlaceStructures,
             Activity = selection.Context.Activity,
             AvailableCommandTags = commandTags

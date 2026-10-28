@@ -48,7 +48,7 @@ public sealed class PlacementActivityRulesTests
         var policy = new ReferalProgram.Application.Policies.BuyPlacePolicy(null!, null!, null!, null!, null!, null!);
         var decision = new BuyPlaceDecision(true, null, null, true, null, null)
         {
-            ViewerRootMp = "root",
+            ViewerRootMps = ["root"],
             AvailableCommandTags = new HashSet<uint> { ProgramCommandTags.BuyPlace },
             Activity = new PlacementActivityRules("child", "inviter", false, false, true, 0),
             ActiveSourceProfiles = inviteActive ? new HashSet<string> { "other" } : new HashSet<string>()
@@ -69,7 +69,7 @@ public sealed class PlacementActivityRulesTests
         var policy = new ReferalProgram.Application.Policies.BuyPlacePolicy(null!, null!, null!, null!, null!, null!);
         var decision = new BuyPlaceDecision(true, null, null, true, null, null)
         {
-            ViewerRootMp = "root",
+            ViewerRootMps = ["root"],
             AvailableCommandTags = new HashSet<uint> { ProgramCommandTags.BuyPlace },
             Activity = new("child", null, false, false, true, 1),
             ActiveSourceProfiles = sourceActive ? new HashSet<string> { "other" } : new HashSet<string>()

@@ -143,16 +143,17 @@ source of truth. Important rules include:
   open-position candidate query.
 - `classic` may honor an explicitly selected position. `chess` and `radar`
   ignore selected positions and calculate their own candidate.
-- Selected classic positions for profiled purchases must be inside the
-  profile's resolved subtree and outside its locks. System purchases skip the
-  profile-subtree check but still validate position and locks.
+- Selected classic positions for profiled purchases must be inside any of the
+  profile's topmost non-nested own-place subtrees and outside its locks. System
+  purchases skip the profile-subtree check but still validate position and locks.
 - Position selection uses locks belonging to the resolved root profile. If profile-root resolution falls
   back to an active inviter, use that inviter profile and its locks.
 - Lock/unlock commands and tree lock actions use the issuing profile's own
   topmost, non-nested place MPs in the selected program and structure. They do
   not inherit inviter/owner fallback authority. Every branch root is protected
   from new locks; outside every branch, both commands must be unauthorized even
-  for existing locks and idempotent retries. Keep buy/placement roots separate.
+  for existing locks and idempotent retries. Classic manual purchases use the
+  same own branch roots; automatic placement keeps its existing first-place root.
 - Chess and radar can prioritize profiled places and search a configured depth
   spread. Respect both settings and all locks.
 - `trimmed_classic` is used by Mini clone/reinvest overrides. Count direct kind

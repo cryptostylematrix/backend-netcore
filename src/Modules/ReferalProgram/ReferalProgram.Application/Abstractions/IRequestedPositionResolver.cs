@@ -15,7 +15,7 @@ public interface IRequestedPositionResolver
         byte structureWidth,
         byte positionGroup,
         RequestedPosition requestedPosition,
-        string? requiredRootMp,
+        IReadOnlyCollection<string>? requiredRootMps,
         IReadOnlyCollection<string> lockMps,
         CancellationToken cancellationToken, PlacementActivityRules? activity = null);
 }

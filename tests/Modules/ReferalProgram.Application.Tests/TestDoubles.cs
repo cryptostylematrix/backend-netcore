@@ -7,6 +7,7 @@ namespace ReferalProgram.Application.Tests;
 
 internal abstract class PlaceQueriesStub : IPlaceQueries
 {
+    public virtual Task<IReadOnlyList<string>> GetProfileBranchRootMpsAsync(string marketingAddr, byte structureNumber, string profileAddr, CancellationToken cancellationToken) => throw new NotSupportedException();
 
     public virtual Task<PlaceResponse?> GetFirstPlaceAsync(string marketingAddr, byte structureNumber, string? profileAddr, CancellationToken cancellationToken) => throw new NotSupportedException();
     public virtual Task<PlaceResponse?> GetLastPlaceAsync(string marketingAddr, byte structureNumber, string? profileAddr, CancellationToken cancellationToken) => throw new NotSupportedException();

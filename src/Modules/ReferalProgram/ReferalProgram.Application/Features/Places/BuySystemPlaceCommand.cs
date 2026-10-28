@@ -63,7 +63,7 @@ internal sealed class BuySystemPlaceCommandHandler(
                         childPosition.Parent.ProfileAddr,
                         childPosition.Parent.PlaceNumber,
                         childPosition.Position),
-                    requiredRootMp: null,
+                    requiredRootMps: null,
                     selection.Context.RootProfileLockMps,
                     cancellationToken, selection.Context.Activity);
 

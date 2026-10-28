@@ -18,7 +18,7 @@ public sealed class RequestedPositionResolverTests
             structureWidth: 3,
             positionGroup: 1,
             new RequestedPosition(2, "parent", 1, 1),
-            requiredRootMp: "ROOT",
+            requiredRootMps: ["ROOT"],
             lockMps: [],
             default);
 
@@ -38,13 +38,22 @@ public sealed class RequestedPositionResolverTests
             structureWidth: 3,
             positionGroup: 2,
             new RequestedPosition(2, "parent", 1, 2),
-            requiredRootMp: null,
+            requiredRootMps: null,
             lockMps: [],
             default);
 
         Assert.True(result.IsSuccess);
         Assert.Equal("OTHER00000002", result.Position!.Mp);
         Assert.Equal((byte)2, result.Position.PosGroup);
+    }
+
+    [Fact]
+    public async Task Empty_required_roots_deny_profile_positions_while_null_preserves_system_bypass()
+    {
+        var resolver = new RequestedPositionResolver(new Queries(Parent("OTHER", 0)));
+        var result = await resolver.ResolveAsync("marketing", 2, 3, 0, new(2, "parent", 1, 1), [], [], default);
+        Assert.False(result.IsSuccess);
+        Assert.Equal("position_is_outside_viewer_root", result.Reason);
     }
 
     private static PlaceResponse Parent(string mp, uint filling) => new()

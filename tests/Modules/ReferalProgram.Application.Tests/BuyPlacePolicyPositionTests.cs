@@ -87,6 +87,26 @@ public sealed class BuyPlacePolicyPositionTests
         Assert.Equal(ProgramCommandTags.BuyFirstPlace, result.CommandTag);
     }
 
+    [Theory]
+    [InlineData("LEFT", true)]
+    [InlineData("RIGHT", true)]
+    [InlineData("OTHER", false)]
+    [InlineData("right", false)]
+    public void Manual_tree_purchase_uses_all_owned_branches(string root, bool allowed)
+    {
+        var decision = Decision(false) with { ViewerRootMps = ["LEFT", "RIGHT"] };
+        var result = policy.EvaluatePosition(decision, Parent(root), root + "00000001", 1, false);
+        Assert.Equal(allowed, result.CanBuy);
+        Assert.False(policy.EvaluatePosition(decision, Parent(root), root + "00000001", 1, true).CanBuy);
+    }
+
+    [Fact]
+    public void Automatic_purchase_does_not_expand_to_other_owned_branches()
+    {
+        var decision = Decision(true) with { ViewerRootMps = ["ROOT", "OTHER"] };
+        Assert.False(policy.EvaluatePosition(decision, Parent("OTHER"), "OTHER00000001", 1, false).CanBuy);
+    }
+
     private static BuyPlaceDecision Decision(bool requireNext) =>
         new(
             CanBuy: true,
@@ -97,7 +117,7 @@ public sealed class BuyPlacePolicyPositionTests
             Reason: null)
         {
             RequireNextPosition = requireNext,
-            ViewerRootMp = "ROOT",
+            ViewerRootMps = ["ROOT"],
             HasPlacesInBuyFirstPlaceStructures = true,
             AvailableCommandTags = new HashSet<uint>
             {

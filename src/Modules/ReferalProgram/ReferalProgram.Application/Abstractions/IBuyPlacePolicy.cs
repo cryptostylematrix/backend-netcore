@@ -17,7 +17,7 @@ public sealed record BuyPlaceDecision(
     public PlacementActivityRules? Activity { get; init; }
     public IReadOnlySet<string> ActiveSourceProfiles { get; init; } = new HashSet<string>();
     public bool RequireNextPosition { get; init; }
-    public string? ViewerRootMp { get; init; }
+    public IReadOnlyList<string> ViewerRootMps { get; init; } = [];
     public bool HasPlacesInBuyFirstPlaceStructures { get; init; }
     public IReadOnlySet<uint> AvailableCommandTags { get; init; } = new HashSet<uint>();
 }

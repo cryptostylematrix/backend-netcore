@@ -16,9 +16,17 @@ processor uses `buy_place` when it is available.
 
 Selected positions apply only to `classic`. `chess` and `radar` ignore a
 requested position and calculate one. For a profiled classic purchase, an
-explicit position must also be inside the profile's resolved subtree and
-outside its locks. System-place purchases do not apply the profile-subtree
-check, but still validate the requested classic position and its locks.
+explicit position must be inside any of the profile's topmost, non-nested own
+place subtrees in that program and structure, and outside its locks. System-place
+purchases do not apply the profile-subtree check, but still validate the requested
+classic position and its locks.
+
+Tree buy actions use the same branch roots. Filling, width, terminal-clone,
+activity, previous-structure, command availability, and per-profile limit checks
+remain in force. Automatic position selection keeps its existing first-place
+root and does not fall back to additional owned branches. If that automatic
+search has no candidate, classic manual selection remains available for valid
+positions in another owned branch; the suggested automatic position is null.
 
 ## Source-place response
 
@@ -199,8 +207,8 @@ Outside all owned branches, both commands are unauthorized even when an exact
 lock already exists or an unlock would otherwise be a no-op. Wallet ownership,
 width, filling, system-parent, command-availability, and final-free-position checks
 remain in force. GetTree loads the branch root MPs once and uses the same lock
-policy for its action flags. Buy authorization and automatic placement keep their
-existing root-selection rules.
+policy for its action flags. Classic manual purchases use the same own branch
+roots; automatic placement keeps its existing first-place root-selection rules.
 
 Example allowing invitations and fallback through inactive invites:
 

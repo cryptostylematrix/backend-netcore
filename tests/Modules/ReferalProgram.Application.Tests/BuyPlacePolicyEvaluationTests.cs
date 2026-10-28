@@ -232,6 +232,41 @@ public sealed class BuyPlacePolicyEvaluationTests
         Assert.Same(calculated, result.Position);
     }
 
+    [Theory]
+    [InlineData("RIGHT", false, true)]
+    [InlineData("RIGHT", true, false)]
+    [InlineData("OUTSIDE", false, false)]
+    public async Task Explicit_classic_purchase_checks_all_owned_branches(string target, bool locked, bool allowed)
+    {
+        var first = Place("LEFT", "viewer", 1, 0);
+        var second = Place("RIGHT", "viewer", 2, 0);
+        var parent = Place(target + "00000001", "parent", 1, 0);
+        var policy = Policy(Structure("profile", algorithm: "classic"), placesCount: 2,
+            viewerRoot: first, places: [first, second, parent],
+            lockMps: locked ? [parent.Mp + "00000001"] : [],
+            tags: new HashSet<uint> { ProgramCommandTags.BuyPlace });
+        var result = await policy.EvaluateAsync("marketing", 4, "viewer", new(4, "parent", 1, 1), default);
+        Assert.Equal(allowed, result.CanBuy);
+        if (allowed) Assert.Equal(new[] { "LEFT", "RIGHT" }, result.ViewerRootMps);
+        else Assert.Equal(locked ? "position_is_locked" : "position_is_outside_viewer_root", result.Reason);
+    }
+
+    [Fact]
+    public async Task Manual_tree_selection_remains_available_when_first_branch_has_no_automatic_candidate()
+    {
+        var first = Place("LEFT", "viewer", 1, 3);
+        var second = Place("RIGHT", "viewer", 2, 0);
+        var policy = Policy(Structure("profile", algorithm: "classic"), placesCount: 2,
+            viewerRoot: first, nextPosition: null, places: [first, second],
+            tags: new HashSet<uint> { ProgramCommandTags.BuyPlace });
+        var decision = await policy.EvaluateAsync("marketing", 4, "viewer", null, default);
+        Assert.True(decision.CanBuy);
+        Assert.True(decision.IncludePosition);
+        Assert.Null(decision.Position);
+        Assert.False(decision.RequireNextPosition);
+        Assert.True(policy.EvaluatePosition(decision, second, "RIGHT00000001", 1, false).CanBuy);
+    }
+
     private static BuyPlacePolicy Policy(
         StructureResponse? structure,
         long placesCount = 0,
@@ -339,13 +374,14 @@ public sealed class BuyPlacePolicyEvaluationTests
                 ? previousStructurePlacesCount
                 : count);
 
-        public override Task<PlaceResponse?> GetFirstPlaceAsync(string marketingAddr, byte structureNumber, string? profileAddr, CancellationToken cancellationToken) =>
-            Task.FromResult(places
-                .Where(place => place.MarketingAddr == marketingAddr
-                    && place.StructNumber == structureNumber
-                    && place.ProfileAddr == profileAddr)
-                .OrderBy(place => place.PlaceNumber)
-                .FirstOrDefault());
+        public override Task<IReadOnlyList<string>> GetProfileBranchRootMpsAsync(string marketingAddr, byte structureNumber, string profileAddr, CancellationToken cancellationToken)
+        {
+            var own = places.Where(place => place.MarketingAddr == marketingAddr
+                && place.StructNumber == structureNumber && place.ProfileAddr == profileAddr).ToArray();
+            return Task.FromResult<IReadOnlyList<string>>(own.Where(place => !own.Any(ancestor =>
+                    ancestor.Mp.Length < place.Mp.Length && place.Mp.StartsWith(ancestor.Mp, StringComparison.Ordinal)))
+                .Select(place => place.Mp).ToArray());
+        }
 
         public override Task<bool> HasProfilePlacesInStructuresAsync(string marketingAddr, string profileAddr, IReadOnlyCollection<byte> structureNumbers, CancellationToken cancellationToken)
         {

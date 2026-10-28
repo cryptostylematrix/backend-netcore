@@ -11,7 +11,7 @@ public sealed class RequestedPositionResolver(IPlaceQueries placeQueries)
         byte structureWidth,
         byte positionGroup,
         RequestedPosition requestedPosition,
-        string? requiredRootMp,
+        IReadOnlyCollection<string>? requiredRootMps,
         IReadOnlyCollection<string> lockMps,
         CancellationToken cancellationToken, PlacementActivityRules? activity = null)
     {
@@ -42,8 +42,8 @@ public sealed class RequestedPositionResolver(IPlaceQueries placeQueries)
 
         var requestedMp = parent.Mp
             + requestedPosition.Position.ToString("X8");
-        if (requiredRootMp is not null
-            && !requestedMp.StartsWith(requiredRootMp, StringComparison.Ordinal))
+        if (requiredRootMps is not null
+            && !requiredRootMps.Any(rootMp => requestedMp.StartsWith(rootMp, StringComparison.Ordinal)))
         {
             return Denied("position_is_outside_viewer_root");
         }
