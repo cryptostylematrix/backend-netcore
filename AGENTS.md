@@ -124,6 +124,11 @@ aggregate are committed by the same EF save.
 Treat `PROGRAM_PROCESSING.md` and `POSITION_ALGORITHMS.md` as the maintained
 source of truth. Important rules include:
 
+- `parent_id` identifies the physical parent within the same program and structure.
+  `parent_profile_addr`, `parent_profile_login`, and `parent_place_number` mirror
+  that parent's current identity; only in structure 0 do they also describe the
+  profile's inviter. Ownership transfers must synchronize these fields on the
+  transferred places and their immediate children without changing `parent_id`.
 - A place identity is unique by marketing address, structure number, profile
   address, and place number. Profile address may be null for system places.
 - `max_places_per_profile = 0` means unlimited. A classic structure width of

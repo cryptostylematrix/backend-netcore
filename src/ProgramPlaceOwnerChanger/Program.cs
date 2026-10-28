@@ -20,7 +20,7 @@ try
     Console.WriteLine("Program: {0}; structures: {1}", marketing, structure?.ToString() ?? "all > 0");
     Console.WriteLine("{0} ({1}) -> {2} ({3})", oldLogin, oldAddress, newLogin, newAddress);
     Console.WriteLine("Places: {0}; locks: {1}", preview.Places, preview.Locks);
-    Console.WriteLine("New referral parent: {0} ({1})", preview.ParentLogin, preview.ParentAddress);
+    Console.WriteLine("New profile inviter (structure 0 only): {0} ({1})", preview.ParentLogin, preview.ParentAddress);
     if (preview.Places == 0 && preview.Locks == 0) return 0;
     Console.Write("Stop other Programs database writers. Type CHANGE to apply: ");
     if (Console.ReadLine()?.Trim() != "CHANGE") { Console.WriteLine("Cancelled; no changes made."); return 0; }

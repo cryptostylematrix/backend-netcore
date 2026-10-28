@@ -83,21 +83,42 @@ internal sealed class OwnerChangeService(string connectionString)
             FROM public.places source
             WHERE source.marketing_addr = @marketing AND source.structure_number > 0
               AND (@structure IS NULL OR source.structure_number = @structure) AND source.profile_addr = @old;
-
-            UPDATE public.places child
-            SET parent_place_number = moved.new_number
-            FROM owner_transfer moved
-            WHERE child.marketing_addr = @marketing AND child.structure_number = moved.structure_number
-              AND child.parent_id = moved.id;
-
+            """);
+        await using (var invalidParents = Command("""
+            SELECT COUNT(*) FROM public.places child
+            LEFT JOIN public.places parent ON parent.id = child.parent_id
+            WHERE child.marketing_addr = @marketing
+              AND child.structure_number > 0
+              AND (@structure IS NULL OR child.structure_number = @structure)
+              AND (child.id IN (SELECT id FROM owner_transfer) OR child.parent_id IN (SELECT id FROM owner_transfer))
+              AND child.parent_id IS NOT NULL
+              AND (parent.id IS NULL OR parent.id = child.id OR parent.marketing_addr <> child.marketing_addr
+                   OR parent.structure_number <> child.structure_number);
+            """))
+        {
+            if ((long)(await invalidParents.ExecuteScalarAsync(ct))! != 0)
+                throw new OwnerChangeException("Invalid physical parent reference; transfer rolled back.");
+        }
+        await Execute("""
             UPDATE public.places place
-            SET place_number = moved.new_number, profile_addr = @new, profile_login = @login, "index" = @login || moved.new_number::text,
-                parent_profile_addr = invite.parent_profile_addr, parent_profile_login = invite.parent_profile_login
-            FROM public.places invite, owner_transfer moved
-            WHERE place.id = moved.id AND invite.marketing_addr = @marketing AND invite.structure_number = 0
-              AND invite.profile_addr = @new AND invite.place_number = 1
-              AND place.marketing_addr = @marketing AND place.structure_number > 0
-              AND (@structure IS NULL OR place.structure_number = @structure) AND place.profile_addr = @old;
+            SET place_number = moved.new_number, profile_addr = @new, profile_login = @login,
+                "index" = @login || moved.new_number::text
+            FROM owner_transfer moved
+            WHERE place.id = moved.id;
+
+            WITH expected_parents AS (
+                SELECT child.id, parent.profile_addr, parent.profile_login, parent.place_number
+                FROM public.places child
+                LEFT JOIN public.places parent ON parent.id = child.parent_id
+                  AND parent.marketing_addr = child.marketing_addr AND parent.structure_number = child.structure_number
+                WHERE child.marketing_addr = @marketing AND child.structure_number > 0
+                  AND (@structure IS NULL OR child.structure_number = @structure)
+                  AND (child.id IN (SELECT id FROM owner_transfer) OR child.parent_id IN (SELECT id FROM owner_transfer))
+            )
+            UPDATE public.places child
+            SET parent_profile_addr = expected.profile_addr, parent_profile_login = expected.profile_login,
+                parent_place_number = expected.place_number
+            FROM expected_parents expected WHERE child.id = expected.id;
 
             WITH mapped AS (
                 SELECT position_lock.id, moved.new_number
@@ -145,9 +166,16 @@ internal sealed class OwnerChangeService(string connectionString)
             DO UPDATE SET personal_volume = EXCLUDED.personal_volume, referral_volume = EXCLUDED.referral_volume;
             """);
         await using (var verification = Command("""
-            SELECT COUNT(*) FROM public.places
-            WHERE marketing_addr = @marketing AND structure_number > 0
-              AND (@structure IS NULL OR structure_number = @structure) AND profile_addr = @old;
+            SELECT COUNT(*) FROM public.places child
+            LEFT JOIN public.places parent ON parent.id = child.parent_id
+              AND parent.marketing_addr = child.marketing_addr AND parent.structure_number = child.structure_number
+            WHERE child.marketing_addr = @marketing AND child.structure_number > 0
+              AND (@structure IS NULL OR child.structure_number = @structure)
+              AND (child.profile_addr = @old OR (
+                (child.id IN (SELECT id FROM owner_transfer) OR child.parent_id IN (SELECT id FROM owner_transfer))
+                AND (child.parent_profile_addr IS DISTINCT FROM parent.profile_addr
+                     OR child.parent_profile_login IS DISTINCT FROM parent.profile_login
+                     OR child.parent_place_number IS DISTINCT FROM parent.place_number)));
             """))
         {
             if ((long)(await verification.ExecuteScalarAsync(ct))! != 0)

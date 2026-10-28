@@ -19,6 +19,7 @@ Entity Framework Core, MediatR, and the included TON SDK projects.
 | `src/ProgramMatrixFillingRecalculator` | Dry-run-first maintenance tool for recalculating persisted matrix filling in all existing programs or one selected program. |
 | `src/ProgramVolumeRecalculator` | Dry-run-first maintenance tool for rebuilding one profile-volume type in one program structure. |
 | `src/LegacyPlacesXmindExporter` | Read-only export of a legacy PostgreSQL places structure to an editable XMind file. |
+| `src/ProgramPlaceParentRepairer` | Check and repair physical-parent metadata using parent IDs across selected programs and structures. |
 | `src/ProgramPlaceOwnerChanger` | Interactive atomic place-owner transfer with lock and volume updates. |
 | `src/ProgramInviterChanger` | Administrative console application for moving a referral subtree. |
 | `src/BuildingBlocks` | Shared domain, integration-event, and messaging infrastructure. |
@@ -52,6 +53,7 @@ name is intentionally preserved in paths and namespaces.
   describes checking and backfilling matrix counts for existing programs.
 - [Program Volume Recalculator](src/ProgramVolumeRecalculator/README.md)
   describes checking and rebuilding personal or referral profile volume.
+- [Program Place Parent Repairer](src/ProgramPlaceParentRepairer/README.md) describes checking and repairing physical-parent fields after ownership transfers.
 - [Program Inviter Changer](src/ProgramInviterChanger/README.md) describes its
   safety checks, required permissions, and invocation.
 - [Referral Program database scripts](src/Modules/ReferalProgram/Database/Scripts)
