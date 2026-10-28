@@ -119,13 +119,42 @@ public sealed class PositionNodeActionPolicyTests
         Assert.False(descendant.CanUnlock);
     }
 
+    [Fact]
+    public void Tree_uses_all_lock_branches_without_expanding_buy_permission()
+    {
+        var context = Context("ROOT00000002") with { ViewerRootMps = ["ROOT", "OTHER"] };
+        var child = policy.Evaluate(context, Parent("OTHER"), "OTHER00000002", 2);
+        Assert.True(child.CanLock);
+        Assert.False(child.CanBuy);
+        Assert.False(child.CanUnlock);
+        var root = policy.Evaluate(context, Parent(), "OTHER", 1);
+        Assert.False(root.CanLock);
+        Assert.False(root.CanUnlock);
+        var locked = policy.Evaluate(context with { ViewerLockMps = ["OTHER00000002"] },
+            Parent("OTHER"), "OTHER00000002", 2);
+        Assert.True(locked.CanUnlock);
+        var outside = policy.Evaluate(context with { ViewerLockMps = ["OUTSIDE00000002"] },
+            Parent("OUTSIDE"), "OUTSIDE00000002", 2);
+        Assert.False(outside.CanLock);
+        Assert.False(outside.CanUnlock);
+    }
+
+    [Fact]
+    public void Multiple_branches_do_not_grant_a_non_owner_lock_permission()
+    {
+        var context = Context("ROOT00000002") with { ViewerRootMps = ["ROOT", "OTHER"], ViewerOwnsProfile = false };
+        var result = policy.Evaluate(context, Parent("OTHER"), "OTHER00000002", 2);
+        Assert.False(result.CanLock);
+        Assert.False(result.CanUnlock);
+    }
+
     private static PositionNodeActionContext Context(
         string nextMp,
         byte width = 3,
         string[]? locks = null) =>
         new(
             width,
-            "ROOT",
+            ["ROOT"],
             locks ?? [],
             ViewerOwnsProfile: true,
             new HashSet<uint>

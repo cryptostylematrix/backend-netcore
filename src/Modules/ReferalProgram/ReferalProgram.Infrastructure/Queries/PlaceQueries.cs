@@ -11,6 +11,34 @@ public sealed class PlaceQueries(
     [FromKeyedServices("Programs")] NpgsqlDataSource dataSource)
     : IPlaceQueries, IPositionCandidateQueries
 {
+    public async Task<IReadOnlyList<string>> GetProfileBranchRootMpsAsync(
+        string marketingAddr, byte structureNumber, string profileAddr,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(profileAddr)) return [];
+        const string sql = """
+            SELECT DISTINCT place.mp
+            FROM public.places place
+            WHERE place.marketing_addr = @marketingAddr
+              AND place.structure_number = @structureNumber
+              AND place.profile_addr = @profileAddr
+              AND NOT EXISTS (
+                  SELECT 1 FROM public.places ancestor
+                  WHERE ancestor.marketing_addr = place.marketing_addr
+                    AND ancestor.structure_number = place.structure_number
+                    AND ancestor.profile_addr = place.profile_addr
+                    AND length(ancestor.mp) < length(place.mp)
+                    AND starts_with(place.mp, ancestor.mp)
+              )
+            ORDER BY place.mp;
+            """;
+        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        var roots = await connection.QueryAsync<string>(new CommandDefinition(sql,
+            new { marketingAddr, structureNumber = (short)structureNumber, profileAddr },
+            cancellationToken: cancellationToken));
+        return roots.ToArray();
+    }
+
     public async Task<IReadOnlyDictionary<string, byte[]>> GetProfileStructureNumbersAsync(
         string marketingAddr, IReadOnlyCollection<string> profileAddrs,
         CancellationToken cancellationToken)

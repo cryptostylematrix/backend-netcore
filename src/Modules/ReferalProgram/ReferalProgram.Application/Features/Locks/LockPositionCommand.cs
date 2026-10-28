@@ -23,8 +23,6 @@ internal sealed class LockPositionCommandHandler(
     IStructureQueries structureQueries,
     ISender sender,
     ITonAddressComparer addressComparer,
-    IPositionAlgorithmConfigurationParser configurationParser,
-    IPositionRootResolver positionRootResolver,
     ILockQueries lockQueries,
     IPositionLockPolicy lockPolicy,
     IPlaceRepository placeRepository,
@@ -60,17 +58,13 @@ internal sealed class LockPositionCommandHandler(
         if (structure is null)
             return Result<CommandResponse>.Error("Structure was not found.");
 
-        var configuration = configurationParser.Parse(structure.PosAlgo);
-
-        var root = await positionRootResolver.ResolveAsync(
-            configuration.Root,
+        var rootMps = await placeQueries.GetProfileBranchRootMpsAsync(
             request.MarketingAddr,
             request.StructureNumber,
             request.ProfileAddr,
             cancellationToken);
-
-        if (root is null)
-            return Result<CommandResponse>.Error("Could not resolve the profile root place.");
+        if (rootMps.Count == 0)
+            return Result<CommandResponse>.Error("The profile has no places in this structure.");
 
         var place = await placeQueries.GetPlaceAsync(
             request.MarketingAddr,
@@ -95,7 +89,7 @@ internal sealed class LockPositionCommandHandler(
         var decision = lockPolicy.Evaluate(
             new PositionLockContext(
                 structure.Width,
-                root.Mp,
+                rootMps,
                 lockMps,
                 addressComparer.AreEqual(request.SourceAddr, profileResult.Value.OwnerAddr),
                 CanIssueLockCommand: true,

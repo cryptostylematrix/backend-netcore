@@ -185,6 +185,23 @@ Own first places are returned without reading invite settings. Position selectio
 uses the resolved root owner's locks. The `owner` strategy used by CryptoCash
 remains independent of invite activity and these settings.
 
+Lock/unlock authority is independent of the position-selection root. Within one
+program and structure, it covers the union of subtrees rooted at the profile's
+own topmost places: a place is a branch root only when no other place belonging
+to that profile has a strictly shorter matching MP prefix. MP comparisons preserve
+case. This includes separate branches acquired through ownership transfers, and
+excludes inviter/owner fallback branches when the profile has no places of its own.
+
+Every branch root is protected from new locks. Nested owned places are covered by
+their upper root and are not additional protected roots. Existing exact locks may
+be unlocked inside the owned branches, including a lock on a newly acquired root.
+Outside all owned branches, both commands are unauthorized even when an exact
+lock already exists or an unlock would otherwise be a no-op. Wallet ownership,
+width, filling, system-parent, command-availability, and final-free-position checks
+remain in force. GetTree loads the branch root MPs once and uses the same lock
+policy for its action flags. Buy authorization and automatic placement keep their
+existing root-selection rules.
+
 Example allowing invitations and fallback through inactive invites:
 
 ```json

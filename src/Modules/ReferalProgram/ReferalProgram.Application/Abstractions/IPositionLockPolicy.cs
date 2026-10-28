@@ -2,7 +2,7 @@ namespace ReferalProgram.Application.Abstractions;
 
 public sealed record PositionLockContext(
     byte Width,
-    string ViewerRootMp,
+    IReadOnlyList<string> ViewerRootMps,
     string[] ViewerLockMps,
     bool ViewerOwnsProfile,
     bool CanIssueLockCommand,

@@ -13,10 +13,10 @@ public sealed class PositionLockPolicy : IPositionLockPolicy
             mp.StartsWith(lockMp, StringComparison.Ordinal));
 
         if (!context.ViewerOwnsProfile)
-            return Decision(isLocked, isLock, reason: "viewer_is_not_profile_owner");
+            return Decision(isLocked, isLock, reason: "viewer_is_not_profile_owner", viewerAuthorized: false);
 
-        if (!mp.StartsWith(context.ViewerRootMp, StringComparison.Ordinal))
-            return Decision(isLocked, isLock, reason: "position_is_outside_viewer_root");
+        if (!context.ViewerRootMps.Any(rootMp => mp.StartsWith(rootMp, StringComparison.Ordinal)))
+            return Decision(isLocked, isLock, reason: "position_is_outside_viewer_root", viewerAuthorized: false);
 
         var canUnlock = context.CanIssueUnlockCommand && isLock;
         if (isLocked)
@@ -33,7 +33,7 @@ public sealed class PositionLockPolicy : IPositionLockPolicy
         if (!context.CanIssueLockCommand)
             return Decision(isLocked, isLock, canUnlock, "lock_command_not_configured");
 
-        if (string.Equals(mp, context.ViewerRootMp, StringComparison.Ordinal))
+        if (context.ViewerRootMps.Contains(mp, StringComparer.Ordinal))
             return Decision(isLocked, isLock, canUnlock, "viewer_root_cannot_be_locked");
 
         if (parent is null)
@@ -70,9 +70,10 @@ public sealed class PositionLockPolicy : IPositionLockPolicy
         bool isLocked,
         bool isLock,
         bool canUnlock = false,
-        string? reason = null) =>
+        string? reason = null,
+        bool viewerAuthorized = true) =>
         new(
-            ViewerAuthorized: reason != "viewer_is_not_profile_owner",
+            ViewerAuthorized: viewerAuthorized,
             isLocked,
             isLock,
             CanLock: false,

@@ -103,12 +103,86 @@ public sealed class PositionLockPolicyTests
         Assert.Equal("system_place_cannot_be_locked", result.Reason);
     }
 
+    [Theory]
+    [InlineData("LEFT")]
+    [InlineData("RIGHT")]
+    public void Each_independent_branch_allows_lock_and_exact_unlock(string rootMp)
+    {
+        var mp = rootMp + "00000001";
+        var context = Context([]) with { ViewerRootMps = ["LEFT", "RIGHT"] };
+        var parent = new PlaceResponse { Mp = rootMp, ProfileAddr = "profile", ProfileLogin = "login", Filling = 1 };
+        Assert.True(_policy.Evaluate(context, parent, mp, 1).CanLock);
+        var exact = _policy.Evaluate(context with { ViewerLockMps = [mp] }, parent, mp, 1);
+        Assert.True(exact.ViewerAuthorized);
+        Assert.True(exact.CanUnlock);
+    }
+
+    [Theory]
+    [InlineData("LEFT")]
+    [InlineData("RIGHT")]
+    public void Each_top_level_root_is_protected(string rootMp)
+    {
+        var context = Context([]) with { ViewerRootMps = ["LEFT", "RIGHT"] };
+        var result = _policy.Evaluate(context, Parent(), rootMp, 1);
+        Assert.False(result.CanLock);
+        Assert.False(result.CanUnlock);
+        Assert.Equal("viewer_root_cannot_be_locked", result.Reason);
+    }
+
+    [Fact]
+    public void Nested_owned_place_is_not_an_additional_protected_root()
+    {
+        var context = Context([]) with { ViewerRootMps = ["ROOT", "OTHER"] };
+        Assert.True(_policy.Evaluate(context, Parent(), "ROOT00000001", 1).CanLock);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Outside_all_branches_is_unauthorized_even_for_an_existing_lock(bool existing)
+    {
+        const string mp = "OUTSIDE00000001";
+        var context = Context(existing ? [mp] : []) with { ViewerRootMps = ["LEFT", "RIGHT"] };
+        var result = _policy.Evaluate(context, Parent(), mp, 1);
+        Assert.Equal(existing, result.IsLock);
+        Assert.False(result.ViewerAuthorized);
+        Assert.False(result.CanLock);
+        Assert.False(result.CanUnlock);
+        Assert.Equal("position_is_outside_viewer_root", result.Reason);
+    }
+
+    [Fact]
+    public void No_owned_branches_gives_no_authorization()
+    {
+        var result = _policy.Evaluate(Context([]) with { ViewerRootMps = [] }, Parent(), "ROOT00000001", 1);
+        Assert.False(result.ViewerAuthorized);
+        Assert.False(result.CanLock);
+        Assert.False(result.CanUnlock);
+    }
+
+    [Fact]
+    public void Existing_lock_on_a_new_root_can_be_removed()
+    {
+        var context = Context(["ROOT"]) with { ViewerRootMps = ["ROOT", "OTHER"] };
+        var result = _policy.Evaluate(context, Parent(), "ROOT", 1);
+        Assert.False(result.CanLock);
+        Assert.True(result.CanUnlock);
+    }
+
+    [Fact]
+    public void Branch_matching_preserves_mp_case()
+    {
+        var result = _policy.Evaluate(Context([]) with { ViewerRootMps = ["0000000A"] },
+            Parent(), "0000000a00000001", 1);
+        Assert.False(result.ViewerAuthorized);
+    }
+
     private static PositionLockContext Context(
         IReadOnlyCollection<string> locks,
         bool ownsProfile = true,
         byte width = 3) => new(
             Width: width,
-            ViewerRootMp: "ROOT",
+            ViewerRootMps: ["ROOT"],
             ViewerLockMps: locks.ToArray(),
             ViewerOwnsProfile: ownsProfile,
             CanIssueLockCommand: true,

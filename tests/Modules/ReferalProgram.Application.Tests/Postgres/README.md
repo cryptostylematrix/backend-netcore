@@ -18,7 +18,19 @@ ordinary unit-test runs. Set this variable only to the port of this disposable
 container: the fixture assumes database `activity_test`, user `postgres`, and the
 runner's test password. Supplying it opts into database creation/deletion.
 
+Run only the lock-branch regressions:
+
+```bash
+ACTIVITY_TEST_FILTER='FullyQualifiedName~ActivityPostgresTests.Lock_' bash tests/Modules/ReferalProgram.Application.Tests/Postgres/run.sh
+```
+
 ## Coverage
+
+- Lock branch SQL returns only topmost owned places, preserving MP case and
+  program/structure boundaries. Lock/unlock handlers persist changes in either
+  independent branch, protect both roots, and reject foreign branches, non-owner
+  wallets, and inviter fallback. Outside-branch exact locks cannot bypass the
+  authorization check or create processed-task receipts on denial.
 
 - Four legacy activity forms (SQL NULL, empty object, immediate activation true
   and false), active/inactive inviters, with/without marketing places: 16 cases.

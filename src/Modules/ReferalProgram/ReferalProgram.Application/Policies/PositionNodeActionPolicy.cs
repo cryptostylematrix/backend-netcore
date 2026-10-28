@@ -14,7 +14,7 @@ public sealed class PositionNodeActionPolicy(
         var lockDecision = lockPolicy.Evaluate(
             new PositionLockContext(
                 context.Width,
-                context.ViewerRootMp,
+                context.ViewerRootMps,
                 context.ViewerLockMps,
                 context.ViewerOwnsProfile,
                 context.AvailableCommandTags.Contains(ProgramCommandTags.LockPosition),

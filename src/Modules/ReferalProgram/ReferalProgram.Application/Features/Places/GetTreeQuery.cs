@@ -87,6 +87,12 @@ internal sealed class GetTreeQueryHandler(
                 ct);
         }
 
+        var viewerLockRootMps = await placeQueries.GetProfileBranchRootMpsAsync(
+            request.MarketingAddr,
+            request.StructureNumber,
+            request.ViewerProfileAddr,
+            ct);
+
         var configuration = configurationParser.Parse(structure.PosAlgo);
 
         var viewerRoot = await positionRootResolver.ResolveAsync(
@@ -96,7 +102,7 @@ internal sealed class GetTreeQueryHandler(
             request.ViewerProfileAddr,
             ct);
 
-        if (viewerRoot is null)
+        if (viewerRoot is null && viewerLockRootMps.Count == 0)
             return Result<TreeNodeResponse>.NotFound();
 
         var buyDecision = await buyPlacePolicy.EvaluateAsync(
@@ -138,7 +144,7 @@ internal sealed class GetTreeQueryHandler(
 
         var actionContext = new PositionNodeActionContext(
             structure.Width,
-            viewerRoot.Mp,
+            viewerLockRootMps,
             lockMps,
             viewerOwnsProfile,
             availableCommandTags,
@@ -297,7 +303,7 @@ internal sealed class GetTreeQueryHandler(
                 ActivateCommandTag = activation.CommandTag,
                 IsRoot = string.Equals(
                     row.Mp,
-                    viewerRoot.Mp,
+                    viewerRoot?.Mp,
                     StringComparison.Ordinal)
             };
         }

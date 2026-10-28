@@ -2,7 +2,7 @@ namespace ReferalProgram.Application.Abstractions;
 
 public sealed record PositionNodeActionContext(
     byte Width,
-    string ViewerRootMp,
+    IReadOnlyList<string> ViewerRootMps,
     string[] ViewerLockMps,
     bool ViewerOwnsProfile,
     IReadOnlySet<uint> AvailableCommandTags,

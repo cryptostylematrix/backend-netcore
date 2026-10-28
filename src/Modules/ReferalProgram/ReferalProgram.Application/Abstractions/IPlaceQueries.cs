@@ -2,6 +2,10 @@ namespace ReferalProgram.Application.Abstractions;
 
 public interface IPlaceQueries
 {
+    Task<IReadOnlyList<string>> GetProfileBranchRootMpsAsync(
+        string marketingAddr, byte structureNumber, string profileAddr,
+        CancellationToken cancellationToken) => throw new NotSupportedException();
+
     Task<IReadOnlyDictionary<string, byte[]>> GetProfileStructureNumbersAsync(
         string marketingAddr, IReadOnlyCollection<string> profileAddrs,
         CancellationToken cancellationToken) => throw new NotSupportedException();
