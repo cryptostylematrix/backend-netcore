@@ -139,6 +139,15 @@ environments the Referral Program processor runs at the configured
 `TaskProcessor__IntervalSeconds` interval. `activate_place` is processed for configured profiled places; see the
 [processing invariants](src/Modules/ReferalProgram/PROGRAM_PROCESSING.md#activity-and-activation).
 
+## Logging
+
+In Production, setting `SEQ_URL` enables Seq as the primary log destination,
+using `SEQ_API_KEY` when supplied. Application events go to the console only
+if Seq delivery fails after the sink's retries. This fallback is delayed by
+the retry policy; it is not an immediate connectivity switch. Without Seq
+configuration, or outside Production, application events go to the console.
+Native libraries that write directly to stdout/stderr are unaffected.
+
 ## Tests
 
 Run the test projects independently:

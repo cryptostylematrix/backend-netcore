@@ -53,16 +53,21 @@ builder.Host.UseSerilog((_, _, loggerConfiguration) =>
         .MinimumLevel.Information()
         .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
         .MinimumLevel.Override("System", LogEventLevel.Warning)
-        .Enrich.FromLogContext()
-        .WriteTo.Console();
+        .Enrich.FromLogContext();
 
     var seqUrl = builder.Configuration["SEQ_URL"];
     if (builder.Environment.IsProduction()
         && !string.IsNullOrWhiteSpace(seqUrl))
     {
-        loggerConfiguration.WriteTo.Seq(
-            seqUrl,
-            apiKey: builder.Configuration["SEQ_API_KEY"]);
+        loggerConfiguration.WriteTo.FallbackChain(
+            sink => sink.Seq(
+                seqUrl,
+                apiKey: builder.Configuration["SEQ_API_KEY"]),
+            fallback => fallback.Console());
+    }
+    else
+    {
+        loggerConfiguration.WriteTo.Console();
     }
 });
 
